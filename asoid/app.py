@@ -44,6 +44,7 @@ def index(application_options):
     :param application_options: dictionary (app_key: apps)
     :return:
     """
+
     num_columns = len(_categories.APPLICATION_CATEGORIES_BY_COLUMN.keys())
     columns = st.columns(num_columns)
     bottom_cont = st.container()
@@ -57,6 +58,8 @@ def index(application_options):
     step3_im = Image.open(step3_fname)
     step4_fname = HERE.joinpath("images/active_learning_schematic.png")
     step4_im = Image.open(step4_fname)
+    step5_fname =  HERE.joinpath("images/app_discovery.png")
+    step5_im = Image.open(step5_fname)
 
     # 4 column layout
     for (
@@ -82,6 +85,9 @@ def index(application_options):
                         app_.image(step3_im)
                     elif application.TITLE == 'Refine Behaviors':
                         app_.image(step4_im)
+                    elif application.TITLE == "Unsupervised discovery":
+                        app_.image(step5_im)
+
                     if app_.button(f'{application.TITLE}', key=app_key):
                         swap_app(app_key)
 

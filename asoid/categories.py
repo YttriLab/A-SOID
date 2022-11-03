@@ -12,8 +12,8 @@ APPLICATION_CATEGORIES_BY_COLUMN = {
     1: [EXTRACT_FEATURES],
     2: [CLASSIFY_BEHAVIORS],
     #3: [REFINE],
-    3: [PREDICT],
-    4: [VIEW],
-    5: [DISCOVER],
+    #3: [PREDICT],
+    #4: [VIEW],
+    3: [DISCOVER],
 
 }
