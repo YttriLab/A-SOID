@@ -149,6 +149,12 @@ streamlit run asoid/app.py
 ---
 ## Get in contact:
 
+### Corresponding authors:
+
+Martin K. Schwarz [SchwarzLab](https://ieecr-bonn.de/ieecr-groups/schwarz-group/)
+
+Eric A. Yttri
+
 ### Contributing
 
 Pull requests are welcome. For recommended changes that you would like to see, open an issue. 
