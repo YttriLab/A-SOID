@@ -167,8 +167,8 @@ If you are having issues, please refer to our issue page first, to see whether a
 If this does not apply to your problem, please submit an issue with enough information that we can replicate it. Thank you!
 
 ## License
-
 A-SOiD is released under a [Clear BSD License](https://github.com/YttriLab/A-SOID/blob/main/LICENSE) and is intended for research/academic use only.
+
 ---
 
 ## References
