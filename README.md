@@ -147,6 +147,19 @@ conda activate asoid
 streamlit run asoid/app.py
 ````
 ---
+## Contributors:
+
+A-SOiD was developed as a collaboration between the Yttri Lab and Schwarz Lab by:
+
+[Jens Schweihoff](https://github.com/JensBlack), University Bonn
+
+[Alex Hsu](https://github.com/runninghsus), Carnegie Mellon University
+
+[Martin Schwarz](https://github.com/SchwarzNeuroconLab), University Bonn
+
+[Eric Yttri](https://github.com/YttriLab), Carnegie Mellon University
+
+---
 ## Get in contact:
 
 ### Corresponding authors:
