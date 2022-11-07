@@ -29,7 +29,7 @@ of user-defined behaviors and discovered subactions.
 
 ![DLS_Stim](asoid/images/GUI_overview.png)
 
-A-SOiD is a streamlit-based application that integrates the core features of [A-SOiD](REF_PAPER) into a user-friendly,
+A-SOiD is a streamlit-based application that integrates the core features of [A-SOiD](https://www.biorxiv.org/content/10.1101/2022.11.04.515138v1) into a user-friendly,
 no-coding required GUI solution that can be downloaded and used on custom data.
 
 
