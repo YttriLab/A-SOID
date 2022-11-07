@@ -96,7 +96,7 @@ While some are easier to access, others are easier to alter.
 ### Download and install locally as app (Easiest)
 The easiest solution is to download our exe file and install A-SOiD locally on your computer.
 
-**ADD LINK to DOWNLOAD**
+**COMING SOON**
 
 ### Download repository and install locally as python package (advanced)
 
@@ -153,7 +153,7 @@ streamlit run asoid/app.py
 
 Martin K. Schwarz [SchwarzLab](https://ieecr-bonn.de/ieecr-groups/schwarz-group/)
 
-Eric A. Yttri
+Eric A. Yttri [YttriLab](https://labs.bio.cmu.edu/yttri/)
 
 ### Contributing
 
@@ -168,11 +168,11 @@ If this does not apply to your problem, please submit an issue with enough infor
 
 ## License
 
-**ADD TEXT ABOUT LICENSE**
+A-SOiD is released under a [Clear BSD License](https://github.com/YttriLab/A-SOID/blob/main/LICENSE) and is intended for research/academic use only.
 ---
 
 ## References
-If you are using our code, please make sure to cite us and any additional resources you were using
+If you are using our work, please make sure to cite us and any additional resources you were using
 
 1. [Mathis A, Mamidanna P, Cury KM, Abe T, Murthy VN, Mathis MW, Bethge M. DeepLabCut: markerless pose estimation of user-defined body parts with deep learning. Nat Neurosci. 2018 Sep;21(9):1281-1289. doi: 10.1038/s41593-018-0209-y. Epub 2018 Aug 20. PubMed PMID: 30127430.](https://www.nature.com/articles/s41593-018-0209-y)
 
