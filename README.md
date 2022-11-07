@@ -3,6 +3,8 @@
 [![GitHub stars](https://img.shields.io/github/stars/YttriLab/A-SOID.svg?style=social&label=Star)](https://github.com/YttriLab/A-SOID)
 [![GitHub forks](https://img.shields.io/github/forks/YttriLab/A-SOID.svg?style=social&label=Fork)](https://github.com/YttriLab/A-SOID)
 
+### Read the [preprint](https://www.biorxiv.org/content/10.1101/2022.11.04.515138v1)!
+
 [DeepLabCut](https://github.com/AlexEMG/DeepLabCut) <sup>1,2,3</sup>, 
 [SLEAP](https://github.com/murthylab/sleap) <sup>4</sup>, and 
 [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) <sup>5</sup> 
@@ -199,7 +201,25 @@ If you are using our work, please make sure to cite us and any additional resour
 6. [Hsu AI, Yttri EA. B-SOiD, an open-source unsupervised algorithm for identification and fast prediction of behaviors. Nat Commun. 2021 Aug 31;12(1):5188](https://doi.org/10.1038/s41467-021-25420-x)
 7. [Friard, O. and Gamba, M. (2016), BORIS: a free, versatile open-source event-logging software for video/audio coding and live observations.  Methods Ecol Evol, 7: 1325-1330](https://doi.org/10.1111/2041-210X.12584)
 
+### How to cite us:
+    A-SOiD, an active learning platform for expert-guided, data efficient discovery of behavior.
+    Jens F. Schweihoff, Alexander I. Hsu, Martin K. Schwarz, Eric A. Yttri
+    bioRxiv 2022.11.04.515138; doi: https://doi.org/10.1101/2022.11.04.515138
 
+**BibTeX:**
+````
+@article {Schweihoff2022.11.04.515138,
+	author = {Schweihoff, Jens F. and Hsu, Alexander I. and Schwarz, Martin K. and Yttri, Eric A,},
+	title = {A-SOiD, an active learning platform for expert-guided, data efficient discovery of behavior},
+	elocation-id = {2022.11.04.515138},
+	year = {2022},
+	doi = {10.1101/2022.11.04.515138},
+	publisher = {Cold Spring Harbor Laboratory},
+	URL = {https://www.biorxiv.org/content/early/2022/11/04/2022.11.04.515138},
+	eprint = {https://www.biorxiv.org/content/early/2022/11/04/2022.11.04.515138.full.pdf},
+	journal = {bioRxiv}
+}
+````
 
 
 
