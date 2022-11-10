@@ -26,6 +26,11 @@ def save_predictions(labels,source_file_name,behavior_classes,sample_rate):
 
     # for simplicity let's convert this back into BORIS type file
     dummy_df = pd.get_dummies(df["classes"])
+    #add 0 columns for each class that wasn't predicted in the file
+    not_predicted_classes = [x for x in behavior_classes if x not in np.unique(df["classes"].values)]
+    for not_predicted_class in not not_predicted_classes:
+        dummy_df[not_predicted_class] = 0
+
     dummy_df["time"] = time_clm
     dummy_df = dummy_df.set_index("time")
 
