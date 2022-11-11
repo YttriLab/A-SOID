@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 
 from utils.load_preprocess import select_software
-from utils.load_workspace import load_iterX
-from utils.extract_features import feature_extraction,frameshift_predict,bsoid_predict_numba,bsoid_predict_numba_noscale
+from utils.load_workspace import load_iterX, load_features
+from utils.extract_features import feature_extraction, feature_extraction_with_extr_scaler,frameshift_predict,bsoid_predict_numba,bsoid_predict_numba_noscale
 from utils.import_data import load_pose,get_bodyparts,get_animals
 from config.help_messages import *
 
@@ -58,6 +58,7 @@ class Predictor:
 
 
         [self.iterX_model,_,_,_,_,_] = load_iterX(self.working_dir,self.prefix)
+        [_, _, self.scalar, _] = load_features(self.working_dir,self.prefix)
 
         self.pose_files = None
         self.pose_file_names = []
@@ -143,17 +144,22 @@ class Predictor:
         number2train = len(self.processed_input_data)
         frames2integ = round(float(self.framerate) * (self.duration_min / 0.1))
 
-        # TODO: THIS IS NOT THE CORRECT WAY TO DO THIS... THE SCALING NOW IS FILE WISE BUT SHOULD BE IMPORTED FROM THE PROJECT
-        # ALSO THE FEATURE EXTRACTION CODE IS PROBABLY EASIER TO GET FROM ANOTHER FUNCTION INSTEAD OF CHEATING WITH THIS ONE
-
         self.features = []
         self.scaled_features = []
         # extract features, bin them
         for i,data in enumerate(self.processed_input_data):
             # we are doing this to predict on each file seperatly!
-            features,scaled_features = feature_extraction([data]
-                                                          ,1
-                                                          ,frames2integ)
+            #feature extracting from within each file
+            # features,scaled_features = feature_extraction([data]
+            #                                               ,1
+            #                                               ,frames2integ
+            #                                               )
+            #using feature scaling from training set
+            features,scaled_features = feature_extraction_with_extr_scaler([data]
+                                                                            ,1
+                                                                            ,frames2integ
+                                                                            ,self.scalar
+                                                                           )
             self.features.append(features)
             self.scaled_features.append(scaled_features)
 
