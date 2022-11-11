@@ -3,6 +3,8 @@
 [![GitHub stars](https://img.shields.io/github/stars/YttriLab/A-SOID.svg?style=social&label=Star)](https://github.com/YttriLab/A-SOID)
 [![GitHub forks](https://img.shields.io/github/forks/YttriLab/A-SOID.svg?style=social&label=Fork)](https://github.com/YttriLab/A-SOID)
 
+### Read the [preprint](https://www.biorxiv.org/content/10.1101/2022.11.04.515138v1)!
+
 [DeepLabCut](https://github.com/AlexEMG/DeepLabCut) <sup>1,2,3</sup>, 
 [SLEAP](https://github.com/murthylab/sleap) <sup>4</sup>, and 
 [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) <sup>5</sup> 
@@ -27,7 +29,7 @@ of user-defined behaviors and discovered subactions.
 
 ![DLS_Stim](asoid/images/GUI_overview.png)
 
-A-SOiD is a streamlit-based application that integrates the core features of [A-SOiD](REF_PAPER) into a user-friendly,
+A-SOiD is a streamlit-based application that integrates the core features of [A-SOiD](https://www.biorxiv.org/content/10.1101/2022.11.04.515138v1) into a user-friendly,
 no-coding required GUI solution that can be downloaded and used on custom data.
 
 
@@ -96,7 +98,7 @@ While some are easier to access, others are easier to alter.
 ### Download and install locally as app (Easiest)
 The easiest solution is to download our exe file and install A-SOiD locally on your computer.
 
-**ADD LINK to DOWNLOAD**
+**COMING SOON**
 
 ### Download repository and install locally as python package (advanced)
 
@@ -147,13 +149,26 @@ conda activate asoid
 streamlit run asoid/app.py
 ````
 ---
+## Contributors:
+
+A-SOiD was developed as a collaboration between the Yttri Lab and Schwarz Lab by:
+
+[Jens Schweihoff](https://github.com/JensBlack), University Bonn
+
+[Alex Hsu](https://github.com/runninghsus), Carnegie Mellon University
+
+[Martin Schwarz](https://github.com/SchwarzNeuroconLab), University Bonn
+
+[Eric Yttri](https://github.com/YttriLab), Carnegie Mellon University
+
+---
 ## Get in contact:
 
 ### Corresponding authors:
 
 Martin K. Schwarz [SchwarzLab](https://ieecr-bonn.de/ieecr-groups/schwarz-group/)
 
-Eric A. Yttri
+Eric A. Yttri [YttriLab](https://labs.bio.cmu.edu/yttri/)
 
 ### Contributing
 
@@ -167,12 +182,12 @@ If you are having issues, please refer to our issue page first, to see whether a
 If this does not apply to your problem, please submit an issue with enough information that we can replicate it. Thank you!
 
 ## License
+A-SOiD is released under a [Clear BSD License](https://github.com/YttriLab/A-SOID/blob/main/LICENSE) and is intended for research/academic use only.
 
-**ADD TEXT ABOUT LICENSE**
 ---
 
 ## References
-If you are using our code, please make sure to cite us and any additional resources you were using
+If you are using our work, please make sure to cite us and any additional resources you were using
 
 1. [Mathis A, Mamidanna P, Cury KM, Abe T, Murthy VN, Mathis MW, Bethge M. DeepLabCut: markerless pose estimation of user-defined body parts with deep learning. Nat Neurosci. 2018 Sep;21(9):1281-1289. doi: 10.1038/s41593-018-0209-y. Epub 2018 Aug 20. PubMed PMID: 30127430.](https://www.nature.com/articles/s41593-018-0209-y)
 
@@ -186,7 +201,25 @@ If you are using our code, please make sure to cite us and any additional resour
 6. [Hsu AI, Yttri EA. B-SOiD, an open-source unsupervised algorithm for identification and fast prediction of behaviors. Nat Commun. 2021 Aug 31;12(1):5188](https://doi.org/10.1038/s41467-021-25420-x)
 7. [Friard, O. and Gamba, M. (2016), BORIS: a free, versatile open-source event-logging software for video/audio coding and live observations.  Methods Ecol Evol, 7: 1325-1330](https://doi.org/10.1111/2041-210X.12584)
 
+### How to cite us:
+    A-SOiD, an active learning platform for expert-guided, data efficient discovery of behavior.
+    Jens F. Schweihoff, Alexander I. Hsu, Martin K. Schwarz, Eric A. Yttri
+    bioRxiv 2022.11.04.515138; doi: https://doi.org/10.1101/2022.11.04.515138
 
+**BibTeX:**
+````
+@article {Schweihoff2022.11.04.515138,
+	author = {Schweihoff, Jens F. and Hsu, Alexander I. and Schwarz, Martin K. and Yttri, Eric A,},
+	title = {A-SOiD, an active learning platform for expert-guided, data efficient discovery of behavior},
+	elocation-id = {2022.11.04.515138},
+	year = {2022},
+	doi = {10.1101/2022.11.04.515138},
+	publisher = {Cold Spring Harbor Laboratory},
+	URL = {https://www.biorxiv.org/content/early/2022/11/04/2022.11.04.515138},
+	eprint = {https://www.biorxiv.org/content/early/2022/11/04/2022.11.04.515138.full.pdf},
+	journal = {bioRxiv}
+}
+````
 
 
 
