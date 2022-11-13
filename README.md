@@ -155,7 +155,7 @@ A-SOiD was developed as a collaboration between the Yttri Lab and Schwarz Lab by
 
 [Jens Schweihoff](https://github.com/JensBlack), University Bonn
 
-[Alexander I. Hsu](https://github.com/runninghsus), Carnegie Mellon University
+[Alex Hsu](https://github.com/runninghsus), Carnegie Mellon University
 
 [Martin Schwarz](https://github.com/SchwarzNeuroconLab), University Bonn
 
