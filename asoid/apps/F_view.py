@@ -23,6 +23,6 @@ def main(config=None):
         if button_col1.button('◀  PRIOR STEP'):
             swap_app('E-predict')
         if button_col5.button('NEXT STEP ▶'):
-            swap_app('G-discover')
+            swap_app('G-unsupervised-discovery')
         st.write('')
         st.markdown('<span style="color:grey">{}</span>'.format(IMPRESS_TEXT), unsafe_allow_html=True)
