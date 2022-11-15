@@ -515,10 +515,7 @@ class Extract:
         save_data(self.working_dir, self.prefix, 'heldout_feats_targets.sav',
                   [self.features_heldout,
                    self.targets_heldout])
-        #save for later unsupervised discovery
-        save_data(self.working_dir, self.prefix, "full_feats_targets.sav",
-                  [self.features, self.scaled_features, self.scalar, self.frames2integ])
-
+        
     def main(self):
         self.extract_features()
         self.downsample_labels()
