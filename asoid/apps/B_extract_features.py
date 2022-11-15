@@ -117,7 +117,7 @@ def main(config=None):
         if button_col1.button('◀  PRIOR STEP'):
             swap_app('A-data-preprocess')
         if button_col5.button('NEXT STEP ▶'):
-            swap_app('C-baseline-classification')
+            swap_app('C-auto-active-learning')
         st.write('')
         st.markdown('<span style="color:grey">{}</span>'.format(IMPRESS_TEXT), unsafe_allow_html=True)
 

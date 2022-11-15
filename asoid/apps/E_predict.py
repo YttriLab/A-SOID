@@ -31,7 +31,7 @@ def main(config=None):
         st.write('')
         button_col1, button_col2, button_col3, button_col4, button_col5 = st.columns([3, 3, 1, 1, 1])
         if button_col1.button('◀  PRIOR STEP'):
-            swap_app('D-active-learning')
+            swap_app('C-auto-active-learning')
         if button_col5.button('NEXT STEP ▶'):
             swap_app('F-view')
         st.write('')
