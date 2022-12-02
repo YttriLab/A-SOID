@@ -92,15 +92,10 @@ sklearn.preprocessing.OneHotEncoder
 ---
 ## Installation
 
-There are three ways to install and run A-SOiD depending on your preferences. All installation methods will result in the same app running.
+There are two ways to install and run A-SOiD depending on your preferences. All installation methods will result in the same app running.
 While some are easier to access, others are easier to alter.
 
-### Download and install locally as app (Easiest)
-The easiest solution is to download our exe file and install A-SOiD locally on your computer.
-
-**COMING SOON**
-
-### Download repository and install locally as python package (advanced)
+### Download repository and install locally as python package (recommended)
 
 Clone this repository and create a new environment (recommended) or active the environment using [Anaconda/Python3](https://www.anaconda.com/), you want to install A-SOiD in.
 Next, install the A-SOiD package by moving to the directory containing A-SOiD:
@@ -148,6 +143,7 @@ conda activate asoid
 
 streamlit run asoid/app.py
 ````
+
 ---
 ## Contributors:
 
@@ -172,7 +168,7 @@ Eric A. Yttri [YttriLab](https://labs.bio.cmu.edu/yttri/)
 
 ### Contributing
 
-Pull requests are welcome. For recommended changes that you would like to see, open an issue. 
+For recommended changes that you would like to see, open an issue. 
 
 There are many exciting avenues to explore based on this work. 
 Please do not hesitate to contact us for collaborations.
@@ -206,20 +202,7 @@ If you are using our work, please make sure to cite us and any additional resour
     Jens F. Schweihoff, Alexander I. Hsu, Martin K. Schwarz, Eric A. Yttri
     bioRxiv 2022.11.04.515138; doi: https://doi.org/10.1101/2022.11.04.515138
 
-**BibTeX:**
-````
-@article {Schweihoff2022.11.04.515138,
-	author = {Schweihoff, Jens F. and Hsu, Alexander I. and Schwarz, Martin K. and Yttri, Eric A,},
-	title = {A-SOiD, an active learning platform for expert-guided, data efficient discovery of behavior},
-	elocation-id = {2022.11.04.515138},
-	year = {2022},
-	doi = {10.1101/2022.11.04.515138},
-	publisher = {Cold Spring Harbor Laboratory},
-	URL = {https://www.biorxiv.org/content/early/2022/11/04/2022.11.04.515138},
-	eprint = {https://www.biorxiv.org/content/early/2022/11/04/2022.11.04.515138.full.pdf},
-	journal = {bioRxiv}
-}
-````
+or see [Cite Us](CITATION)
 
 
 

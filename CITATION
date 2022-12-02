@@ -1,0 +1,11 @@
+@article {Schweihoff2022.11.04.515138,
+	author = {Schweihoff, Jens F. and Hsu, Alexander I. and Schwarz, Martin K. and Yttri, Eric A,},
+	title = {A-SOiD, an active learning platform for expert-guided, data efficient discovery of behavior},
+	elocation-id = {2022.11.04.515138},
+	year = {2022},
+	doi = {10.1101/2022.11.04.515138},
+	publisher = {Cold Spring Harbor Laboratory},
+	URL = {https://www.biorxiv.org/content/early/2022/11/04/2022.11.04.515138},
+	eprint = {https://www.biorxiv.org/content/early/2022/11/04/2022.11.04.515138.full.pdf},
+	journal = {bioRxiv}
+}
