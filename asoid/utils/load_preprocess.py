@@ -139,14 +139,16 @@ class Preprocess:
                             # if not append
                             optional_classes.append(temp_optional_class)
 
-                #move other to last place
-                if "other" in optional_classes:
-                    optional_classes.append(optional_classes.pop(optional_classes.index("other")))
+
 
                 self.classes = input_container.multiselect(
                     "Deselect classes that should not be included in training."
                     , optional_classes, optional_classes, help = INIT_CLASS_SELECT_HELP
                 )
+
+                #move other to last place
+                if "other" in optional_classes:
+                    optional_classes.append(optional_classes.pop(optional_classes.index("other")))
 
                 self.exclude_other = input_container.checkbox("Exclude 'other'?", False,
                                                               key= "exclude_other_check",
