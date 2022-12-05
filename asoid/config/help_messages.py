@@ -16,6 +16,13 @@ POSE_ORIGIN_SELECT_HELP = "If you want to replicate the published results, selec
 
 FPS_HELP = "This information can usually be found in the meta data of the original videos used for pose estimation."
 
+INIT_CLASS_SELECT_HELP =  "This will move all available data from the excluded classes to be included in 'other'."
+
+EXCLUDE_OTHER_HELP = "WARNING: This option excludes the collective 'other' class from training. This is a valid option if you have only a FEW unlabeled frames (e.g., noise) which will be collected automatically into 'other'." \
+                     " However, keep in mind, that if you are planning to predict on novel data, occurences of 'other' - i.e., when 'other'" \
+                     " is used to collect a LARGE number of undefined frames (e.g., irrelevant behavior), will result in worse performance as" \
+                     " the classifier will be forced to decide between the remaining classes for every input frame. "
+
 MULTI_ANIMAL_HELP = "Only select this option if you are using a multi animal model for pose estimation, such as maDLC or SLEAP Top-Down or Bottom-Up." \
                     " If you have multiple animals, but are using a single instance network," \
                     " then select all body parts/individuals that you want to include during body part selection."

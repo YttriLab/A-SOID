@@ -11,7 +11,8 @@ from utils.import_data import load_pose, get_bodyparts, get_animals, load_labels
 from utils.project_utils import create_new_project, update_config
 from config.help_messages import POSE_ORIGIN_SELECT_HELP, FPS_HELP, MULTI_ANIMAL_HELP, MULTI_ANIMAL_SELECT_HELP,\
     BODYPART_SELECT, WORKING_DIR_HELP,PREFIX_HELP, DATA_DIR_IMPORT_HELP, POSE_DIR_IMPORT_HELP, POSE_ORIGIN_HELP,\
-    POSE_SELECT_HELP, LABEL_DIR_IMPORT_HELP, LABEL_ORIGIN_HELP, LABEL_SELECT_HELP, PREPROCESS_HELP
+    POSE_SELECT_HELP, LABEL_DIR_IMPORT_HELP, LABEL_ORIGIN_HELP, LABEL_SELECT_HELP, PREPROCESS_HELP, EXCLUDE_OTHER_HELP,\
+    INIT_CLASS_SELECT_HELP
 
 
 
@@ -138,10 +139,18 @@ class Preprocess:
                             # if not append
                             optional_classes.append(temp_optional_class)
 
+                #move other to last place
+                if "other" in optional_classes:
+                    optional_classes.append(optional_classes.pop(optional_classes.index("other")))
+
                 self.classes = input_container.multiselect(
-                    "Reorder the classes (please place undefined 'other' to the last position)"
-                    , optional_classes, optional_classes
+                    "Deselect classes that should not be included in training."
+                    , optional_classes, optional_classes, help = INIT_CLASS_SELECT_HELP
                 )
+
+                self.exclude_other = input_container.checkbox("Exclude 'other'?", False,
+                                                              key= "exclude_other_check",
+                                                              help= EXCLUDE_OTHER_HELP)
             except IndexError:
                 st.warning('Please select corresponding label files.')
             self.multi_animal = st.checkbox("Is this a multiple animal project?",
@@ -433,7 +442,7 @@ class Preprocess:
                     # the loaded sleap file has them too, so exclude for both
                     idx_selected = [i for i in idx_selected if i not in idx_llh]
 
-                    train_portion = int(np.array(current_pose.shape[0]) * 0.7)
+                    #train_portion = int(np.array(current_pose.shape[0]) * 0.7)
                     self.processed_input_data.append(np.array(current_pose.iloc[:, idx_selected]))
 
                     # self.processed_input_data.append(np.array(current_pose.iloc[:train_portion, idx_selected]))
@@ -444,7 +453,7 @@ class Preprocess:
 
                     # continue with partioning
                     targets = label_vector[-current_pose.shape[0]:].copy()
-                    train_portion_labels = int(targets.shape[0] * 0.7)
+                    #train_portion_labels = int(targets.shape[0] * 0.7)
                     self.targets.append(targets)
 
                     # self.targets.append(targets[:train_portion_labels])
@@ -490,7 +499,8 @@ class Preprocess:
                     KEYPOINTS_CHOSEN=self.selected_bodyparts,
                     PROJECT_PATH=self.working_dir,
                     CLASSES=self.classes,
-                    MULTI_ANIMAL=self.multi_animal
+                    MULTI_ANIMAL=self.multi_animal,
+                    EXCLUDE_OTHER = self.exclude_other
                 ),
                 "Processing": dict(
                     ITERATION=0,

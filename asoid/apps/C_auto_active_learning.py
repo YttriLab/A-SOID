@@ -86,6 +86,8 @@ def main(config=None):
                 annotation_classes = value
             elif parameter == 'PROJECT_TYPE':
                 software = value
+            elif parameter == 'EXCLUDE_OTHER':
+                exclude_other = value
         for parameter, value in config[sections[2]].items():
             if parameter == 'TRAIN_FRACTION':
                 train_fx = value
@@ -110,7 +112,7 @@ def main(config=None):
                 if st.button('re-classify'.upper()):
                     rf_classifier = RF_Classify(working_dir, prefix, software,
                                                 init_ratio, max_iter, max_samples_iter,
-                                                annotation_classes, features_heldout, targets_heldout)
+                                                annotation_classes, features_heldout, targets_heldout, exclude_other)
                     rf_classifier.main()
         except FileNotFoundError:
             init_ratio, max_iter, max_samples_iter, features_heldout, targets_heldout = \
@@ -118,7 +120,7 @@ def main(config=None):
             if st.button('classify'.upper()):
                 rf_classifier = RF_Classify(working_dir, prefix, software,
                                             init_ratio, max_iter, max_samples_iter,
-                                            annotation_classes, features_heldout, targets_heldout)
+                                            annotation_classes, features_heldout, targets_heldout, exclude_other)
                 rf_classifier.main()
     else:
         st.error(NO_CONFIG_HELP)

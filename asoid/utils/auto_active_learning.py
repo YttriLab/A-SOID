@@ -117,7 +117,7 @@ class RF_Classify:
 
     def __init__(self, working_dir, prefix, software,
                  init_ratio, max_iter, max_samples_iter,
-                 annotation_classes, features_heldout, targets_heldout):
+                 annotation_classes, features_heldout, targets_heldout, exclude_other):
         self.container = st.container()
         self.placeholder = self.container.empty()
         self.working_dir = working_dir
@@ -131,8 +131,8 @@ class RF_Classify:
         self.features_heldout = features_heldout
         self.targets_heldout = targets_heldout
 
-        # get label code for last class ('other') to exclude later on
-        # self.label_code_other = max(np.unique(self.targets_test))
+        # get label code for last class ('other') to exclude later on if applicable
+        self.exclude_other = exclude_other
         self.label_code_other = max(np.unique(np.hstack(self.targets_heldout)))
         self.frames2integ = None
 
@@ -178,9 +178,15 @@ class RF_Classify:
             unique_classes = np.unique(np.hstack([np.hstack(targets_train), np.hstack(self.targets_heldout)]))
             # go through each class and select the all samples from the features and targets
             for sample_label in unique_classes:
-                if sample_label != self.label_code_other:
+                if self.exclude_other:
+                    #skip other if excluded
+                    if sample_label != self.label_code_other:
+                        X_all.append(features_train[i][targets_train[i] == sample_label][:])
+                        Y_all.append(targets_train[i][targets_train[i] == sample_label][:])
+                else:
                     X_all.append(features_train[i][targets_train[i] == sample_label][:])
                     Y_all.append(targets_train[i][targets_train[i] == sample_label][:])
+
             X_all_train = np.vstack(X_all)
             Y_all_train = np.hstack(Y_all)
             self.all_model = RandomForestClassifier(n_estimators=200, random_state=42, n_jobs=-1,
@@ -281,7 +287,9 @@ class RF_Classify:
             selected_idx = np.random.choice(np.arange(len(all_c_options)), len(behavior_classes), replace=False)
             default_colors = [all_c_options[s] for s in selected_idx]
         mean_scores2beat = np.mean(np.mean(self.all_f1_scores, axis=0), axis=0)
+        print(np.mean(self.iter0_f1_scores, axis=0))
         for c, c_name in enumerate(behavior_classes):
+            print(c, c_name)
             if c_name != behavior_classes[-1]:
                 self.perf_by_class[c_name].append(int(100 * round(np.mean(self.iter0_f1_scores, axis=0)[c], 2)))
                 self.perf2beat_by_class[c_name].append(int(100 * round(np.mean(self.all_f1_scores, axis=0)[c], 2)))
@@ -320,10 +328,16 @@ class RF_Classify:
         self.placeholder.plotly_chart(fig, use_container_width=True)
 
     def base_classification(self):
+
+        print("Test1")
         self.subsampled_classify()
+        print("Check1")
         self.show_subsampled_performance()
+        print("Check2")
         self.save_all_train_info()
+        print("Check3")
         self.save_subsampled_info()
+        print("Check4")
 
     def self_learn(self):
         [features_train,
