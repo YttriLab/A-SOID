@@ -44,6 +44,10 @@ setup(
                     ,"setuptools"
                     ,"umap-learn"
                     ,"click"
+                    ,"hydralit-components"
+                    ,"streamlit-option-menu"
+                    ,"plotly"
+                    ,"stqdm"
                     ],
     python_requires=">=3.7",
 )
