@@ -92,56 +92,53 @@ sklearn.preprocessing.OneHotEncoder
 ---
 ## Installation
 
-There are two ways to install and run A-SOiD depending on your preferences. All installation methods will result in the same app running.
-While some are easier to access, others are easier to alter.
+There are two ways to install A-SOiD. We recommend using a fresh environment in any case to avoid any installation conflicts.
+To simplify the process, we provide `asoid.yml` file that will do everything for you (see below).
 
-### Download repository and install locally as python package (recommended)
+### Download repository and install locally as python package within a new environment
 
-Clone this repository and create a new environment (recommended) or active the environment using [Anaconda/Python3](https://www.anaconda.com/), you want to install A-SOiD in.
-Next, install the A-SOiD package by moving to the directory containing A-SOiD:
+Clone this repository and create a new environment in which A-SOiD will be installed automatically (recommended) [Anaconda/Python3](https://www.anaconda.com/).
 
-Git clone the web URL (example below) or download ZIP. 
-
-Change your current working directory to the location where you want the cloned directory to be made.
-```bash
-git clone https://github.com/YttriLab/A-SOID.git
-```
-
+#### Change your current working directory to the location where you want the directory to be made.
 ````
 cd path/to/A-SOiD
 ````
-and install the package once using the `setup.py`:
-````
-pip install .
-````
-You can run A-SOiD now from inside your environment by using (you do not have change directories anymore):
-````
-asoid app
-````
-
-### Download repository and run locally as streamlit app (developer option)
-
-Clone this repository and create a new environment using [Anaconda/Python3](https://www.anaconda.com/) with the provided `environment.yaml` file.
-
-Git clone the web URL (example below) or download ZIP. 
-
-Change your current working directory to the location where you want the cloned directory to be made.
+Clone it directly from GitHub
 ```bash
 git clone https://github.com/YttriLab/A-SOID.git
 ```
+or download ZIP and unpack where you want. 
 
-````
-cd path/to/A-SOiD
-````
-and create an environment using anaconda:
+#### Create an environment using anaconda:
 ````
 conda env create --file asoid.yaml
 ````
-You can run A-SOiD now from inside your environment by using (you have to change directories to the cloned repo):
+
+#### Alternatively, you can install A-SOiD locally 
+in the directory you saved the repo in:
+````
+cd path/to/A-SOiD
+````
+activate the environment, you want to install A-SOiD in:
+````
+conda activate MYENVIRONMENT
+````
+install using `setup.py` in your own environment:
+````
+pip install .
+````
+
+A-SOiD is installed alongside all dependencies.
+
+### How to start A-SOiD:
+
 ````
 conda activate asoid
+````
 
-streamlit run asoid/app.py
+You can run A-SOiD now from inside your environment by using (you do not have change directories anymore):
+````
+asoid app
 ````
 
 ---
