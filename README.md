@@ -71,24 +71,15 @@ the app offers a reporting tab that allows users to view results (see Fig. above
 
 A-SOiD supports the following input types:
 
-Pose estimation:
+### Pose estimation:
 - [SLEAP](https://sleap.ai/)
 - [DeepLabCut](http://www.mackenziemathislab.org/deeplabcut)
 
-Annotation files:
-- [BORIS](https://www.boris.unito.it/) -> exported as binary files
-- any annotation files in this style ([one-hot encoded](https://en.wikipedia.org/wiki/One-hot)), including an indexed that specifies time steps in seconds.
+### Annotation files:
+- [BORIS](https://www.boris.unito.it/) -> exported as binary files in 0.1 sec time steps (10 Hz): [Read the docs](https://boris.readthedocs.io/en/latest/#export-events-as-behavioral-binary-table)
+- any annotation files in this style ([one-hot encoded](https://en.wikipedia.org/wiki/One-hot)), including an index that specifies time steps in seconds.
 ----
-_Note_:
-
-You can easily convert annotation files from a categorical encoded type to this format by using functions such as:
-````
-pandas.get_dummies()
-````
-or 
-````
-sklearn.preprocessing.OneHotEncoder
-````
+> You can see an example of this using pandas in our docs: [Convert annotations to binary format](docs/export_annotations_to_binary_format.ipynb)
 ---
 ## Installation
 

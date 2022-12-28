@@ -1,3 +1,4 @@
 include asoid/images/*
 include asoid/config/*
 include asoid/.streamlit/*
+include docs/*
