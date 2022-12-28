@@ -111,7 +111,7 @@ or download ZIP and unpack where you want.
 
 #### Create an environment using anaconda:
 ````
-conda env create --file asoid.yaml
+conda env create --file asoid.yml
 ````
 
 #### Alternatively, you can install A-SOiD locally 
