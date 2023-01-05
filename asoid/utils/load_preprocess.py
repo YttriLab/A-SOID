@@ -382,7 +382,9 @@ class Preprocess:
         # drop all classes that are deselected
         # select_label_df.drop(columns=deselected_classes, inplace=True)
         # make sure that other is one of the selected classes
-        if "other" not in self.classes and not self.exclude_other:
+        #if "other" not in self.classes and not self.exclude_other:
+
+        if "other" not in self.classes:
             self.classes.append("other")
 
         # make sure that all classes are in (irrelevant for most cases):
@@ -396,8 +398,8 @@ class Preprocess:
             columns=(list([clm for clm in self.classes if clm != "other"]) + ["other"]))
 
         #get rid of "other" column if excluded
-        if self.exclude_other:
-            select_label_df.drop(columns=["other"], inplace=True)
+        # if self.exclude_other:
+        #     select_label_df.drop(columns=["other"], inplace=True)
 
         # convert dummie encoding to numbers but keep also identity of classes not represented in this file
         label_vector = np.argmax(np.array(select_label_df), axis=1)

@@ -169,21 +169,14 @@ class RF_Classify:
         for i in range(len(features_train)):
             X_all = []
             Y_all = []
-            # old code from Alex
-            # for b in np.unique(targets_runlist[i]):
-            #     if b != self.label_code_other:
-            #         idx_b = np.where(targets_runlist[i] == b)[0]
-            #         X_all.append(features_runlist[i][idx_b[:]])
-            #         Y_all.append(targets_runlist[i][idx_b[:]])
+
             unique_classes = np.unique(np.hstack([np.hstack(targets_train), np.hstack(self.targets_heldout)]))
+            #remove other if exclude other
+            if self.exclude_other:
+                unique_classes = unique_classes[unique_classes != self.label_code_other]
+
             # go through each class and select the all samples from the features and targets
             for sample_label in unique_classes:
-                if self.exclude_other:
-                    #skip other if excluded
-                    if sample_label != self.label_code_other:
-                        X_all.append(features_train[i][targets_train[i] == sample_label][:])
-                        Y_all.append(targets_train[i][targets_train[i] == sample_label][:])
-                else:
                     X_all.append(features_train[i][targets_train[i] == sample_label][:])
                     Y_all.append(targets_train[i][targets_train[i] == sample_label][:])
 
@@ -202,7 +195,7 @@ class RF_Classify:
             else:
                 predict = frameshift_predict(data_test, len(data_test), scalar,
                                              self.all_model, framerate=120)
-            # check f1 scores per class
+            # check f1 scores per class, always exclude other (unlabeled data)
             self.all_f1_scores.append(f1_score(
                 self.targets_heldout[i][self.targets_heldout[i] != self.label_code_other],
                 predict[self.targets_heldout[i] != self.label_code_other],
@@ -222,25 +215,16 @@ class RF_Classify:
             X = []
             Y = []
 
-            # original from Alex
-            # samples2train = [int(len(np.where(targets_runlist[i] == b)[0]) * self.init_ratio)
-            #                  for b in np.unique(targets_runlist[i]) if b < max(np.unique(self.targets_test))]
-            # for b in np.unique(targets_runlist[i]):
-            #     if b != self.label_code_other:
-            #         idx_b = np.where(targets_runlist[i] == b)[0]
-            #         X.append(features_runlist[i][idx_b[:samples2train[int(b)]]])
-            #         Y.append(targets_runlist[i][idx_b[:samples2train[int(b)]]])
-
             # find the available amount of samples in the trainset,
             # take only the initial ratio and only classes that are in test
             # this returns 0 for samples that are not available
             samples2train = [int(np.sum(targets_train[i] == b) * self.init_ratio)
-                             for b in unique_classes if b != self.label_code_other]
+                             for b in unique_classes]
 
             # go through each class and select the number of samples from the features and targets
             for n_samples, sample_label in zip(samples2train, unique_classes):
                 # if there are samples in the train
-                if n_samples > 0 and sample_label != self.label_code_other:
+                if n_samples > 0:
                     X.append(features_train[i][targets_train[i] == sample_label][:n_samples])
                     Y.append(targets_train[i][targets_train[i] == sample_label][:n_samples])
 
