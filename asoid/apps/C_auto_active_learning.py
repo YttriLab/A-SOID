@@ -12,7 +12,8 @@ from utils.load_workspace import load_features, load_test_targets, load_heldout,
 from utils.project_utils import update_config
 
 from config.help_messages import INIT_RATIO_HELP, MAX_ITER_HELP, MAX_SAMPLES_HELP,\
-                                SHOW_FINAL_RESULTS_HELP, RE_CLASSIFY_HELP, IMPRESS_TEXT, NO_CONFIG_HELP
+                                SHOW_FINAL_RESULTS_HELP, RE_CLASSIFY_HELP, IMPRESS_TEXT, NO_CONFIG_HELP,\
+                                NO_FEATURES_HELP
 
 CATEGORY = categories.CLASSIFY_BEHAVIORS
 TITLE = "Active Learning"
@@ -91,6 +92,7 @@ def main(config=None):
         for parameter, value in config[sections[2]].items():
             if parameter == 'TRAIN_FRACTION':
                 train_fx = value
+
         try:
             [_, all_X_train_list, all_Y_train_list, all_f1_scores, _, _] = \
                 load_all_train(working_dir, prefix)
@@ -115,13 +117,17 @@ def main(config=None):
                                                 annotation_classes, features_heldout, targets_heldout, exclude_other)
                     rf_classifier.main()
         except FileNotFoundError:
-            init_ratio, max_iter, max_samples_iter, features_heldout, targets_heldout = \
-                prompt_setup(software, train_fx, working_dir, prefix)
-            if st.button('classify'.upper()):
-                rf_classifier = RF_Classify(working_dir, prefix, software,
-                                            init_ratio, max_iter, max_samples_iter,
-                                            annotation_classes, features_heldout, targets_heldout, exclude_other)
-                rf_classifier.main()
+            #make sure the features were extracted:
+            try:
+                init_ratio, max_iter, max_samples_iter, features_heldout, targets_heldout = \
+                    prompt_setup(software, train_fx, working_dir, prefix)
+                if st.button('classify'.upper()):
+                    rf_classifier = RF_Classify(working_dir, prefix, software,
+                                                init_ratio, max_iter, max_samples_iter,
+                                                annotation_classes, features_heldout, targets_heldout, exclude_other)
+                    rf_classifier.main()
+            except FileNotFoundError:
+                st.error(NO_FEATURES_HELP)
     else:
         st.error(NO_CONFIG_HELP)
     bottom_cont = st.container()
