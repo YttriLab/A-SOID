@@ -287,9 +287,7 @@ class RF_Classify:
             selected_idx = np.random.choice(np.arange(len(all_c_options)), len(behavior_classes), replace=False)
             default_colors = [all_c_options[s] for s in selected_idx]
         mean_scores2beat = np.mean(np.mean(self.all_f1_scores, axis=0), axis=0)
-        print(np.mean(self.iter0_f1_scores, axis=0))
         for c, c_name in enumerate(behavior_classes):
-            print(c, c_name)
             if c_name != behavior_classes[-1]:
                 self.perf_by_class[c_name].append(int(100 * round(np.mean(self.iter0_f1_scores, axis=0)[c], 2)))
                 self.perf2beat_by_class[c_name].append(int(100 * round(np.mean(self.all_f1_scores, axis=0)[c], 2)))
@@ -328,16 +326,15 @@ class RF_Classify:
         self.placeholder.plotly_chart(fig, use_container_width=True)
 
     def base_classification(self):
-
-        print("Test1")
+        #print("Subsampled classfication...")
         self.subsampled_classify()
-        print("Check1")
+        #print("Showing subsampled performance...")
         self.show_subsampled_performance()
-        print("Check2")
+        #print("Saving all training...")
         self.save_all_train_info()
-        print("Check3")
+        #print("Save subsampled data...")
         self.save_subsampled_info()
-        print("Check4")
+        #print("All done.")
 
     def self_learn(self):
         [features_train,
