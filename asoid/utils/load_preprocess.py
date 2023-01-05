@@ -382,7 +382,7 @@ class Preprocess:
         # drop all classes that are deselected
         # select_label_df.drop(columns=deselected_classes, inplace=True)
         # make sure that other is one of the selected classes
-        if "other" not in self.classes:
+        if "other" not in self.classes and not self.exclude_other:
             self.classes.append("other")
 
         # make sure that all classes are in (irrelevant for most cases):
