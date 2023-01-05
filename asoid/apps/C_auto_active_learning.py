@@ -19,7 +19,7 @@ CATEGORY = categories.CLASSIFY_BEHAVIORS
 TITLE = "Active Learning"
 
 
-def prompt_setup(software, train_fx, working_dir, prefix):
+def prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotation_classes):
     [_, targets_runlist, _, _] = load_features(working_dir, prefix)
     if software == 'CALMS21 (PAPER)':
         ROOT = Path(__file__).parent.parent.parent.resolve()
@@ -31,26 +31,34 @@ def prompt_setup(software, train_fx, working_dir, prefix):
         # targets_test = np.hstack(load_test_targets(working_dir, prefix))
     col1, col2 = st.columns(2)
 
-    data_samples_per = [np.mean([len(np.where(targets_runlist[i] == be)[0])
-                        for i in range(len(targets_runlist))]) for be in np.unique(targets_runlist)]
+    if exclude_other:
+        label_code_other = max(np.unique(np.hstack(targets_runlist)))
+        data_samples_per = [np.mean([len(np.where(targets_runlist[i] == be)[0])
+                                     for i in range(len(targets_runlist))]) for be in np.unique(targets_runlist) if
+                            be != label_code_other]
+    else:
+        data_samples_per = [np.mean([len(np.where(targets_runlist[i] == be)[0])
+                                     for i in range(len(targets_runlist))]) for be in np.unique(targets_runlist)]
+
     col1_exp = col1.expander('Initial sampling ratio'.upper(), expanded=True)
     col2_exp = col2.expander('Max number of iterations'.upper(), expanded=True)
     col2_bot_exp = col2.expander('Samples per iteration'.upper(), expanded=True)
 
     if 'init_ratio' not in st.session_state:
         st.session_state.init_ratio = float(train_fx)
-        init_ratio = col1_exp.number_input(
-            f'On average, samples to train: '
-            f'{[round(data_samples_per[b] * st.session_state.init_ratio, 2) for b in range(len(data_samples_per))]}',
+        init_ratio = col1_exp.number_input("Select an initial sampling ratio",
             min_value=0.0, max_value=1.0, value=0.01, key='init3', help = INIT_RATIO_HELP)
+
     else:
         init_ratio = col1_exp.number_input(
-            f'On average, samples to train: '
-            f'{[round(data_samples_per[b] * st.session_state.init_ratio, 2) for b in range(len(data_samples_per))]}',
+            "Select an initial sampling ratio",
             min_value=0.0, max_value=1.0, value=st.session_state.init_ratio, key='init3', help = INIT_RATIO_HELP)
         st.session_state.init_ratio = init_ratio
-        if col1_exp.button('Set'):
-            st.experimental_rerun()
+    # give user info about samples
+    annotation_classes = [k.strip()  for k in annotation_classes.split(",")]
+    info_text = [f"{annotation_classes[i]} [{round(data_samples_per[i] * st.session_state.init_ratio, 2)}]" for i in range(len(data_samples_per))]
+    col1_exp.info('On average, samples to train per class: \n\n' + ";  ".join(info_text))
+
     max_iter = col2_exp.number_input('Max number of self-learning iterations',
                                      min_value=1, max_value=None, value=100, key='maxi3', help = MAX_ITER_HELP)
     max_samples_iter = col2_bot_exp.number_input(f'Max samples amongst the '
@@ -110,7 +118,7 @@ def main(config=None):
                 message_container.success(f'This prefix had been classified.')
             else:
                 init_ratio, max_iter, max_samples_iter, features_heldout, targets_heldout = \
-                    prompt_setup(software, train_fx, working_dir, prefix)
+                    prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotation_classes)
                 if st.button('re-classify'.upper()):
                     rf_classifier = RF_Classify(working_dir, prefix, software,
                                                 init_ratio, max_iter, max_samples_iter,
@@ -120,7 +128,7 @@ def main(config=None):
             #make sure the features were extracted:
             try:
                 init_ratio, max_iter, max_samples_iter, features_heldout, targets_heldout = \
-                    prompt_setup(software, train_fx, working_dir, prefix)
+                    prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotation_classes)
                 if st.button('classify'.upper()):
                     rf_classifier = RF_Classify(working_dir, prefix, software,
                                                 init_ratio, max_iter, max_samples_iter,
