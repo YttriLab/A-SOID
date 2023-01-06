@@ -50,7 +50,7 @@ def show_classifier_results(annotation_classes, all_score,
     fig.add_scatter(y=np.repeat(100 * round(mean_scores2beat, 2), scores.shape[0]),
                     mode='lines',
                     marker=dict(color='white', opacity=0.1),
-                    name='average to beat',
+                    name='average (full data)',
                     row=1, col=1
                     )
     for c, c_name in enumerate(behavior_classes):
@@ -60,7 +60,7 @@ def show_classifier_results(annotation_classes, all_score,
                             row=1, col=1
                             )
             fig.add_scatter(y=np.repeat(100 * round(scores2beat_byclass[c], 2), scores.shape[0]), mode='lines',
-                            marker=dict(color=behavior_colors[c_name]), name=str.join('', (c_name, ' to beat')),
+                            marker=dict(color=behavior_colors[c_name]), name=str.join('', (c_name, ' (full data)')),
                             row=1, col=1
                             )
     fig.add_scatter(y=mean_scores, mode='lines+markers',
@@ -73,7 +73,7 @@ def show_classifier_results(annotation_classes, all_score,
                      linecolor='dimgray', gridcolor='dimgray')
     fig.for_each_trace(
         lambda trace: trace.update(line=dict(width=2, dash="dot"))
-        if trace.name.endswith('to beat')
+        if trace.name.endswith('with full data')
         else (trace.update(line=dict(width=2))),
     )
 
@@ -285,7 +285,7 @@ class RF_Classify:
         fig.add_scatter(y=np.repeat(100 * round(mean_scores2beat, 2), self.max_iter + 1),
                         mode='lines',
                         marker=dict(color='white', opacity=0.1),
-                        name='average to beat',
+                        name='average (full data)',
                         row=1, col=1
                         )
         fig.update_xaxes(range=[-.5, self.max_iter + .5],
@@ -293,7 +293,7 @@ class RF_Classify:
         fig.update_yaxes(ticksuffix="%", linecolor='dimgray', gridcolor='dimgray')
         fig.for_each_trace(
             lambda trace: trace.update(line=dict(width=2, dash="dot"))
-            if trace.name == "average to beat"
+            if trace.name == "average (full data)"
             else (trace.update(line=dict(width=2))),
         )
         fig.update_layout(
@@ -462,7 +462,7 @@ class RF_Classify:
         fig.add_scatter(y=np.repeat(100 * round(mean_scores2beat, 2), self.max_iter + 1),
                         mode='lines',
                         marker=dict(color='white', opacity=0.1),
-                        name='average to beat',
+                        name='average (full data)',
                         row=1, col=1
                         )
         for c, c_name in enumerate(behavior_classes):
@@ -473,7 +473,7 @@ class RF_Classify:
                                 )
                 fig.add_scatter(y=np.repeat(100 * round(np.mean(self.all_f1_scores, axis=0)[c], 2),
                                             self.max_iter + 1), mode='lines',
-                                marker=dict(color=default_colors[c]), name=str.join('', (c_name, ' to beat')),
+                                marker=dict(color=default_colors[c]), name=str.join('', (c_name, ' (full data)')),
                                 row=1, col=1
                                 )
         fig.add_scatter(y=mean_scores, mode='lines+markers',
@@ -487,7 +487,7 @@ class RF_Classify:
         fig.update_yaxes(ticksuffix="%", linecolor='dimgray', gridcolor='dimgray')
         fig.for_each_trace(
             lambda trace: trace.update(line=dict(width=2, dash="dot"))
-            if trace.name.endswith('to beat')
+            if trace.name.endswith('(full data)')
             else (trace.update(line=dict(width=2))),
         )
         # fig.update_traces(line=dict(width=2))
