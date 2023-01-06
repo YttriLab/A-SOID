@@ -257,7 +257,7 @@ class Preprocess:
             self.select_software()
             if not self.software == 'CALMS21 (PAPER)':
                 upload_container = st.container()
-                if st.checkbox("Use folder import", help = DATA_DIR_IMPORT_HELP):
+                if upload_container.checkbox("Use folder import", help = DATA_DIR_IMPORT_HELP):
                     #find our pose and label files automatically
                     #self.select_data_directories()
 
@@ -382,6 +382,8 @@ class Preprocess:
         # drop all classes that are deselected
         # select_label_df.drop(columns=deselected_classes, inplace=True)
         # make sure that other is one of the selected classes
+        #if "other" not in self.classes and not self.exclude_other:
+
         if "other" not in self.classes:
             self.classes.append("other")
 
@@ -394,7 +396,12 @@ class Preprocess:
         # rearrange so that "other" is always last and classes are in the order they were selected:
         select_label_df = select_label_df.reindex(
             columns=(list([clm for clm in self.classes if clm != "other"]) + ["other"]))
-        # convert dummie encoding to numbers but keep also identify of classes not represented in this file
+
+        #get rid of "other" column if excluded
+        # if self.exclude_other:
+        #     select_label_df.drop(columns=["other"], inplace=True)
+
+        # convert dummie encoding to numbers but keep also identity of classes not represented in this file
         label_vector = np.argmax(np.array(select_label_df), axis=1)
 
         return label_vector

@@ -19,6 +19,7 @@ def show_classifier_results(annotation_classes, all_score,
     option_col.write('')
     option_col.write('')
     option_col.write('')
+    option_expander = option_col.expander("Configure Plot")
     behavior_classes = annotation_classes.split(', ')
     behavior_colors = {k: [] for k in behavior_classes}
     all_c_options = list(mcolors.CSS4_COLORS.keys())
@@ -31,7 +32,7 @@ def show_classifier_results(annotation_classes, all_score,
         default_colors = [all_c_options[s] for s in selected_idx]
 
     for i, class_id in enumerate(behavior_classes):
-        behavior_colors[class_id] = option_col.selectbox(f'Color for {behavior_classes[i]}',
+        behavior_colors[class_id] = option_expander.selectbox(f'Color for {behavior_classes[i]}',
                                                          all_c_options,
                                                          index=all_c_options.index(default_colors[i]),
                                                          key=f'color_option{i}')
@@ -50,7 +51,7 @@ def show_classifier_results(annotation_classes, all_score,
     fig.add_scatter(y=np.repeat(100 * round(mean_scores2beat, 2), scores.shape[0]),
                     mode='lines',
                     marker=dict(color='white', opacity=0.1),
-                    name='average to beat',
+                    name='average (full data)',
                     row=1, col=1
                     )
     for c, c_name in enumerate(behavior_classes):
@@ -60,7 +61,7 @@ def show_classifier_results(annotation_classes, all_score,
                             row=1, col=1
                             )
             fig.add_scatter(y=np.repeat(100 * round(scores2beat_byclass[c], 2), scores.shape[0]), mode='lines',
-                            marker=dict(color=behavior_colors[c_name]), name=str.join('', (c_name, ' to beat')),
+                            marker=dict(color=behavior_colors[c_name]), name=str.join('', (c_name, ' (full data)')),
                             row=1, col=1
                             )
     fig.add_scatter(y=mean_scores, mode='lines+markers',
@@ -73,7 +74,7 @@ def show_classifier_results(annotation_classes, all_score,
                      linecolor='dimgray', gridcolor='dimgray')
     fig.for_each_trace(
         lambda trace: trace.update(line=dict(width=2, dash="dot"))
-        if trace.name.endswith('to beat')
+        if trace.name.endswith('with full data')
         else (trace.update(line=dict(width=2))),
     )
 
@@ -169,21 +170,14 @@ class RF_Classify:
         for i in range(len(features_train)):
             X_all = []
             Y_all = []
-            # old code from Alex
-            # for b in np.unique(targets_runlist[i]):
-            #     if b != self.label_code_other:
-            #         idx_b = np.where(targets_runlist[i] == b)[0]
-            #         X_all.append(features_runlist[i][idx_b[:]])
-            #         Y_all.append(targets_runlist[i][idx_b[:]])
+
             unique_classes = np.unique(np.hstack([np.hstack(targets_train), np.hstack(self.targets_heldout)]))
+            #remove other if exclude other
+            if self.exclude_other:
+                unique_classes = unique_classes[unique_classes != self.label_code_other]
+
             # go through each class and select the all samples from the features and targets
             for sample_label in unique_classes:
-                if self.exclude_other:
-                    #skip other if excluded
-                    if sample_label != self.label_code_other:
-                        X_all.append(features_train[i][targets_train[i] == sample_label][:])
-                        Y_all.append(targets_train[i][targets_train[i] == sample_label][:])
-                else:
                     X_all.append(features_train[i][targets_train[i] == sample_label][:])
                     Y_all.append(targets_train[i][targets_train[i] == sample_label][:])
 
@@ -202,7 +196,7 @@ class RF_Classify:
             else:
                 predict = frameshift_predict(data_test, len(data_test), scalar,
                                              self.all_model, framerate=120)
-            # check f1 scores per class
+            # check f1 scores per class, always exclude other (unlabeled data)
             self.all_f1_scores.append(f1_score(
                 self.targets_heldout[i][self.targets_heldout[i] != self.label_code_other],
                 predict[self.targets_heldout[i] != self.label_code_other],
@@ -222,25 +216,16 @@ class RF_Classify:
             X = []
             Y = []
 
-            # original from Alex
-            # samples2train = [int(len(np.where(targets_runlist[i] == b)[0]) * self.init_ratio)
-            #                  for b in np.unique(targets_runlist[i]) if b < max(np.unique(self.targets_test))]
-            # for b in np.unique(targets_runlist[i]):
-            #     if b != self.label_code_other:
-            #         idx_b = np.where(targets_runlist[i] == b)[0]
-            #         X.append(features_runlist[i][idx_b[:samples2train[int(b)]]])
-            #         Y.append(targets_runlist[i][idx_b[:samples2train[int(b)]]])
-
             # find the available amount of samples in the trainset,
             # take only the initial ratio and only classes that are in test
             # this returns 0 for samples that are not available
             samples2train = [int(np.sum(targets_train[i] == b) * self.init_ratio)
-                             for b in unique_classes if b != self.label_code_other]
+                             for b in unique_classes]
 
             # go through each class and select the number of samples from the features and targets
             for n_samples, sample_label in zip(samples2train, unique_classes):
                 # if there are samples in the train
-                if n_samples > 0 and sample_label != self.label_code_other:
+                if n_samples > 0:
                     X.append(features_train[i][targets_train[i] == sample_label][:n_samples])
                     Y.append(targets_train[i][targets_train[i] == sample_label][:n_samples])
 
@@ -287,9 +272,7 @@ class RF_Classify:
             selected_idx = np.random.choice(np.arange(len(all_c_options)), len(behavior_classes), replace=False)
             default_colors = [all_c_options[s] for s in selected_idx]
         mean_scores2beat = np.mean(np.mean(self.all_f1_scores, axis=0), axis=0)
-        print(np.mean(self.iter0_f1_scores, axis=0))
         for c, c_name in enumerate(behavior_classes):
-            print(c, c_name)
             if c_name != behavior_classes[-1]:
                 self.perf_by_class[c_name].append(int(100 * round(np.mean(self.iter0_f1_scores, axis=0)[c], 2)))
                 self.perf2beat_by_class[c_name].append(int(100 * round(np.mean(self.all_f1_scores, axis=0)[c], 2)))
@@ -303,7 +286,7 @@ class RF_Classify:
         fig.add_scatter(y=np.repeat(100 * round(mean_scores2beat, 2), self.max_iter + 1),
                         mode='lines',
                         marker=dict(color='white', opacity=0.1),
-                        name='average to beat',
+                        name='average (full data)',
                         row=1, col=1
                         )
         fig.update_xaxes(range=[-.5, self.max_iter + .5],
@@ -311,7 +294,7 @@ class RF_Classify:
         fig.update_yaxes(ticksuffix="%", linecolor='dimgray', gridcolor='dimgray')
         fig.for_each_trace(
             lambda trace: trace.update(line=dict(width=2, dash="dot"))
-            if trace.name == "average to beat"
+            if trace.name == "average (full data)"
             else (trace.update(line=dict(width=2))),
         )
         fig.update_layout(
@@ -328,16 +311,15 @@ class RF_Classify:
         self.placeholder.plotly_chart(fig, use_container_width=True)
 
     def base_classification(self):
-
-        print("Test1")
+        #print("Subsampled classfication...")
         self.subsampled_classify()
-        print("Check1")
+        #print("Showing subsampled performance...")
         self.show_subsampled_performance()
-        print("Check2")
+        #print("Saving all training...")
         self.save_all_train_info()
-        print("Check3")
+        #print("Save subsampled data...")
         self.save_subsampled_info()
-        print("Check4")
+        #print("All done.")
 
     def self_learn(self):
         [features_train,
@@ -481,7 +463,7 @@ class RF_Classify:
         fig.add_scatter(y=np.repeat(100 * round(mean_scores2beat, 2), self.max_iter + 1),
                         mode='lines',
                         marker=dict(color='white', opacity=0.1),
-                        name='average to beat',
+                        name='average (full data)',
                         row=1, col=1
                         )
         for c, c_name in enumerate(behavior_classes):
@@ -492,7 +474,7 @@ class RF_Classify:
                                 )
                 fig.add_scatter(y=np.repeat(100 * round(np.mean(self.all_f1_scores, axis=0)[c], 2),
                                             self.max_iter + 1), mode='lines',
-                                marker=dict(color=default_colors[c]), name=str.join('', (c_name, ' to beat')),
+                                marker=dict(color=default_colors[c]), name=str.join('', (c_name, ' (full data)')),
                                 row=1, col=1
                                 )
         fig.add_scatter(y=mean_scores, mode='lines+markers',
@@ -506,7 +488,7 @@ class RF_Classify:
         fig.update_yaxes(ticksuffix="%", linecolor='dimgray', gridcolor='dimgray')
         fig.for_each_trace(
             lambda trace: trace.update(line=dict(width=2, dash="dot"))
-            if trace.name.endswith('to beat')
+            if trace.name.endswith('(full data)')
             else (trace.update(line=dict(width=2))),
         )
         # fig.update_traces(line=dict(width=2))

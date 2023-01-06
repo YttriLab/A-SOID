@@ -121,7 +121,35 @@ pip install .
 
 A-SOiD is installed alongside all dependencies.
 
-### How to start A-SOiD:
+## Updating A-SOiD
+
+1. Download or clone the latest version of A-SOiD from this repository.
+
+2. Activate the environment you installed A-SOiD in.
+````
+conda activate asoid
+````
+3. Go to the locotion of that you unpacked the latest version at.
+````
+cd path/to/A-SOiD
+````
+4. Install the new version on-top of the other using `setup.py`:
+````
+pip install .
+````
+The console output should look like this:
+
+    Successfully built asoid
+    Installing collected packages: asoid
+      Attempting uninstall: asoid
+        Found existing installation: asoid 0.1
+        Uninstalling asoid-0.1:
+          Successfully uninstalled asoid-0.1
+    Successfully installed asoid-0.2.0
+
+You can start A-SOiD again and use the new version just like before.
+
+## How to start A-SOiD:
 
 ````
 conda activate asoid

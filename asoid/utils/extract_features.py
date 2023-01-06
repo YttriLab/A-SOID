@@ -346,33 +346,35 @@ def interactive_durations_dist(targets, annotation_classes, framerate, plot_cont
     option_col.write('')
     option_col.write('')
     all_c_options = list(mcolors.CSS4_COLORS.keys())
-    if split_by_class:
-        behavior_classes = annotation_classes.split(', ')
-        behavior_colors = {k: [] for k in behavior_classes}
-        if len(behavior_classes) == 4:
-            default_colors = ["red", "darkorange", "dodgerblue", "gray"]
-        else:
-            np.random.seed(42)
-            selected_idx = np.random.choice(np.arange(len(all_c_options)), len(behavior_classes), replace=False)
-            default_colors = [all_c_options[s] for s in selected_idx]
+    with option_col:
+        option_expander = st.expander("Configure plot")
+        if split_by_class:
+            behavior_classes = annotation_classes.split(', ')
+            behavior_colors = {k: [] for k in behavior_classes}
+            if len(behavior_classes) == 4:
+                default_colors = ["red", "darkorange", "dodgerblue", "gray"]
+            else:
+                np.random.seed(42)
+                selected_idx = np.random.choice(np.arange(len(all_c_options)), len(behavior_classes), replace=False)
+                default_colors = [all_c_options[s] for s in selected_idx]
 
-        for i, class_id in enumerate(behavior_classes):
-            behavior_colors[class_id] = option_col.selectbox(f'Color for {behavior_classes[i]}',
-                                                             all_c_options,
-                                                             index=all_c_options.index(default_colors[i]),
-                                                             key=f'color_option{i}',
-                                                             help= BEHAVIOR_COLOR_SELECT_HELP)
-        colors = [behavior_colors[class_id] for class_id in behavior_classes]
-    else:
-        behavior_colors = {k: [] for k in ['All']}
-        default_colors = ['dodgerblue']
-        for i, class_id in enumerate(['All']):
-            behavior_colors[class_id] = option_col.selectbox(f'Color for all',
-                                                             all_c_options,
-                                                             index=all_c_options.index(default_colors[i]),
-                                                             key=f'color_option{i}',
-                                                             help = BEHAVIOR_COLOR_SELECT_HELP)
-        colors = [behavior_colors[class_id] for class_id in ['All']]
+            for i, class_id in enumerate(behavior_classes):
+                behavior_colors[class_id] = option_expander.selectbox(f'Color for {behavior_classes[i]}',
+                                                                 all_c_options,
+                                                                 index=all_c_options.index(default_colors[i]),
+                                                                 key=f'color_option{i}',
+                                                                 help= BEHAVIOR_COLOR_SELECT_HELP)
+            colors = [behavior_colors[class_id] for class_id in behavior_classes]
+        else:
+            behavior_colors = {k: [] for k in ['All']}
+            default_colors = ['dodgerblue']
+            for i, class_id in enumerate(['All']):
+                behavior_colors[class_id] = option_expander.selectbox(f'Color for all',
+                                                                 all_c_options,
+                                                                 index=all_c_options.index(default_colors[i]),
+                                                                 key=f'color_option{i}',
+                                                                 help = BEHAVIOR_COLOR_SELECT_HELP)
+            colors = [behavior_colors[class_id] for class_id in ['All']]
 
     annotations = annotation_classes.split(', ')
     duration_dict = {k: [] for k in annotations}
@@ -385,6 +387,8 @@ def interactive_durations_dist(targets, annotation_classes, framerate, plot_cont
     for seq in range(len(durations)):
         current_seq_durs = durations[seq]
         for unique_beh in np.unique(np.hstack(corr_targets)):
+            #make sure it's an int
+            unique_beh = int(unique_beh)
             idx_behavior = np.where(corr_targets[seq] == unique_beh)[0]
             curr_annot = annotations[unique_beh]
             if len(idx_behavior) > 0:

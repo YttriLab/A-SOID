@@ -5,6 +5,8 @@ CALM_HELP = " Keep this parameter if you want to replicate our findings."
 NO_CONFIG_HELP = "Upload a config file to access this step. If you have not created a project yet," \
                  " return to 'Menu', or go directly to 'Upload Data' to begin your project."
 
+NO_FEATURES_HELP = "Make sure that you extracted the features in the previous step."
+
 """Menu"""
 
 UPLOAD_CONFIG_HELP = "Upload config files from previous A-SOiD projects to continue working on them."
