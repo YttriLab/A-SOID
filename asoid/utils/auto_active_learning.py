@@ -19,6 +19,7 @@ def show_classifier_results(annotation_classes, all_score,
     option_col.write('')
     option_col.write('')
     option_col.write('')
+    option_expander = option_col.expander("Configure Plot")
     behavior_classes = annotation_classes.split(', ')
     behavior_colors = {k: [] for k in behavior_classes}
     all_c_options = list(mcolors.CSS4_COLORS.keys())
@@ -31,7 +32,7 @@ def show_classifier_results(annotation_classes, all_score,
         default_colors = [all_c_options[s] for s in selected_idx]
 
     for i, class_id in enumerate(behavior_classes):
-        behavior_colors[class_id] = option_col.selectbox(f'Color for {behavior_classes[i]}',
+        behavior_colors[class_id] = option_expander.selectbox(f'Color for {behavior_classes[i]}',
                                                          all_c_options,
                                                          index=all_c_options.index(default_colors[i]),
                                                          key=f'color_option{i}')
