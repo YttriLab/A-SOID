@@ -219,6 +219,7 @@ class Explorer:
         st.success(f"Upload newly created project {new_prefix} to continue training with the new classes".upper())
 
     def save_subclasses(self, selected_subclasses):
+
         idx_class = np.argwhere(self.target_set == self.selected_class_num)
         org_num_classes = len(self.classes)
         class_name = self.number_to_class[self.selected_class_num]
@@ -240,11 +241,16 @@ class Explorer:
         upsample_rate = time_step / sample_rate
 
         new_targets = np.repeat(self.new_annotations, int(upsample_rate),axis=0)
-        #reshape into targets shape
-        new_targets = new_targets.astype(self.targets.dtype)
-        new_targets = new_targets.reshape((1,new_targets.shape[0]))
-
-        self.export_to_new_project(new_targets)
+        #turn into int to avoid indexing issues later
+        new_targets = new_targets.astype(int)
+        #reshape/split into targets shape
+        # List of lengths of the sub-arrays (original files)
+        sub_array_lengths = [sub_array.shape[0] for sub_array in self.targets]
+        # cumsum to get relative position of each file, we can ignore the last
+        sub_array_idx = np.cumsum(sub_array_lengths[:-1])
+        # Split the array using `split`
+        split_targets = np.split(new_targets, sub_array_idx)
+        self.export_to_new_project(split_targets)
 
     def run_discovery(self):
 

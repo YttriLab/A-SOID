@@ -387,6 +387,8 @@ def interactive_durations_dist(targets, annotation_classes, framerate, plot_cont
     for seq in range(len(durations)):
         current_seq_durs = durations[seq]
         for unique_beh in np.unique(np.hstack(corr_targets)):
+            #make sure it's an int
+            unique_beh = int(unique_beh)
             idx_behavior = np.where(corr_targets[seq] == unique_beh)[0]
             curr_annot = annotations[unique_beh]
             if len(idx_behavior) > 0:
