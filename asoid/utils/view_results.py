@@ -1,8 +1,13 @@
 import numpy as np
 import pandas as pd
 import streamlit as st
+from stqdm import stqdm
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import os
+import glob
+import cv2
+import joblib
 from plotly.subplots import make_subplots
 import plotly.express as px
 import plotly.graph_objects as go
@@ -12,6 +17,8 @@ import matplotlib.colors as mcolors
 
 from config.help_messages import VIEW_LOADER_HELP
 from utils.import_data import load_labels
+from utils.load_workspace import load_data
+from utils.motionenergy import conv_2_egocentric, collect_labels, animate_blobs
 
 
 def label_blocks(df, clm_block):
@@ -88,12 +95,30 @@ class Viewer:
             self.framerate = config["Project"].getint("FRAMERATE")
             self.duration_min = config["Processing"].getfloat("MIN_DURATION")
 
+            self.keypoints = [x.strip() for x in config["Project"].get("KEYPOINTS_CHOSEN").split(",")]
+            keypoints_idx = np.arange(len(self.keypoints) * 2)
+            keypoints_idx = np.reshape(keypoints_idx, (len(self.keypoints), 2))
+            self.keypoints_to_idx = {self.keypoints[i]: list(keypoints_idx[i]) for i in range(len(self.keypoints))}
+
+            self.class_to_number = {s: i for i, s in enumerate(self.annotation_classes)}
+            self.number_to_class = {i: s for i, s in enumerate(self.annotation_classes)}
+
+            [data, _] = load_data(self.working_dir, self.prefix)
+            [self.processed_input_data, self.targets] = data
+
+
         else:
             self.working_dir = None
             self.prefix = None
             self.annotation_classes = None
             self.framerate = None
             self.duration_min = None
+            self.keypoints = None
+            self.keypoints_to_idx = None
+            self.class_to_number = None
+            self.number_to_class = None
+            self.processed_input_data = None
+            self.targets = None
 
         pass
 
@@ -221,20 +246,256 @@ class Viewer:
     #
     #     plot_cont.plotly_chart(fig,use_container_width=False)
 
+    def select_outline(self):
+        "Allows GUI selection of polygons made up by bodyparts as corners for blob animation"
+        # available colors
+        colors = dict(cyan = (255, 255, 0)
+                      , magenta = (255, 0, 255))
+
+        POLY_COUNT_HELP = "TeST"
+        SINGLE_POLY_HELP = "TeST"
+
+
+
+        poly_count = st.number_input("Number of Polygons"
+                                     , help= POLY_COUNT_HELP
+                                     , step = 1
+                                     , min_value=1
+                                     , key= "poly_count"
+                                     )
+        outline_dict = {}
+        #TODO: Add image for visual explanation?
+        for poly in range(int(poly_count)):
+            polygon_key = "Polygon {}".format(poly)
+            st.write(polygon_key)
+            poly_selection = st.multiselect("Select the body parts to form the polygon"
+                           ,self.keypoints
+                           ,help = SINGLE_POLY_HELP
+                           ,key = "poly_select{}".format(poly)
+                                            )
+            color_selection = st.selectbox("Select a color for that polygon"
+                                           , list(colors.keys())
+                                           ,key = "poly_select{}".format(poly)
+                                           ,)
+
+            outline_dict[polygon_key] = dict(order = poly_selection
+                                             ,color = colors[color_selection]
+                                            )
+
+        #translate selected keypoints into indices
+        for poly_part in outline_dict.keys():
+            outline_dict[poly_part]["idx"] = []
+            kp_names = outline_dict[poly_part]["order"]
+            for kp in kp_names:
+                outline_dict[poly_part]["idx"].append(self.keypoints_to_idx[kp])
+
+        return outline_dict
+
+    def create_blob_animation(self, outline_dict, ref_origin_idx, ref_rot_idxs):
+        """
+        :params outline_dict, dict: Dictionary of user-defined polygons, including color and keypoint idxs
+        :param ref_origin_idx, tuple/list: Idx of keypoint used for egocentric alignment as new origin
+        :param ref_rot_idxs, tuple/list: Idx of keypoint used for egocentric alignment as x-axis
+        """
+
+        outpath = os.path.join(self.working_dir, self.prefix, "animations")
+
+        # find all frames in all sequences for selected class:
+        for selected_class in stqdm(range(len(self.annotation_classes)), desc = "Collecting examples and animating blobs..."):
+            label_collection, total_labels = collect_labels(self.targets, selected_class)
+
+            st.info(f"Found {len(label_collection)} files with a total of {total_labels} for class {self.number_to_class[selected_class]}.")
+
+            for sequence_number in stqdm(range(len(label_collection)), desc = "Going through files..."):
+                transition_idx = np.where(np.diff(label_collection[sequence_number]) != 1)[0] + 1
+                for i, t in enumerate(transition_idx):
+                    collection_array = None
+                    if i == 0:
+                        for num, l_list in enumerate([label_collection[sequence_number][:t]]):
+                            # select only frames from sequence with selected class
+                            if collection_array is None:
+                                collection_array = self.processed_input_data[sequence_number][l_list, :]
+                            else:
+                                collection_array = np.concatenate(
+                                    [collection_array, self.processed_input_data[sequence_number][l_list, :]], axis=0)
+                    else:
+                        for num, l_list in enumerate([label_collection[sequence_number][transition_idx[i - 1]:t]]):
+                            # select only frames from sequence with selected class
+                            if collection_array is None:
+                                collection_array = self.processed_input_data[sequence_number][l_list, :]
+                            else:
+                                collection_array = np.concatenate(
+                                    [collection_array, self.processed_input_data[sequence_number][l_list, :]], axis=0)
+
+                    ## motion energy works on >= 2 frames
+                    if (len(collection_array) >= 2):
+                        class_data_ego = conv_2_egocentric(collection_array,
+                                                           ref_rot_idxs=ref_rot_idxs, ref_origin_idx=ref_origin_idx)
+                        #create folder for class if not existing
+                        vid_path = os.path.join(outpath, f"{self.number_to_class[selected_class]}")
+                        os.makedirs(vid_path, exist_ok=True)
+                        #generate video name on current parameters
+                        video_name = os.path.join(vid_path,
+                                                  f"{self.number_to_class[selected_class].replace(' ', '_')}_seq{sequence_number}_example{i}.avi")
+                        #animate and save file
+                        animate_blobs(class_data_ego, video_name, outlines=outline_dict)
+
+    def extract_frames(self):
+        outpath = os.path.join(self.working_dir, self.prefix, "animations")
+        frame_list = {}
+        for sdx in stqdm(range(len(self.annotation_classes)),desc = "Extracting frames from videos for actions"):
+            selected_behavior = self.annotation_classes[sdx]
+            files = glob.glob(str.join('', (os.path.join(outpath, selected_behavior), '/*.avi')), recursive=True)
+            if not files:
+                #when there are no files, just ignore it
+                continue
+            behavior_i = []
+            for idx in stqdm(range(len(files)), desc = "Going through examples..."):
+                test_video = files[idx]
+                cap = cv2.VideoCapture(test_video)
+                frameCount = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                frameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+                resize_f = 3
+                resize_dim = (frameHeight // resize_f, frameWidth // resize_f)
+
+                # convert video into numpy array of frames (binary)
+
+                success, image = cap.read()
+                count = 0
+                frame_array = np.empty((frameCount, resize_dim[0], resize_dim[1]), np.dtype('uint8'))
+                while count < frameCount - 1 and success:
+                    success, img = cap.read()
+                    # convert to grayscale
+                    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                    # convert to binary
+                    thresh = 1
+                    im_bw = cv2.threshold(gray, thresh, 255, cv2.THRESH_BINARY)[1]
+                    # resize for easier calculations
+                    res_bw = cv2.resize(im_bw, (resize_dim[0], resize_dim[1]))
+                    # add to numpy array
+                    frame_array[count] = res_bw
+                    count += 1
+                behavior_i.append(frame_array)
+                frame_list[selected_behavior] = behavior_i
+                cap.release()
+
+        return frame_list
+
+    @st.cache
+    def calc_motion_energy(self, frame_list):
+        motion_energy_by_behavior = {}
+        for selected_behavior in list(frame_list.keys()):
+            norm_diff_list = []
+            for example in range(len(frame_list[selected_behavior])):
+                abs_diff = np.absolute(np.diff(frame_list[selected_behavior][example], axis=0))
+                norm_diff = np.nanmean(abs_diff, axis=0)
+                norm_diff_list.append(norm_diff)
+            motion_energy_by_behavior[selected_behavior] = norm_diff_list
+
+        return motion_energy_by_behavior
+
+    def view_motion_energy(self, motion_energy):
+
+        #TODO UI adjustment of color range
+        #c_range = st.slider("Color range", min_value = 0 , max_value = 100, [0, 20])
+        c_range = [0, 20]
+        motion_energy_keys = list(motion_energy.keys())
+        fig = make_subplots(rows=1, cols=len(motion_energy_keys)
+                            , subplot_titles= motion_energy_keys
+                            )
+
+        for i, action_type in enumerate(motion_energy_keys):
+            fig.add_trace(go.Heatmap(z=np.nanmean(motion_energy[action_type], axis=0),
+                                     name=action_type, showscale=True,
+                                     #colorbar=dict(title='Intensity',
+                                     #              x=1.05, len=0.5),
+                                     zmin=c_range[0], zmax=c_range[1]
+                                     ,colorscale= px.colors.sequential.Viridis
+                                     )
+                          ,col = i +1
+                          ,row = 1)
+
+        fig.update_layout(title='Motion energy')
+        fig.update_xaxes(showticklabels = False)
+        fig.update_yaxes(showticklabels=False)
+        #fig.update(layout_coloraxis_showscale=False)
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    def get_motionenergy(self):
+
+        ego_container = st.container()
+        polygon_container = st.container()
+        motion_container = st.container()
+
+        #get user input for egocentric alignment
+        #TODO: limit selection to two
+        with ego_container:
+            egocentric_bps = st.multiselect("Select body parts to align pose estimation to:", self.keypoints
+                           #, max_selections  = 2 #only available for higher versions of streamlit
+                           ,help="Select two keypoints that an egocentric alignment is based on. "
+                                 " The first selected keypoint will be used as the new origin (0,0). "
+                                 " The second will be used as aligned to the x-axis. "
+                                 "Note that, depending on your choice, the resulting motion energy images will look differnt."
+                                 "\n\n Tip: Select bodyparts that form a natural axis in your animals/behaviors, such as the tail base and nose point of the animal."
+                                            )
+
+            if len(egocentric_bps) >= 2:
+                #pick first two and transform into index
+                ref_origin_idx = self.keypoints_to_idx[egocentric_bps[0]]
+                ref_rot_idxs = self.keypoints_to_idx[egocentric_bps[1]]
+                st.info("Reference for new origin: {} \n\n Reference for x-axis alignment: {}".format(egocentric_bps[0], egocentric_bps[1]))
+
+        with polygon_container:
+            #get user input to create polygons for blob animation using keypoints as corners
+            outline_dict = self.select_outline()
+
+            if st.button("Create Animations"):
+                self.create_blob_animation(outline_dict, ref_origin_idx, ref_rot_idxs)
+        with motion_container:
+            file_path = os.path.join(self.working_dir, self.prefix, 'temp_boutframes_bylabel.sav')
+            try:
+                # try to load the file if it already exists
+                with open(file_path, 'rb') as fr:
+                    frame_list = joblib.load(fr)
+                motion_energy = self.calc_motion_energy(frame_list)
+                self.view_motion_energy(motion_energy)
+            except FileNotFoundError:
+                if st.button("Extract frames for Motion Energy"):
+                    # extract frames
+                    frame_list = self.extract_frames()
+                    # save it for next time
+                    with open(file_path, 'wb') as f:
+                        joblib.dump(frame_list, f)
+
+                    motion_energy = self.calc_motion_energy(frame_list)
+                    self.view_motion_energy(motion_energy)
+
+
+
     def main(self):
 
-        self.upload_labels()
-        self.label_csvs = {}
-        if self.label_files:
-            for file in self.label_files:
-                file.seek(0)
-                temp_name = file.name
-                labels = load_labels(file,origin = "BORIS", fps = self.framerate)
-                self.label_csvs[temp_name] = labels
+        label_exp = st.expander("View label files")
+        blob_exp = st.expander("Motion Energy")
+        with label_exp:
+            self.upload_labels()
+            self.label_csvs = {}
+            if self.label_files:
+                for file in self.label_files:
+                    file.seek(0)
+                    temp_name = file.name
+                    labels = load_labels(file,origin = "BORIS", fps = self.framerate)
+                    self.label_csvs[temp_name] = labels
 
-            for num, f_name in enumerate(self.label_csvs.keys()):
+                for num, f_name in enumerate(self.label_csvs.keys()):
 
-                with st.expander(label = f_name ):
-                    self.plot_labels_matplotlib(self.label_csvs[f_name])
+                    with st.expander(label = f_name ):
+                        self.plot_labels_matplotlib(self.label_csvs[f_name])
+
+        with blob_exp:
+            if self.working_dir is not None:
+                self.get_motionenergy()
 
 
