@@ -319,7 +319,7 @@ class MotionEnergyMachine:
         :param ref_origin_idx, tuple/list: Idx of keypoint used for egocentric alignment as new origin
         :param ref_rot_idxs, tuple/list: Idx of keypoint used for egocentric alignment as x-axis
         """
-
+        blob_info_box = st.empty()
         outpath = os.path.join(self.working_dir, self.prefix, "animations")
 
         # find all frames in all sequences for selected class:
@@ -327,7 +327,7 @@ class MotionEnergyMachine:
             selected_class = self.class_to_number[sub_selected_classes[i]]
             label_collection, total_labels = collect_labels(self.targets, selected_class)
 
-            st.info(f"Found {len(label_collection)} files with a total of {total_labels} for class {self.number_to_class[selected_class]}.")
+            blob_info_box = st.info(f"Found {len(label_collection)} files with a total of {total_labels} for class {self.number_to_class[selected_class]}.")
 
             for sequence_number in stqdm(range(len(label_collection)), desc = "Going through files..."):
                 transition_idx = np.where(np.diff(label_collection[sequence_number]) != 1)[0] + 1
@@ -366,48 +366,49 @@ class MotionEnergyMachine:
     def extract_frames(self):
         video_import_path = os.path.join(self.working_dir, self.prefix, "animations")
         #frame_list = {}
-        for sdx in stqdm(range(len(self.annotation_classes)),desc = "Extracting frames from videos for actions"):
-            selected_behavior = self.annotation_classes[sdx]
-            files = glob.glob(str.join('', (os.path.join(video_import_path, selected_behavior), '/*.avi')), recursive=True)
-            if not files:
-                #when there are no files, just ignore it
-                continue
-            behavior_i = []
-            for idx in stqdm(range(len(files)), desc = "Going through examples..."):
-                test_video = files[idx]
-                cap = cv2.VideoCapture(test_video)
-                frameCount = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                frameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        with st.spinner("Extracting frames from videos for actions"):
+            for sdx in range(len(self.annotation_classes)):
+                selected_behavior = self.annotation_classes[sdx]
+                files = glob.glob(str.join('', (os.path.join(video_import_path, selected_behavior), '/*.avi')), recursive=True)
+                if not files:
+                    #when there are no files, just ignore it
+                    continue
+                behavior_i = []
+                for idx in stqdm(range(len(files)), desc = "Going through examples..."):
+                    test_video = files[idx]
+                    cap = cv2.VideoCapture(test_video)
+                    frameCount = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                    frameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                    frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-                resize_f = 3
-                resize_dim = (frameHeight // resize_f, frameWidth // resize_f)
+                    resize_f = 3
+                    resize_dim = (frameHeight // resize_f, frameWidth // resize_f)
 
-                # convert video into numpy array of frames (binary)
+                    # convert video into numpy array of frames (binary)
 
-                success, image = cap.read()
-                count = 0
-                frame_array = np.empty((frameCount, resize_dim[0], resize_dim[1]), np.dtype('uint8'))
-                while count < frameCount - 1 and success:
-                    success, img = cap.read()
-                    # convert to grayscale
-                    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                    # convert to binary
-                    thresh = 1
-                    im_bw = cv2.threshold(gray, thresh, 255, cv2.THRESH_BINARY)[1]
-                    # resize for easier calculations
-                    res_bw = cv2.resize(im_bw, (resize_dim[0], resize_dim[1]))
-                    # add to numpy array
-                    frame_array[count] = res_bw
-                    count += 1
-                behavior_i.append(frame_array)
-                #frame_list[selected_behavior] = behavior_i
-                cap.release()
+                    success, image = cap.read()
+                    count = 0
+                    frame_array = np.empty((frameCount, resize_dim[0], resize_dim[1]), np.dtype('uint8'))
+                    while count < frameCount - 1 and success:
+                        success, img = cap.read()
+                        # convert to grayscale
+                        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                        # convert to binary
+                        thresh = 1
+                        im_bw = cv2.threshold(gray, thresh, 255, cv2.THRESH_BINARY)[1]
+                        # resize for easier calculations
+                        res_bw = cv2.resize(im_bw, (resize_dim[0], resize_dim[1]))
+                        # add to numpy array
+                        frame_array[count] = res_bw
+                        count += 1
+                    behavior_i.append(frame_array)
+                    #frame_list[selected_behavior] = behavior_i
+                    cap.release()
 
-            # save it for next time
-            frames_collection_path = os.path.join(self.working_dir, self.prefix, "animations",selected_behavior,  "f_collection_{}".format(selected_behavior))
-            with open(frames_collection_path, 'wb') as f:
-                joblib.dump(behavior_i, f)
+                # save it for next time
+                frames_collection_path = os.path.join(self.working_dir, self.prefix, "animations",selected_behavior,  "f_collection_{}".format(selected_behavior))
+                with open(frames_collection_path, 'wb') as f:
+                    joblib.dump(behavior_i, f)
 
     def load_frames_single(self, selected_behavior):
 
@@ -473,6 +474,7 @@ class MotionEnergyMachine:
         with param_exp:
             ego_container = st.container()
             polygon_container = st.container()
+            animation_info_box = st.empty()
             with ego_container:
                 egocentric_bps = st.multiselect("Select body parts to align pose estimation to:", self.keypoints
                                #, max_selections  = 2 #only available for higher versions of streamlit
@@ -482,19 +484,26 @@ class MotionEnergyMachine:
                     #pick first two and transform into index
                     ref_origin_idx = self.keypoints_to_idx[egocentric_bps[0]]
                     ref_rot_idxs = self.keypoints_to_idx[egocentric_bps[1]]
-                    st.info("Reference for new origin: {} \n\n Reference for x-axis alignment: {}".format(egocentric_bps[0], egocentric_bps[1]))
+                    animation_info_box.info("Reference for new origin: {} \n\n Reference for x-axis alignment: {}".format(egocentric_bps[0], egocentric_bps[1]))
 
             with polygon_container:
                 #get user input to create polygons for blob animation using keypoints as corners
                 outline_dict = self.select_outline()
                 sub_selected_classes = st.multiselect("Select behavioral classes for animation",
                                                       self.annotation_classes, self.annotation_classes)
+
                 if st.button("Create Animations"):
-                    self.create_blob_animation(sub_selected_classes, outline_dict, ref_origin_idx, ref_rot_idxs)
+                    try:
+                        self.create_blob_animation(sub_selected_classes, outline_dict, ref_origin_idx, ref_rot_idxs)
+                        animation_info_box.info("Ready for motion energy calculcation.")
+                    except:
+                        animation_info_box.error("Enter required parameters first.")
+
 
         with motion_container:
             motion_info_box = st.empty()
             file_path_motion = os.path.join(self.working_dir, self.prefix, 'motionenergy.sav')
+            #for later
             motion_energy = None
 
             try:
