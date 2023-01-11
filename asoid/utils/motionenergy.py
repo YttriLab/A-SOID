@@ -11,7 +11,7 @@ import glob
 from tqdm import tqdm
 
 
-
+""" Egocentric alignment"""
 def set_to_origin(mouse, ref_idx2: list):
     # number of timesteps and coordinates
     nts,ncoords = mouse.shape
@@ -154,3 +154,15 @@ def animate_blobs(arr, filename, outlines:dict, include_dots = False, center_shi
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
     out.release()
+
+"""Motion energy"""
+
+
+def calc_motion_energy_single(frames):
+    norm_diff_list = []
+    for example in frames:
+        abs_diff = np.absolute(np.diff(example, axis=0))
+        norm_diff = np.nanmean(abs_diff, axis=0)
+        norm_diff_list.append(norm_diff)
+
+    return norm_diff_list

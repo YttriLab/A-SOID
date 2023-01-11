@@ -10,11 +10,12 @@ TITLE = "View"
 
 def main(config=None):
     st.markdown("""---""")
-
+    st.subheader("Viewer")
     viewer = Viewer(config)
     viewer.main()
 
     if config is not None:
+        st.subheader("Motion Energy")
         motion_energy = MotionEnergyMachine(config)
         motion_energy.main()
 

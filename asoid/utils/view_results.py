@@ -18,7 +18,7 @@ import matplotlib.colors as mcolors
 from config.help_messages import VIEW_LOADER_HELP, POLY_COUNT_HELP ,SINGLE_POLY_HELP, EGO_SELECT_HELP
 from utils.import_data import load_labels
 from utils.load_workspace import load_data
-from utils.motionenergy import conv_2_egocentric, collect_labels, animate_blobs
+from utils.motionenergy import conv_2_egocentric, collect_labels, animate_blobs, calc_motion_energy_single
 
 
 def label_blocks(df, clm_block):
@@ -249,8 +249,6 @@ class Viewer:
                         self.plot_labels_matplotlib(self.label_csvs[f_name])
 
 
-
-
 class MotionEnergyMachine:
 
     def __init__(self, config):
@@ -279,11 +277,6 @@ class MotionEnergyMachine:
         # available colors
         colors = dict(cyan = (255, 255, 0)
                       , magenta = (255, 0, 255))
-
-        POLY_COUNT_HELP = "TeST"
-        SINGLE_POLY_HELP = "TeST"
-
-
 
         poly_count = st.number_input("Number of Polygons"
                                      , help= POLY_COUNT_HELP
@@ -330,7 +323,8 @@ class MotionEnergyMachine:
         outpath = os.path.join(self.working_dir, self.prefix, "animations")
 
         # find all frames in all sequences for selected class:
-        for selected_class in stqdm(range(len(sub_selected_classes)), desc = "Collecting examples and animating blobs..."):
+        for i in stqdm(range(len(sub_selected_classes)), desc = "Collecting examples and animating blobs..."):
+            selected_class = self.class_to_number[sub_selected_classes[i]]
             label_collection, total_labels = collect_labels(self.targets, selected_class)
 
             st.info(f"Found {len(label_collection)} files with a total of {total_labels} for class {self.number_to_class[selected_class]}.")
@@ -370,11 +364,11 @@ class MotionEnergyMachine:
                         animate_blobs(class_data_ego, video_name, outlines=outline_dict)
 
     def extract_frames(self):
-        outpath = os.path.join(self.working_dir, self.prefix, "animations")
-        frame_list = {}
+        video_import_path = os.path.join(self.working_dir, self.prefix, "animations")
+        #frame_list = {}
         for sdx in stqdm(range(len(self.annotation_classes)),desc = "Extracting frames from videos for actions"):
             selected_behavior = self.annotation_classes[sdx]
-            files = glob.glob(str.join('', (os.path.join(outpath, selected_behavior), '/*.avi')), recursive=True)
+            files = glob.glob(str.join('', (os.path.join(video_import_path, selected_behavior), '/*.avi')), recursive=True)
             if not files:
                 #when there are no files, just ignore it
                 continue
@@ -407,21 +401,37 @@ class MotionEnergyMachine:
                     frame_array[count] = res_bw
                     count += 1
                 behavior_i.append(frame_array)
-                frame_list[selected_behavior] = behavior_i
+                #frame_list[selected_behavior] = behavior_i
                 cap.release()
 
-        return frame_list
+            # save it for next time
+            frames_collection_path = os.path.join(self.working_dir, self.prefix, "animations",selected_behavior,  "f_collection_{}".format(selected_behavior))
+            with open(frames_collection_path, 'wb') as f:
+                joblib.dump(behavior_i, f)
 
-    @st.cache
-    def calc_motion_energy(self, frame_list):
+    def load_frames_single(self, selected_behavior):
+
+        frames_collection_path = os.path.join(self.working_dir, self.prefix, "animations", selected_behavior,
+                                              "f_collection_{}".format(selected_behavior))
+        with open(frames_collection_path, 'rb') as fr:
+            temp_frames = joblib.load(fr)
+
+        return temp_frames
+
+    def calc_motion_energy(self):
         motion_energy_by_behavior = {}
-        for selected_behavior in list(frame_list.keys()):
-            norm_diff_list = []
-            for example in range(len(frame_list[selected_behavior])):
-                abs_diff = np.absolute(np.diff(frame_list[selected_behavior][example], axis=0))
-                norm_diff = np.nanmean(abs_diff, axis=0)
-                norm_diff_list.append(norm_diff)
-            motion_energy_by_behavior[selected_behavior] = norm_diff_list
+        for i in stqdm(range(len(self.annotation_classes)), desc = "Calculating motion energy"):
+            selected_behavior = self.annotation_classes[i]
+            try:
+                frames = self.load_frames_single(selected_behavior)
+            except FileNotFoundError:
+                continue
+            motion_energy = calc_motion_energy_single(frames)
+            motion_energy_by_behavior[selected_behavior] = motion_energy
+
+        if not motion_energy_by_behavior:
+            #if it is empty because it did not find any animations
+            raise FileNotFoundError
 
         return motion_energy_by_behavior
 
@@ -455,7 +465,7 @@ class MotionEnergyMachine:
 
     def get_motionenergy(self):
 
-        param_exp = st.expander("Generate Motion Energy")
+        param_exp = st.expander("Generate animations")
         motion_container = st.container()
 
         #get user input for egocentric alignment
@@ -483,8 +493,9 @@ class MotionEnergyMachine:
                     self.create_blob_animation(sub_selected_classes, outline_dict, ref_origin_idx, ref_rot_idxs)
 
         with motion_container:
-            file_path_framelist = os.path.join(self.working_dir, self.prefix, 'temp_boutframes_bylabel.sav')
+            motion_info_box = st.empty()
             file_path_motion = os.path.join(self.working_dir, self.prefix, 'motionenergy.sav')
+            motion_energy = None
 
             try:
                 # try to load the file if it already exists
@@ -493,23 +504,24 @@ class MotionEnergyMachine:
                 self.view_motion_energy(motion_energy)
 
             except FileNotFoundError:
-
-                try:
-                    # try to load the file if it already exists
-                    with open(file_path_framelist, 'rb') as fr:
-                        frame_list = joblib.load(fr)
-                except FileNotFoundError:
-                    if st.button("Extract frames for Motion Energy"):
+                if st.button("Calculate Motion Energy"):
+                    motion_info_box = st.info("This may take a long time...")
+                    try:
+                        motion_energy = self.calc_motion_energy()
+                        with open(file_path_motion, 'wb') as f:
+                            joblib.dump(motion_energy, f)
+                    except FileNotFoundError:
                         # extract frames
-                        frame_list = self.extract_frames()
-                        # save it for next time
-                        with open(file_path_framelist, 'wb') as f:
-                            joblib.dump(frame_list, f)
+                        try:
+                            self.extract_frames()
+                            motion_energy = self.calc_motion_energy()
+                            with open(file_path_motion, 'wb') as f:
+                                joblib.dump(motion_energy, f)
+                        except FileNotFoundError:
+                            motion_info_box.error("Generate animations first.")
 
-                motion_energy = self.calc_motion_energy(frame_list)
-                with open(file_path_motion, 'wb') as f:
-                    joblib.dump(motion_energy, f)
-                self.view_motion_energy(motion_energy)
+                if motion_energy is not None:
+                    self.view_motion_energy(motion_energy)
 
 
     def main(self):
