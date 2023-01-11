@@ -2,7 +2,7 @@ import categories
 import streamlit as st
 from app import swap_app
 from config.help_messages import IMPRESS_TEXT
-from utils.view_results import Viewer
+from utils.view_results import Viewer, MotionEnergyMachine
 
 
 CATEGORY = categories.VIEW
@@ -13,6 +13,10 @@ def main(config=None):
 
     viewer = Viewer(config)
     viewer.main()
+
+    if config is not None:
+        motion_energy = MotionEnergyMachine(config)
+        motion_energy.main()
 
     bottom_cont = st.container()
     with bottom_cont:

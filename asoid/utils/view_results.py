@@ -95,17 +95,6 @@ class Viewer:
             self.framerate = config["Project"].getint("FRAMERATE")
             self.duration_min = config["Processing"].getfloat("MIN_DURATION")
 
-            self.keypoints = [x.strip() for x in config["Project"].get("KEYPOINTS_CHOSEN").split(",")]
-            keypoints_idx = np.arange(len(self.keypoints) * 2)
-            keypoints_idx = np.reshape(keypoints_idx, (len(self.keypoints), 2))
-            self.keypoints_to_idx = {self.keypoints[i]: list(keypoints_idx[i]) for i in range(len(self.keypoints))}
-
-            self.class_to_number = {s: i for i, s in enumerate(self.annotation_classes)}
-            self.number_to_class = {i: s for i, s in enumerate(self.annotation_classes)}
-
-            [data, _] = load_data(self.working_dir, self.prefix)
-            [self.processed_input_data, self.targets] = data
-
 
         else:
             self.working_dir = None
@@ -113,12 +102,7 @@ class Viewer:
             self.annotation_classes = None
             self.framerate = None
             self.duration_min = None
-            self.keypoints = None
-            self.keypoints_to_idx = None
-            self.class_to_number = None
-            self.number_to_class = None
-            self.processed_input_data = None
-            self.targets = None
+
 
         pass
 
@@ -246,6 +230,50 @@ class Viewer:
     #
     #     plot_cont.plotly_chart(fig,use_container_width=False)
 
+    def main(self):
+
+        label_exp = st.expander("View label files")
+        with label_exp:
+            self.upload_labels()
+            self.label_csvs = {}
+            if self.label_files:
+                for file in self.label_files:
+                    file.seek(0)
+                    temp_name = file.name
+                    labels = load_labels(file,origin = "BORIS", fps = self.framerate)
+                    self.label_csvs[temp_name] = labels
+
+                for num, f_name in enumerate(self.label_csvs.keys()):
+
+                    with st.expander(label = f_name ):
+                        self.plot_labels_matplotlib(self.label_csvs[f_name])
+
+
+
+
+class MotionEnergyMachine:
+
+    def __init__(self, config):
+
+        self.working_dir = config["Project"].get("PROJECT_PATH")
+        self.prefix = config["Project"].get("PROJECT_NAME")
+
+        self.framerate = config["Project"].getint("FRAMERATE")
+        self.duration_min = config["Processing"].getfloat("MIN_DURATION")
+
+
+        self.annotation_classes = [x.strip() for x in config["Project"].get("CLASSES").split(",")]
+        self.class_to_number = {s: i for i, s in enumerate(self.annotation_classes)}
+        self.number_to_class = {i: s for i, s in enumerate(self.annotation_classes)}
+
+        self.keypoints = [x.strip() for x in config["Project"].get("KEYPOINTS_CHOSEN").split(",")]
+        keypoints_idx = np.arange(len(self.keypoints) * 2)
+        keypoints_idx = np.reshape(keypoints_idx, (len(self.keypoints), 2))
+        self.keypoints_to_idx = {self.keypoints[i]: list(keypoints_idx[i]) for i in range(len(self.keypoints))}
+
+        [data, _] = load_data(self.working_dir, self.prefix)
+        [self.processed_input_data, self.targets] = data
+
     def select_outline(self):
         "Allows GUI selection of polygons made up by bodyparts as corners for blob animation"
         # available colors
@@ -291,8 +319,9 @@ class Viewer:
 
         return outline_dict
 
-    def create_blob_animation(self, outline_dict, ref_origin_idx, ref_rot_idxs):
+    def create_blob_animation(self, sub_selected_classes, outline_dict, ref_origin_idx, ref_rot_idxs):
         """
+        :params sub_selected_classes: List of subselected classes to generate animations for
         :params outline_dict, dict: Dictionary of user-defined polygons, including color and keypoint idxs
         :param ref_origin_idx, tuple/list: Idx of keypoint used for egocentric alignment as new origin
         :param ref_rot_idxs, tuple/list: Idx of keypoint used for egocentric alignment as x-axis
@@ -301,7 +330,7 @@ class Viewer:
         outpath = os.path.join(self.working_dir, self.prefix, "animations")
 
         # find all frames in all sequences for selected class:
-        for selected_class in stqdm(range(len(self.annotation_classes)), desc = "Collecting examples and animating blobs..."):
+        for selected_class in stqdm(range(len(sub_selected_classes)), desc = "Collecting examples and animating blobs..."):
             label_collection, total_labels = collect_labels(self.targets, selected_class)
 
             st.info(f"Found {len(label_collection)} files with a total of {total_labels} for class {self.number_to_class[selected_class]}.")
@@ -426,76 +455,72 @@ class Viewer:
 
     def get_motionenergy(self):
 
-        ego_container = st.container()
-        polygon_container = st.container()
+        param_exp = st.expander("Generate Motion Energy")
         motion_container = st.container()
 
         #get user input for egocentric alignment
         #TODO: limit selection to two
-        with ego_container:
-            egocentric_bps = st.multiselect("Select body parts to align pose estimation to:", self.keypoints
-                           #, max_selections  = 2 #only available for higher versions of streamlit
-                           ,help="Select two keypoints that an egocentric alignment is based on. "
-                                 " The first selected keypoint will be used as the new origin (0,0). "
-                                 " The second will be used as aligned to the x-axis. "
-                                 "Note that, depending on your choice, the resulting motion energy images will look differnt."
-                                 "\n\n Tip: Select bodyparts that form a natural axis in your animals/behaviors, such as the tail base and nose point of the animal."
-                                            )
+        with param_exp:
+            ego_container = st.container()
+            polygon_container = st.container()
+            with ego_container:
+                egocentric_bps = st.multiselect("Select body parts to align pose estimation to:", self.keypoints
+                               #, max_selections  = 2 #only available for higher versions of streamlit
+                               ,help="Select two keypoints that an egocentric alignment is based on. "
+                                     " The first selected keypoint will be used as the new origin (0,0). "
+                                     " The second will be used as aligned to the x-axis. "
+                                     "Note that, depending on your choice, the resulting motion energy images will look differnt."
+                                     "\n\n Tip: Select bodyparts that form a natural axis in your animals/behaviors, such as the tail base and nose point of the animal."
+                                                )
 
-            if len(egocentric_bps) >= 2:
-                #pick first two and transform into index
-                ref_origin_idx = self.keypoints_to_idx[egocentric_bps[0]]
-                ref_rot_idxs = self.keypoints_to_idx[egocentric_bps[1]]
-                st.info("Reference for new origin: {} \n\n Reference for x-axis alignment: {}".format(egocentric_bps[0], egocentric_bps[1]))
+                if len(egocentric_bps) >= 2:
+                    #pick first two and transform into index
+                    ref_origin_idx = self.keypoints_to_idx[egocentric_bps[0]]
+                    ref_rot_idxs = self.keypoints_to_idx[egocentric_bps[1]]
+                    st.info("Reference for new origin: {} \n\n Reference for x-axis alignment: {}".format(egocentric_bps[0], egocentric_bps[1]))
 
-        with polygon_container:
-            #get user input to create polygons for blob animation using keypoints as corners
-            outline_dict = self.select_outline()
+            with polygon_container:
+                #get user input to create polygons for blob animation using keypoints as corners
+                outline_dict = self.select_outline()
+                sub_selected_classes = st.multiselect("Select behavioral classes for animation",
+                                                      self.annotation_classes, self.annotation_classes)
+                if st.button("Create Animations"):
+                    self.create_blob_animation(sub_selected_classes, outline_dict, ref_origin_idx, ref_rot_idxs)
 
-            if st.button("Create Animations"):
-                self.create_blob_animation(outline_dict, ref_origin_idx, ref_rot_idxs)
         with motion_container:
-            file_path = os.path.join(self.working_dir, self.prefix, 'temp_boutframes_bylabel.sav')
+            file_path_framelist = os.path.join(self.working_dir, self.prefix, 'temp_boutframes_bylabel.sav')
+            file_path_motion = os.path.join(self.working_dir, self.prefix, 'motionenergy.sav')
+
             try:
                 # try to load the file if it already exists
-                with open(file_path, 'rb') as fr:
-                    frame_list = joblib.load(fr)
-                motion_energy = self.calc_motion_energy(frame_list)
+                with open(file_path_motion, 'rb') as fr:
+                    motion_energy = joblib.load(fr)
                 self.view_motion_energy(motion_energy)
+
             except FileNotFoundError:
-                if st.button("Extract frames for Motion Energy"):
-                    # extract frames
-                    frame_list = self.extract_frames()
-                    # save it for next time
-                    with open(file_path, 'wb') as f:
-                        joblib.dump(frame_list, f)
 
-                    motion_energy = self.calc_motion_energy(frame_list)
-                    self.view_motion_energy(motion_energy)
+                try:
+                    # try to load the file if it already exists
+                    with open(file_path_framelist, 'rb') as fr:
+                        frame_list = joblib.load(fr)
+                except FileNotFoundError:
+                    if st.button("Extract frames for Motion Energy"):
+                        # extract frames
+                        frame_list = self.extract_frames()
+                        # save it for next time
+                        with open(file_path_framelist, 'wb') as f:
+                            joblib.dump(frame_list, f)
 
+                motion_energy = self.calc_motion_energy(frame_list)
+                with open(file_path_motion, 'wb') as f:
+                    joblib.dump(motion_energy, f)
+                self.view_motion_energy(motion_energy)
 
 
     def main(self):
 
-        label_exp = st.expander("View label files")
-        blob_exp = st.expander("Motion Energy")
-        with label_exp:
-            self.upload_labels()
-            self.label_csvs = {}
-            if self.label_files:
-                for file in self.label_files:
-                    file.seek(0)
-                    temp_name = file.name
-                    labels = load_labels(file,origin = "BORIS", fps = self.framerate)
-                    self.label_csvs[temp_name] = labels
-
-                for num, f_name in enumerate(self.label_csvs.keys()):
-
-                    with st.expander(label = f_name ):
-                        self.plot_labels_matplotlib(self.label_csvs[f_name])
-
-        with blob_exp:
+        blob_cont = st.container()
+        with blob_cont:
+            st.write("---")
             if self.working_dir is not None:
                 self.get_motionenergy()
-
-
