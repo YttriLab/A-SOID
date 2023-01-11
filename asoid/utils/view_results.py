@@ -15,7 +15,7 @@ import plotly.figure_factory as ff
 import matplotlib.colors as mcolors
 
 
-from config.help_messages import VIEW_LOADER_HELP
+from config.help_messages import VIEW_LOADER_HELP, POLY_COUNT_HELP ,SINGLE_POLY_HELP, EGO_SELECT_HELP
 from utils.import_data import load_labels
 from utils.load_workspace import load_data
 from utils.motionenergy import conv_2_egocentric, collect_labels, animate_blobs
@@ -466,12 +466,7 @@ class MotionEnergyMachine:
             with ego_container:
                 egocentric_bps = st.multiselect("Select body parts to align pose estimation to:", self.keypoints
                                #, max_selections  = 2 #only available for higher versions of streamlit
-                               ,help="Select two keypoints that an egocentric alignment is based on. "
-                                     " The first selected keypoint will be used as the new origin (0,0). "
-                                     " The second will be used as aligned to the x-axis. "
-                                     "Note that, depending on your choice, the resulting motion energy images will look differnt."
-                                     "\n\n Tip: Select bodyparts that form a natural axis in your animals/behaviors, such as the tail base and nose point of the animal."
-                                                )
+                               ,help= EGO_SELECT_HELP)
 
                 if len(egocentric_bps) >= 2:
                     #pick first two and transform into index

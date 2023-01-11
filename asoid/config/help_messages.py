@@ -97,6 +97,16 @@ POSE_UPLOAD_HELP = "Upload pose estimation files to predict with the trained cla
 
 """View"""
 VIEW_LOADER_HELP = "You can upload BORIS type files, including A-SOiD output from predictions to view as ethograms."
+POLY_COUNT_HELP = "Select the number of polygons you need to animate your animals using pose estimation coords of body parts."\
+
+SINGLE_POLY_HELP = "Each polygon will connect the first and last entry. For example: [Nose, Left Ear, Right Ear] as a triangle for the head and so on. ORDER MATTERS!"
+EGO_SELECT_HELP = "Select two keypoints that an egocentric alignment is based on. "\
+                 " The first selected keypoint will be used as the new origin (0,0). "\
+                 " The second will be used as aligned to the x-axis. "\
+                 "Note that, depending on your choice, the resulting motion energy images will look differnt."\
+                 "\n\n Tip: Select bodyparts that form a natural axis in your animals/behaviors, such as the tail base and nose point of the animal."
+
+
 
 """Unsupervised discovery"""
 PREPARE_DATA_HELP = "Before we can run discovery, we need to extract the features from the full data set. This might take a while, but will only run once."
