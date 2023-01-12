@@ -271,3 +271,4 @@ def load_motion_energy(path, name):
     file_path_motion = os.path.join(path, name, 'motionenergy.sav')
     with open(file_path_motion, 'rb') as fr:
         motion_energy = joblib.load(fr)
+    return motion_energy
