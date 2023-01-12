@@ -17,7 +17,7 @@ import matplotlib.colors as mcolors
 
 from config.help_messages import VIEW_LOADER_HELP, POLY_COUNT_HELP ,SINGLE_POLY_HELP, EGO_SELECT_HELP
 from utils.import_data import load_labels
-from utils.load_workspace import load_data
+from utils.load_workspace import load_data, load_motion_energy, save_data
 from utils.motionenergy import conv_2_egocentric, collect_labels, animate_blobs, calc_motion_energy_single
 
 
@@ -509,14 +509,12 @@ class MotionEnergyMachine:
 
         with motion_container:
             motion_info_box = st.empty()
-            file_path_motion = os.path.join(self.working_dir, self.prefix, 'motionenergy.sav')
             #for later
             motion_energy = None
 
             try:
                 # try to load the file if it already exists
-                with open(file_path_motion, 'rb') as fr:
-                    motion_energy = joblib.load(fr)
+                motion_energy = load_motion_energy(self.working_dir, self.prefix)
                 self.view_motion_energy(motion_energy)
 
             except FileNotFoundError:
@@ -524,15 +522,13 @@ class MotionEnergyMachine:
                     motion_info_box = st.info("This may take a long time...")
                     try:
                         motion_energy = self.calc_motion_energy()
-                        with open(file_path_motion, 'wb') as f:
-                            joblib.dump(motion_energy, f)
+                        save_data(self.working_dir, self.prefix, "motionenergy.sav", motion_energy)
                     except FileNotFoundError:
                         # extract frames
                         try:
                             self.extract_frames()
                             motion_energy = self.calc_motion_energy()
-                            with open(file_path_motion, 'wb') as f:
-                                joblib.dump(motion_energy, f)
+                            save_data(self.working_dir, self.prefix, "motionenergy.sav", motion_energy)
                         except FileNotFoundError:
                             motion_info_box.error("Generate animations first.")
 

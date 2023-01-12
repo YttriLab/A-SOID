@@ -265,3 +265,9 @@ def load_new_feats(path, name):
     #     data = joblib.load(fr)
     data = _load_sav(path, name, "new_feats.sav")
     return [i for i in data]
+
+@st.cache
+def load_motion_energy(path, name):
+    file_path_motion = os.path.join(path, name, 'motionenergy.sav')
+    with open(file_path_motion, 'rb') as fr:
+        motion_energy = joblib.load(fr)
