@@ -272,6 +272,9 @@ class MotionEnergyMachine:
         [data, _] = load_data(self.working_dir, self.prefix)
         [self.processed_input_data, self.targets] = data
 
+        #filenames
+        self.filenames = [x.strip().split(".")[0] for x in config["Data"].get("DATA_INPUT_FILES").split(",")]
+
     def select_outline(self):
         "Allows GUI selection of polygons made up by bodyparts as corners for blob animation"
         # available colors
@@ -359,7 +362,7 @@ class MotionEnergyMachine:
                         os.makedirs(vid_path, exist_ok=True)
                         #generate video name on current parameters
                         video_name = os.path.join(vid_path,
-                                                  f"{self.number_to_class[selected_class].replace(' ', '_')}_seq{sequence_number}_example{i}.avi")
+                                                  f"{self.number_to_class[selected_class].replace(' ', '_')}_{self.filenames[sequence_number]}_example{i}.avi")
                         #animate and save file
                         animate_blobs(class_data_ego, video_name, outlines=outline_dict)
 
