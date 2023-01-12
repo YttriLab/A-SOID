@@ -159,10 +159,13 @@ def animate_blobs(arr, filename, outlines:dict, include_dots = False, center_shi
 
 
 def calc_motion_energy_single(frames):
-    norm_diff_list = []
-    for example in frames:
+    #norm_diff_list = []
+    #calculates motion energy per bout then puts it back into dictionary for later sorting by example
+    norm_diff_dict = {}
+    for key, example in frames.items():
         abs_diff = np.absolute(np.diff(example, axis=0))
         norm_diff = np.nanmean(abs_diff, axis=0)
-        norm_diff_list.append(norm_diff)
+        #norm_diff_list.append(norm_diff)
+        norm_diff_dict[key] = norm_diff
 
-    return norm_diff_list
+    return norm_diff_dict

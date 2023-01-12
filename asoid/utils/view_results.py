@@ -373,10 +373,11 @@ class MotionEnergyMachine:
                 if not files:
                     #when there are no files, just ignore it
                     continue
-                behavior_i = []
+                behavior_i = {}
                 for idx in stqdm(range(len(files)), desc = "Going through examples..."):
-                    test_video = files[idx]
-                    cap = cv2.VideoCapture(test_video)
+                    curr_video = files[idx]
+                    curr_filename = os.path.basename(curr_video)[:-4]
+                    cap = cv2.VideoCapture(curr_video)
                     frameCount = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
                     frameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                     frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -401,7 +402,7 @@ class MotionEnergyMachine:
                         # add to numpy array
                         frame_array[count] = res_bw
                         count += 1
-                    behavior_i.append(frame_array)
+                    behavior_i[curr_filename]= frame_array
                     #frame_list[selected_behavior] = behavior_i
                     cap.release()
 
@@ -447,11 +448,17 @@ class MotionEnergyMachine:
                             )
 
         for i, action_type in enumerate(motion_energy_keys):
-            fig.add_trace(go.Heatmap(z=np.nanmean(motion_energy[action_type], axis=0),
-                                     name=action_type, showscale=True,
+            #get all bouts per behavior
+            all_bouts = list(motion_energy[action_type].values())
+            #show the average motion energy across all bouts per behavior
+            avg_motion_energy = np.nanmean(all_bouts, axis=0)
+            fig.add_trace(go.Heatmap(z= avg_motion_energy
+                                     ,name=action_type
+                                     , showscale=True
                                      #colorbar=dict(title='Intensity',
                                      #              x=1.05, len=0.5),
-                                     zmin=c_range[0], zmax=c_range[1]
+                                     ,zmin=c_range[0]
+                                     ,zmax=c_range[1]
                                      ,colorscale= px.colors.sequential.Viridis
                                      )
                           ,col = i +1
