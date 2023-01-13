@@ -9,7 +9,7 @@ from utils.extract_features import frameshift_predict, bsoid_predict_numba, bsoi
 from utils.load_workspace import load_features, load_test, save_data
 
 
-def show_classifier_results(annotation_classes, all_score,
+def show_classifier_results(behavior_classes, all_score,
                             base_score, base_annot,
                             learn_score, learn_annot):
     plot_col, option_col = st.columns([3, 1])
@@ -20,7 +20,6 @@ def show_classifier_results(annotation_classes, all_score,
     option_col.write('')
     option_col.write('')
     option_expander = option_col.expander("Configure Plot")
-    behavior_classes = annotation_classes.split(', ')
     behavior_colors = {k: [] for k in behavior_classes}
     all_c_options = list(mcolors.CSS4_COLORS.keys())
 
@@ -160,8 +159,8 @@ class RF_Classify:
         self.sampled_idx_list = []
 
         self.keys = ['Behavior', 'Performance %', 'Iteration #']
-        self.perf_by_class = {k: [] for k in annotation_classes.split(', ')}
-        self.perf2beat_by_class = {k: [] for k in annotation_classes.split(', ')}
+        self.perf_by_class = {k: [] for k in annotation_classes}
+        self.perf2beat_by_class = {k: [] for k in annotation_classes}
 
     def subsampled_classify(self):
         [features_train, targets_train, scalar, self.frames2integ] = load_features(self.working_dir, self.prefix)
@@ -263,7 +262,7 @@ class RF_Classify:
             self.iter0_Y_train.append(Y_train)
 
     def show_subsampled_performance(self):
-        behavior_classes = self.annotation_classes.split(', ')
+        behavior_classes = self.annotation_classes
         all_c_options = list(mcolors.CSS4_COLORS.keys())
         if len(behavior_classes) == 4:
             default_colors = ["red", "darkorange", "dodgerblue", "gray"]

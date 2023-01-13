@@ -55,7 +55,6 @@ def prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotat
             min_value=0.0, max_value=1.0, value=st.session_state.init_ratio, key='init3', help = INIT_RATIO_HELP)
         st.session_state.init_ratio = init_ratio
     # give user info about samples
-    annotation_classes = [k.strip()  for k in annotation_classes.split(",")]
     info_text = [f"{annotation_classes[i]} [{round(data_samples_per[i] * st.session_state.init_ratio, 2)}]" for i in range(len(data_samples_per))]
     col1_exp.info('On average, samples to train per class: \n\n' + ";  ".join(info_text))
 
@@ -84,22 +83,14 @@ def prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotat
 
 def main(config=None):
     st.markdown("""---""")
-    if config:
-        sections = [x for x in config.keys() if x != "DEFAULT"]
-        for parameter, value in config[sections[0]].items():
-            if parameter == 'PROJECT_PATH':
-                working_dir = value
-            elif parameter == 'PROJECT_NAME':
-                prefix = value
-            elif parameter == 'CLASSES':
-                annotation_classes = value
-            elif parameter == 'PROJECT_TYPE':
-                software = value
-            elif parameter == 'EXCLUDE_OTHER':
-                exclude_other = value
-        for parameter, value in config[sections[2]].items():
-            if parameter == 'TRAIN_FRACTION':
-                train_fx = value
+    if config is not None:
+
+        working_dir = config["Project"].get("PROJECT_PATH")
+        prefix = config["Project"].get("PROJECT_NAME")
+        annotation_classes = [x.strip() for x in config["Project"].get("CLASSES").split(",")]
+        software = config["Project"].get("PROJECT_TYPE")
+        exclude_other = config["Project"].getboolean("EXCLUDE_OTHER")
+        train_fx = config["Project"].getfloat("TRAIN_FRACTION")
 
         try:
             [_, all_X_train_list, all_Y_train_list, all_f1_scores, _, _] = \

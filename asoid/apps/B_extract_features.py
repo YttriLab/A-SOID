@@ -24,7 +24,7 @@ def prompt_setup(prompt_container, software, framerate, annotation_classes,
                                       help = SPLIT_CLASSES_HELP)
     n_bins = prompt_container.slider('Number of bins?', 50, 1000, int(default_bin_count),
                                      help = BINS_SLIDER_HELP)
-    fig = interactive_durations_dist(targets, annotation_classes, float(framerate),
+    fig = interactive_durations_dist(targets, annotation_classes, framerate,
                                      prompt_container,
                                      num_bins=n_bins,
                                      split_by_class=split,
@@ -50,7 +50,7 @@ def prompt_setup(prompt_container, software, framerate, annotation_classes,
             num_splits = right_exp.number_input('number of shuffled splits:', min_value=1, max_value=20,
                                                 value=10, key='ns',
                                                 help = NUM_SPLITS_HELP+ CALM_HELP)
-        frames2integ = round(float(framerate) * (duration_min / 0.1))
+        frames2integ = round(framerate * (duration_min / 0.1))
 
         #update config (only the offline version)
 
@@ -67,19 +67,13 @@ def prompt_setup(prompt_container, software, framerate, annotation_classes,
 
 def main(config=None):
     st.markdown("""---""")
-    if config:
-        sections = [x for x in config.keys() if x != "DEFAULT"]
-        for parameter, value in config[sections[0]].items():
-            if parameter == 'PROJECT_PATH':
-                working_dir = value
-            elif parameter == 'PROJECT_NAME':
-                prefix = value
-            elif parameter == 'CLASSES':
-                annotation_classes = value
-            elif parameter == 'FRAMERATE':
-                framerate = value
-            elif parameter == 'PROJECT_TYPE':
-                software = value
+
+    if config is not None:
+        working_dir = config["Project"].get("PROJECT_PATH")
+        prefix = config["Project"].get("PROJECT_NAME")
+        annotation_classes = [x.strip() for x in config["Project"].get("CLASSES").split(",")]
+        software = config["Project"].get("PROJECT_TYPE")
+        framerate = config["Project"].getfloat("FRAMERATE")
         try:
             [_, _, _, _] = load_features(working_dir, prefix)
             prompt_container = st.container()
