@@ -338,7 +338,7 @@ def frameshift_predict_proba(data_test, num_test, scaler, rf_model, framerate=12
     return np.hstack(new_predictions_pad), np.vstack(new_proba_pad)
 
 
-def interactive_durations_dist(targets, annotation_classes, framerate, plot_container,
+def interactive_durations_dist(targets, behavior_classes, framerate, plot_container,
                                num_bins, split_by_class=True):
     # Add histogram data
     plot_col, option_col = plot_container.columns([3, 1])
@@ -349,7 +349,6 @@ def interactive_durations_dist(targets, annotation_classes, framerate, plot_cont
     with option_col:
         option_expander = st.expander("Configure plot")
         if split_by_class:
-            behavior_classes = annotation_classes.split(', ')
             behavior_colors = {k: [] for k in behavior_classes}
             if len(behavior_classes) == 4:
                 default_colors = ["red", "darkorange", "dodgerblue", "gray"]
@@ -376,8 +375,7 @@ def interactive_durations_dist(targets, annotation_classes, framerate, plot_cont
                                                                  help = BEHAVIOR_COLOR_SELECT_HELP)
             colors = [behavior_colors[class_id] for class_id in ['All']]
 
-    annotations = annotation_classes.split(', ')
-    duration_dict = {k: [] for k in annotations}
+    duration_dict = {k: [] for k in behavior_classes}
     durations = []
     corr_targets = []
     for seq in range(len(targets)):
@@ -390,12 +388,12 @@ def interactive_durations_dist(targets, annotation_classes, framerate, plot_cont
             #make sure it's an int
             unique_beh = int(unique_beh)
             idx_behavior = np.where(corr_targets[seq] == unique_beh)[0]
-            curr_annot = annotations[unique_beh]
+            curr_annot = behavior_classes[unique_beh]
             if len(idx_behavior) > 0:
                 duration_dict[curr_annot].append(current_seq_durs[np.where(corr_targets[seq] == unique_beh)[0]])
     keys = ['Sequence', 'Annotation', 'Duration (seconds)']
     data_dict = {k: [] for k in keys}
-    for curr_annot in annotations:
+    for curr_annot in behavior_classes:
         for seq in range(len(duration_dict[curr_annot])):
             for bout, duration in enumerate(duration_dict[curr_annot][seq]):
                 data_dict['Sequence'].append(seq)

@@ -9,7 +9,7 @@ from utils.extract_features import frameshift_predict, bsoid_predict_numba, bsoi
 from utils.load_workspace import load_features, load_test, save_data
 
 
-def show_classifier_results(annotation_classes, all_score,
+def show_classifier_results(behavior_classes, all_score,
                             base_score, base_annot,
                             learn_score, learn_annot):
     plot_col, option_col = st.columns([3, 1])
@@ -20,7 +20,6 @@ def show_classifier_results(annotation_classes, all_score,
     option_col.write('')
     option_col.write('')
     option_expander = option_col.expander("Configure Plot")
-    behavior_classes = annotation_classes.split(', ')
     behavior_colors = {k: [] for k in behavior_classes}
     all_c_options = list(mcolors.CSS4_COLORS.keys())
 
@@ -160,8 +159,8 @@ class RF_Classify:
         self.sampled_idx_list = []
 
         self.keys = ['Behavior', 'Performance %', 'Iteration #']
-        self.perf_by_class = {k: [] for k in annotation_classes.split(', ')}
-        self.perf2beat_by_class = {k: [] for k in annotation_classes.split(', ')}
+        self.perf_by_class = {k: [] for k in annotation_classes}
+        self.perf2beat_by_class = {k: [] for k in annotation_classes}
 
     def subsampled_classify(self):
         [features_train, targets_train, scalar, self.frames2integ] = load_features(self.working_dir, self.prefix)
@@ -263,7 +262,7 @@ class RF_Classify:
             self.iter0_Y_train.append(Y_train)
 
     def show_subsampled_performance(self):
-        behavior_classes = self.annotation_classes.split(', ')
+        behavior_classes = self.annotation_classes
         all_c_options = list(mcolors.CSS4_COLORS.keys())
         if len(behavior_classes) == 4:
             default_colors = ["red", "darkorange", "dodgerblue", "gray"]
@@ -311,14 +310,16 @@ class RF_Classify:
         self.placeholder.plotly_chart(fig, use_container_width=True)
 
     def base_classification(self):
+        with st.spinner("Subsampled classfication..."):
         #print("Subsampled classfication...")
-        self.subsampled_classify()
+            self.subsampled_classify()
         #print("Showing subsampled performance...")
-        self.show_subsampled_performance()
-        #print("Saving all training...")
-        self.save_all_train_info()
-        #print("Save subsampled data...")
-        self.save_subsampled_info()
+        with st.spinner("Preparing plot..."):
+            self.show_subsampled_performance()
+        with st.spinner("Saving training data..."):
+            self.save_all_train_info()
+        with st.spinner("Saving subsampled data..."):
+            self.save_subsampled_info()
         #print("All done.")
 
     def self_learn(self):
@@ -440,13 +441,13 @@ class RF_Classify:
                     self.save_final_model_info()
 
     def show_training_performance(self, it):
-        behavior_classes = self.annotation_classes.split(', ')
+
         all_c_options = list(mcolors.CSS4_COLORS.keys())
-        if len(behavior_classes) == 4:
+        if len(self.annotation_classes) == 4:
             default_colors = ["red", "darkorange", "dodgerblue", "gray"]
         else:
             np.random.seed(42)
-            selected_idx = np.random.choice(np.arange(len(all_c_options)), len(behavior_classes), replace=False)
+            selected_idx = np.random.choice(np.arange(len(all_c_options)), len(self.annotation_classes), replace=False)
             default_colors = [all_c_options[s] for s in selected_idx]
 
         mean_scores = np.hstack([100 * round(np.mean(self.iter0_f1_scores[0], axis=0), 2),
@@ -454,8 +455,8 @@ class RF_Classify:
                                                                 axis=0), 2)
                                             for j in range(len(self.iterX_f1_scores_list))])])
         mean_scores2beat = np.mean(np.mean(self.all_f1_scores, axis=0), axis=0)
-        for c, c_name in enumerate(behavior_classes):
-            if c_name != behavior_classes[-1]:
+        for c, c_name in enumerate(self.annotation_classes):
+            if c_name != self.annotation_classes[-1]:
                 self.perf_by_class[c_name].append(int(100 * round(np.mean(self.iterX_f1_scores_list[-1],
                                                                           axis=0)[c], 2)))
 
@@ -466,8 +467,8 @@ class RF_Classify:
                         name='average (full data)',
                         row=1, col=1
                         )
-        for c, c_name in enumerate(behavior_classes):
-            if c_name != behavior_classes[-1]:
+        for c, c_name in enumerate(self.annotation_classes):
+            if c_name != self.annotation_classes[-1]:
                 fig.add_scatter(y=self.perf_by_class[c_name], mode='lines+markers',
                                 marker=dict(color=default_colors[c]), name=c_name,
                                 row=1, col=1
