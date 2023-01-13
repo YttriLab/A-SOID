@@ -154,7 +154,10 @@ class Preprocess:
                                                               key= "exclude_other_check",
                                                               help= EXCLUDE_OTHER_HELP)
             except IndexError:
-                st.warning('Please select corresponding label files.')
+                st.warning('Please select corresponding label files first.')
+            except TypeError:
+                st.warning('Please select corresponding label files first.')
+
             self.multi_animal = st.checkbox("Is this a multiple animal project?",
                                             False, key="multi_animal_check",
                                             help = MULTI_ANIMAL_HELP)
@@ -278,17 +281,19 @@ class Preprocess:
                         # make it a dictionary for later sorting
                         self.pose_files = {os.path.basename(x): x for x in found_pose_files}
 
-                        self.pose_csvs = upload_container.multiselect(
-                            'Order them to match the sequence of label files below'
-                            ,self.pose_files.keys(),self.pose_files.keys()
-                            ,help= POSE_SELECT_HELP
-                        )
-                        # retrieve files in right order:
-                        self.pose_csvs = [self.pose_files[x] for x in self.pose_csvs]
+                        if self.pose_files:
+                            self.pose_csvs = upload_container.multiselect(
+                                'Order them to match the sequence of label files below'
+                                ,self.pose_files.keys(),self.pose_files.keys()
+                                ,help= POSE_SELECT_HELP
+                            )
+                            # retrieve files in right order:
+                            self.pose_csvs = [self.pose_files[x] for x in self.pose_csvs]
                         upload_container.write('---')
 
                     except FileNotFoundError:
                         upload_container.error('No such directory')
+
 
                     self.label_data_directories = upload_container.text_input('Select the directory containing the pose estimation files'
                                                                               , os.getcwd()
@@ -305,14 +310,14 @@ class Preprocess:
                                 "Make sure that the label files have the correct file type (*.csv).")
                         # make it a dictionary for later sorting
                         self.label_files = {os.path.basename(x): x for x in found_label_files}
-
-                        self.label_csvs = upload_container.multiselect(
-                            'Order them to match the sequence of label files below'
-                            ,self.label_files.keys(),self.label_files.keys()
-                            ,help = LABEL_SELECT_HELP
-                            )
-                        # retrieve files in right order:
-                        self.label_csvs = [self.label_files[x] for x in self.label_csvs]
+                        if self.label_files:
+                            self.label_csvs = upload_container.multiselect(
+                                'Order them to match the sequence of label files below'
+                                ,self.label_files.keys(),self.label_files.keys()
+                                ,help = LABEL_SELECT_HELP
+                                )
+                            # retrieve files in right order:
+                            self.label_csvs = [self.label_files[x] for x in self.label_csvs]
                         upload_container.write('---')
 
                     except FileNotFoundError:
