@@ -56,24 +56,16 @@ def prompt_setup(software, ftype, threshold):
 
 def main(config=None):
     st.markdown("""---""")
-    if config:
-        sections = [x for x in config.keys() if x != "DEFAULT"]
-        for parameter, value in config[sections[0]].items():
-            if parameter == 'PROJECT_PATH':
-                working_dir = value
-            elif parameter == 'PROJECT_NAME':
-                prefix = value
-            elif parameter == 'CLASSES':
-                annotation_classes = value
-            elif parameter == 'PROJECT_TYPE':
-                software = value
-            elif parameter == 'FILE_TYPE':
-                ftype = value
-        for parameter, value in config[sections[2]].items():
-            if parameter == 'SCORE_THRESHOLD':
-                threshold = value
-            elif parameter == 'ITERATION':
-                iteration = value
+    if config is not None:
+
+        working_dir = config["Project"].get("PROJECT_PATH")
+        prefix = config["Project"].get("PROJECT_NAME")
+        annotation_classes = [x.strip() for x in config["Project"].get("CLASSES").split(",")]
+        software = config["Project"].get("PROJECT_TYPE")
+        ftype = config["Project"].get("FILE_TYPE")
+        threshold = config["Processing"].getfloat("SCORE_THRESHOLD")
+        iteration = config["Processing"].getint("ITERATION")
+
         if software == 'CALMS21 (PAPER)':
             ROOT = Path(__file__).parent.parent.parent.resolve()
             targets_test_csv = os.path.join(ROOT.joinpath("test"), './test_labels.csv')
@@ -93,7 +85,7 @@ def main(config=None):
             left_selection, right_selection = selection_container.columns(2)
             if st.checkbox('Add new files?'):
                 [new_videos, new_pose_list,
-                 p_cutoff, num_outliers, label_filename] = prompt_setup(software, ftype, float(threshold))
+                 p_cutoff, num_outliers, label_filename] = prompt_setup(software, ftype, threshold)
                 if st.button('Predict new behavior'):
                     [_, _, scalar, frames2integ] = load_features(working_dir, prefix)
                     predict, proba, outlier_indices, label_df = None, None, None, None
@@ -148,7 +140,7 @@ def main(config=None):
                 refinement.info_box()
         else:
             [new_videos, new_pose_list,
-             p_cutoff, num_outliers, label_filename] = prompt_setup(software, ftype, float(threshold))
+             p_cutoff, num_outliers, label_filename] = prompt_setup(software, ftype, threshold)
             if st.button('Predict new behavior'):
                 [_, _, scalar, frames2integ] = load_features(working_dir, prefix)
                 predict, proba, outlier_indices, label_df = None, None, None, None
