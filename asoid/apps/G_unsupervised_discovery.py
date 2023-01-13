@@ -3,6 +3,7 @@ import streamlit as st
 from app import swap_app
 from config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP
 from utils.unsupervised_discovery import Explorer
+from utils.motionenergy import MotionEnergyMachine
 
 
 CATEGORY = categories.DISCOVER
@@ -11,10 +12,17 @@ TITLE = "Unsupervised discovery"
 def main(config=None):
     st.markdown("""---""")
     if config is not None:
+        st.subheader("Directed discovery")
         explorer = Explorer(config)
         explorer.main()
+
+        st.subheader("Motion Energy")
+        motion_energy = MotionEnergyMachine(config)
+        motion_energy.main()
+
     else:
         st.error(NO_CONFIG_HELP)
+
     bottom_cont = st.container()
     with bottom_cont:
 
