@@ -296,13 +296,14 @@ class MotionEnergyMachine:
 
     def extract_frames(self):
         video_import_path = os.path.join(self.working_dir, self.prefix, "animations")
+        info_box = st.empty()
         #frame_list = {}
         with st.spinner("Extracting frames from videos for actions"):
             for sdx in range(len(self.annotation_classes)):
                 selected_behavior = self.annotation_classes[sdx]
                 files = glob.glob(str.join('', (os.path.join(video_import_path, selected_behavior), '/*.avi')), recursive=True)
                 if not files:
-                    #when there are no files, just ignore it
+                    info_box.info("No animations found for {}, skipping that class.".format(selected_behavior))
                     continue
                 behavior_i = {}
                 for idx in stqdm(range(len(files)), desc = "Going through examples..."):
