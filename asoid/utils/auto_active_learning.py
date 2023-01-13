@@ -310,14 +310,16 @@ class RF_Classify:
         self.placeholder.plotly_chart(fig, use_container_width=True)
 
     def base_classification(self):
+        with st.spinner("Subsampled classfication..."):
         #print("Subsampled classfication...")
-        self.subsampled_classify()
+            self.subsampled_classify()
         #print("Showing subsampled performance...")
-        self.show_subsampled_performance()
-        #print("Saving all training...")
-        self.save_all_train_info()
-        #print("Save subsampled data...")
-        self.save_subsampled_info()
+        with st.spinner("Preparing plot..."):
+            self.show_subsampled_performance()
+        with st.spinner("Saving training data..."):
+            self.save_all_train_info()
+        with st.spinner("Saving subsampled data..."):
+            self.save_subsampled_info()
         #print("All done.")
 
     def self_learn(self):
