@@ -90,7 +90,7 @@ def main(config=None):
         annotation_classes = [x.strip() for x in config["Project"].get("CLASSES").split(",")]
         software = config["Project"].get("PROJECT_TYPE")
         exclude_other = config["Project"].getboolean("EXCLUDE_OTHER")
-        train_fx = config["Project"].getfloat("TRAIN_FRACTION")
+        train_fx = config["Processing"].getfloat("TRAIN_FRACTION")
 
         try:
             [_, all_X_train_list, all_Y_train_list, all_f1_scores, _, _] = \
