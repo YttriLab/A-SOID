@@ -64,6 +64,7 @@ def prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotat
                                                  f'{len(data_samples_per)} classes',
                                                  min_value=10, max_value=None, value=20, key='maxs3', help = MAX_SAMPLES_HELP)
 
+
     # update config (only the offline version)
 
     parameters_dict = {
@@ -92,6 +93,11 @@ def main(config=None):
         exclude_other = config["Project"].getboolean("EXCLUDE_OTHER")
         train_fx = config["Processing"].getfloat("TRAIN_FRACTION")
 
+        conf_threshold = config["Processing"].getfloat("CONF_THRESHOLD")
+        if conf_threshold is None:
+            #backwards compatability
+            conf_threshold = 0.8
+
         try:
             [_, all_X_train_list, all_Y_train_list, all_f1_scores, _, _] = \
                 load_all_train(working_dir, prefix)
@@ -113,7 +119,7 @@ def main(config=None):
                 if st.button('re-classify'.upper()):
                     rf_classifier = RF_Classify(working_dir, prefix, software,
                                                 init_ratio, max_iter, max_samples_iter,
-                                                annotation_classes, features_heldout, targets_heldout, exclude_other)
+                                                annotation_classes, features_heldout, targets_heldout, exclude_other, conf_threshold)
                     rf_classifier.main()
         except FileNotFoundError:
             #make sure the features were extracted:
@@ -123,7 +129,7 @@ def main(config=None):
                 if st.button('classify'.upper()):
                     rf_classifier = RF_Classify(working_dir, prefix, software,
                                                 init_ratio, max_iter, max_samples_iter,
-                                                annotation_classes, features_heldout, targets_heldout, exclude_other)
+                                                annotation_classes, features_heldout, targets_heldout, exclude_other, conf_threshold)
                     rf_classifier.main()
             except FileNotFoundError:
                 st.error(NO_FEATURES_HELP)
