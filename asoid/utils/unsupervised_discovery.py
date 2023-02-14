@@ -1,5 +1,5 @@
 import numpy as np
-
+from datetime import date
 from psutil import virtual_memory
 import streamlit as st
 import joblib
@@ -16,7 +16,7 @@ from utils.extract_features import Extract
 from utils.project_utils import create_new_project, update_config
 from utils.load_workspace import load_features,save_data,load_data, load_class_embeddings,load_class_clusters, load_full_feats_targets
 from config.help_messages import CLASS_SELECT_HELP,CLUSTER_RANGE_HELP,START_DISCOVERY_HELP, \
-    SUBCLASS_SELECT_HELP,SAVE_NEW_HELP, PREPARE_DATA_HELP
+    SUBCLASS_SELECT_HELP,SAVE_NEW_HELP, PREPARE_DATA_HELP, PREFIX_HELP
 from config.global_config import HDBSCAN_PARAMS,UMAP_PARAMS
 
 
@@ -192,9 +192,10 @@ class Explorer:
         st.plotly_chart(fig)
         return group_types
 
-    def export_to_new_project(self, new_targets):
+    def export_to_new_project(self, new_targets, new_prefix = None):
         # create new project folder with prefix as name:
-        new_prefix = self.prefix + f"_{self.number_to_class[self.selected_class_num]}_disc"
+        if new_prefix is None:
+            new_prefix = self.prefix + f"_{self.number_to_class[self.selected_class_num]}_disc"
         project_folder,_ = create_new_project(self.working_dir,new_prefix,overwrite=True)
         with open(os.path.join(project_folder,'data.sav'),'wb') as f:
             """Save data as npy file"""
@@ -218,7 +219,7 @@ class Explorer:
         update_config(project_folder, updated_params=parameters_dict)
         st.success(f"Upload newly created project {new_prefix} to continue training with the new classes".upper())
 
-    def save_subclasses(self, selected_subclasses):
+    def save_subclasses(self, selected_subclasses, new_prefix):
 
         idx_class = np.argwhere(self.target_set == self.selected_class_num)
         org_num_classes = len(self.classes)
@@ -250,7 +251,7 @@ class Explorer:
         sub_array_idx = np.cumsum(sub_array_lengths[:-1])
         # Split the array using `split`
         split_targets = np.split(new_targets, sub_array_idx)
-        self.export_to_new_project(split_targets)
+        self.export_to_new_project(split_targets, new_prefix)
 
     def run_discovery(self):
 
@@ -311,12 +312,19 @@ class Explorer:
                 'Select Groups to add to training set'
                 ,valid_subclasses
                 ,help=SUBCLASS_SELECT_HELP)
-
+            today = date.today()
+            d4 = today.strftime("%b-%d-%Y")
+            new_prefix = st.text_input(
+                "Please enter a new prefix to create a project containing the new annotations"
+                ,d4 + "_disc"
+                ,help=PREFIX_HELP
+                ,key = "prefix_select_disc"
+                )
 
             if st.form_submit_button("Save new classes",help=SAVE_NEW_HELP) and selected_subclasses:
                 # translate to numbers:
                 selected_subclasses_num = [valid_subclasses_to_number[x] for x in selected_subclasses]
-                self.save_subclasses(selected_subclasses_num)
+                self.save_subclasses(selected_subclasses_num, new_prefix)
 
 
     def main(self):
