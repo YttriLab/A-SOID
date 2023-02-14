@@ -32,13 +32,31 @@ def prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotat
     col1, col2 = st.columns(2)
 
     if exclude_other:
-        label_code_other = max(np.unique(np.hstack(targets_runlist)))
-        data_samples_per = [np.mean([len(np.where(targets_runlist[i] == be)[0])
-                                     for i in range(len(targets_runlist))]) for be in np.unique(targets_runlist) if
-                            be != label_code_other]
+        #this will fail if other has no labels and exclude the class before that instead (without warning)
+        #label_code_other = max(np.unique(np.hstack(targets_runlist)))
+        # data_samples_per = [np.mean([len(np.where(targets_runlist[i] == be)[0])
+        #                              for i in range(len(targets_runlist))]) for be in np.unique(targets_runlist) if
+        #                     be != label_code_other]
+        #exclude other by position
+        selected_class_num = np.arange((len(annotation_classes)))[:-1]
     else:
-        data_samples_per = [np.mean([len(np.where(targets_runlist[i] == be)[0])
-                                     for i in range(len(targets_runlist))]) for be in np.unique(targets_runlist)]
+        #data_samples_per = [np.mean([len(np.where(targets_runlist[i] == be)[0])
+        #                             for i in range(len(targets_runlist))]) for be in np.unique(targets_runlist)]
+        selected_class_num = np.arange((len(annotation_classes)))
+
+    data_samples_per =  []
+    for be in np.arange((len(selected_class_num))):
+        for i in range(len(targets_runlist)):
+            len_samples = [len(np.where(targets_runlist[i] == be)[0])
+                                 for i in range(len(targets_runlist))]
+        data_samples_per.append(np.mean(len_samples))
+
+    if not np.all(data_samples_per):
+        #if any selected class has no labels in the dataset, throw an error (very rare cases).
+        st.error( "Some of selected classes have no available labels! Return back to the data upload and deselect any annotation classes that have no label."\
+                  )
+        if not exclude_other:
+            st.warning("If this is a problem with 'other', you can exclude 'other' in the config or by recreating the project.")
 
     col1_exp = col1.expander('Initial sampling ratio'.upper(), expanded=True)
     col2_exp = col2.expander('Max number of iterations'.upper(), expanded=True)
