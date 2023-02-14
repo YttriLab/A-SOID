@@ -405,7 +405,7 @@ class MotionEnergyMachine:
 
     def get_motionenergy(self):
 
-        param_exp = st.expander("Generate animations")
+        param_exp = st.expander("Generate animations", expanded= True)
         motion_container = st.container()
 
         #get user input for egocentric alignment
