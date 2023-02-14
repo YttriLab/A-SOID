@@ -222,7 +222,11 @@ class Explorer:
     def save_subclasses(self, selected_subclasses, new_prefix):
 
         idx_class = np.argwhere(self.target_set == self.selected_class_num)
-        org_num_classes = len(self.classes)
+        #original number of classes, ignoring other
+        num_other = len(self.classes)
+        org_num_classes = num_other -1
+
+
         class_name = self.number_to_class[self.selected_class_num]
         self.new_annotations = self.target_set.copy()
 
@@ -234,6 +238,13 @@ class Explorer:
             new_class_num = org_num_classes + num
             self.new_annotations[idx_candidates] = new_class_num
             self.new_number_to_class[new_class_num] = 'Sub-{} group {}'.format(class_name,new_class)
+
+
+        #now that all new classes have been added, reset other to the last position
+        idx_other = np.argwhere(self.target_set == num_other)
+        new_num_other = new_class_num + 1
+        self.new_annotations[idx_other] = new_num_other
+        self.new_number_to_class[new_num_other] = "other"
 
         #Upsample targets to original framerate, then create new project
         # upsample labels to fit with pose estimation info
