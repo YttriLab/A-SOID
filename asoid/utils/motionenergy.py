@@ -207,7 +207,13 @@ class MotionEnergyMachine:
         "Allows GUI selection of polygons made up by bodyparts as corners for blob animation"
         # available colors
         colors = dict(cyan = (255, 255, 0)
-                      , magenta = (255, 0, 255))
+                      , magenta = (255, 0, 255)
+                      , red = (255, 0,0)
+                      , lime = (0,255,0)
+                      , blue = (0,0,255)
+                      , yellow = (255, 255, 0)
+                      , white = (255, 255, 255)
+                      )
 
         poly_count = st.number_input("Number of Polygons"
                                      , help= POLY_COUNT_HELP
