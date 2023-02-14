@@ -134,7 +134,8 @@ class RF_Classify:
 
         # get label code for last class ('other') to exclude later on if applicable
         self.exclude_other = exclude_other
-        self.label_code_other = max(np.unique(np.hstack(self.targets_heldout)))
+        #self.label_code_other = max(np.unique(np.hstack(self.targets_heldout)))
+        self.label_code_other = max(np.arange(len(annotation_classes)))
         self.frames2integ = None
 
         self.all_model = None
