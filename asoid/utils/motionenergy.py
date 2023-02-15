@@ -13,8 +13,8 @@ import plotly.graph_objects as go
 
 from stqdm import stqdm
 
-from config.help_messages import VIEW_LOADER_HELP, POLY_COUNT_HELP ,SINGLE_POLY_HELP, EGO_SELECT_HELP
-from utils.load_workspace import load_data, load_motion_energy, save_data
+from asoid.config.help_messages import VIEW_LOADER_HELP, POLY_COUNT_HELP ,SINGLE_POLY_HELP, EGO_SELECT_HELP
+from asoid.utils.load_workspace import load_data, load_motion_energy, save_data
 
 
 
