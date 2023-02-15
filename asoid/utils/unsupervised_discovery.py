@@ -12,12 +12,12 @@ from sklearn.decomposition import PCA
 import umap
 import hdbscan
 
-from utils.extract_features import Extract
-from utils.project_utils import create_new_project, update_config
-from utils.load_workspace import load_features,save_data,load_data, load_class_embeddings,load_class_clusters, load_full_feats_targets
-from config.help_messages import CLASS_SELECT_HELP,CLUSTER_RANGE_HELP,START_DISCOVERY_HELP, \
+from asoid.utils.extract_features import Extract
+from asoid.utils.project_utils import create_new_project, update_config
+from asoid.utils.load_workspace import load_features,save_data,load_data, load_class_embeddings,load_class_clusters, load_full_feats_targets
+from asoid.config.help_messages import CLASS_SELECT_HELP,CLUSTER_RANGE_HELP,START_DISCOVERY_HELP, \
     SUBCLASS_SELECT_HELP,SAVE_NEW_HELP, PREPARE_DATA_HELP
-from config.global_config import HDBSCAN_PARAMS,UMAP_PARAMS
+from asoid.config.global_config import HDBSCAN_PARAMS,UMAP_PARAMS
 
 
 

@@ -12,10 +12,10 @@ from matplotlib.animation import FuncAnimation
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import f1_score
-from utils.extract_features import frameshift_predict_proba, feature_extraction, frameshift_predict
-from utils.load_workspace import load_test, load_iterX, \
+from asoid.utils.extract_features import frameshift_predict_proba, feature_extraction, frameshift_predict
+from asoid.utils.load_workspace import load_test, load_iterX, \
     save_data, load_newest_model, load_test_performance
-from utils.project_utils import update_config
+from asoid.utils.project_utils import update_config
 
 
 def get_outline(order_list, D3=False):

@@ -1,8 +1,8 @@
-import categories
+from asoid import categories
 import streamlit as st
-from app import swap_app
-from config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP
-from utils.unsupervised_discovery import Explorer
+from asoid.app import swap_app
+from asoid.config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP
+from asoid.utils.unsupervised_discovery import Explorer
 
 
 CATEGORY = categories.DISCOVER
