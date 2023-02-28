@@ -176,8 +176,8 @@ asoid app
 We invite you to test A-SOiD using the [CalMS21](https://data.caltech.edu/records/s0vdx-0k302) data set. The data set can be used within the app by simply specifying the path to the train and test set files (see below). While you can reproduce our figures using the provided notebooks, the data set also allows an easy first use case to get familiar with all significant steps in A-SOiD.
 
 1. Download the data set and convert it into npy format using their provided script.
-2. Run A-SOiD and select 'CalMS21 (paper)' in the 'Upload Data' tab.
-3. Enter the full path to both train and test files from the first challenge (e.g. 'C:\Dataset\task1_classic_classification\calms21_task1_train.npy' and 'e.g. 'C:\Dataset\task1_classic_classification\calms21_task1_test.npy').
+2. Run A-SOiD and select 'CalMS21 (paper)' in the `Upload Data` tab.
+3. Enter the full path to both train and test files from the first challenge (e.g. 'C:\Dataset\task1_classic_classification\calms21_task1_train.npy' and 'C:\Dataset\task1_classic_classification\calms21_task1_test.npy').
 4. Enter a directory and prefix to create the A-SOiD project in.
 5. Click on 'Preprocess' and follow the remaining workflow of the app. After successful importing the data set, you can now run the CalMS21 project as any other project in A-SOiD. 
 
