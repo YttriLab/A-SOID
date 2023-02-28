@@ -21,14 +21,15 @@ TITLE = "Active Learning"
 
 def prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotation_classes):
     [_, targets_runlist, _, _] = load_features(working_dir, prefix)
-    if software == 'CALMS21 (PAPER)':
-        ROOT = Path(__file__).parent.parent.parent.resolve()
-        targets_test_csv = os.path.join(ROOT.joinpath("test"), './test_labels.csv')
-        targets_test_df = pd.read_csv(targets_test_csv, header=0)
-        targets_test = np.array(targets_test_df['annotation'])
-    else:
-        features_heldout, targets_heldout = load_heldout(working_dir, prefix)
+    # if software == 'CALMS21 (PAPER)':
+    #     ROOT = Path(__file__).parent.parent.parent.resolve()
+    #     targets_test_csv = os.path.join(ROOT.joinpath("test"), './test_labels.csv')
+    #     targets_test_df = pd.read_csv(targets_test_csv, header=0)
+    #     targets_test = np.array(targets_test_df['annotation'])
+    # else:
+        #features_heldout, targets_heldout = load_heldout(working_dir, prefix)
         # targets_test = np.hstack(load_test_targets(working_dir, prefix))
+    features_heldout, targets_heldout = load_heldout(working_dir, prefix)
     col1, col2 = st.columns(2)
 
     if exclude_other:

@@ -105,6 +105,9 @@ class Preprocess:
         self.working_dir = None
         self.prefix = None
 
+        #for CALMS21 data only
+        self.train_data_path = None
+        self.test_data_path = None
 
     def select_software(self):
         self.software, self.ftype = select_software()
@@ -258,8 +261,9 @@ class Preprocess:
         col3_exp = col1.expander('SAVE', expanded=True)
         with col1_exp:
             self.select_software()
+            upload_container = st.container()
             if not self.software == 'CALMS21 (PAPER)':
-                upload_container = st.container()
+                #upload_container = st.container()
                 if upload_container.checkbox("Use folder import", help = DATA_DIR_IMPORT_HELP):
                     #find our pose and label files automatically
                     #self.select_data_directories()
@@ -353,6 +357,17 @@ class Preprocess:
                         , self.label_files.keys()
                         , help = LABEL_SELECT_HELP)
                     self.label_csvs = [self.label_files[x] for x in self.label_csvs]
+
+            else:
+                #for CALMS21 we need the test and train files directly
+                self.train_data_path = upload_container.text_input(
+                    'Select the full path for the CalMS21 train file (calms21_task1_train.npy)'
+                    , os.getcwd())
+
+                self.test_data_path = upload_container.text_input(
+                    'Select the full path for the CalMS21 test file (calms21_task1_test.npy)'
+                    , os.getcwd())
+
         with col2_exp:
             self.get_config_params()
         with col3_exp:
@@ -417,18 +432,19 @@ class Preprocess:
             self.input_labelfiles = []
             self.processed_input_data = []
             if self.software == "CALMS21 (PAPER)" and self.ftype == "npy":
-                ROOT = Path(__file__).parent.parent.parent.resolve()
-                # TODO: make this work without taking the first available
-                filenames = glob.glob(str(ROOT.joinpath("train")) + '/*.npy')[0]
-                train = np.load(os.path.join(ROOT.joinpath("train"), filenames), allow_pickle=True)
+                # ROOT = Path(__file__).parent.parent.parent.resolve()
+                # filenames = glob.glob(str(ROOT.joinpath("train")) + '/*.npy')[0]
+                #train = np.load(os.path.join(ROOT.joinpath("train"), filenames), allow_pickle=True)
+                train = np.load(self.train_data_path, allow_pickle=True)
                 self.processed_input_data, self.targets = convert_data_format(train, train=True)
-                self.input_datafiles.append(filenames)
-                self.input_labelfiles.append(filenames)
-                filenames_test = glob.glob(str(ROOT.joinpath("test")) + '/*.npy')[0]
-                test = np.load(os.path.join(ROOT.joinpath("test"), filenames_test), allow_pickle=True)
+                self.input_datafiles.append(self.train_data_path)
+                self.input_labelfiles.append(self.train_data_path)
+                # filenames_test = glob.glob(str(ROOT.joinpath("test")) + '/*.npy')[0]
+                # test = np.load(os.path.join(ROOT.joinpath("test"), filenames_test), allow_pickle=True)
+                test = np.load(self.test_data_path, allow_pickle=True)
                 self.processed_input_data_test = convert_data_format(test)
-                self.input_datafiles_test.append(filenames_test)
-                self.input_labelfiles_test.append(filenames_test)
+                self.input_datafiles_test.append(self.test_data_path)
+                self.input_labelfiles_test.append(self.test_data_path)
             # elif self.software == 'DeepLabCut' and self.ftype == 'csv':
             else:
                 # if it's deeplabcut or sleap
