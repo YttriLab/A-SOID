@@ -189,14 +189,18 @@ class RF_Classify:
                                                     class_weight='balanced_subsample'
                                                     )
             self.all_model.fit(X_all_train, Y_all_train)
-            if not self.software == 'CALMS21 (PAPER)':
-                # predict = frameshift_predict(data_test, len(data_test), scalar,
-                #                              self.all_model, framerate=self.frames2integ)
-                predict = bsoid_predict_numba_noscale([self.features_heldout[i]], self.all_model)
-                predict = np.hstack(predict)
-            else:
-                predict = frameshift_predict(data_test, len(data_test), scalar,
-                                             self.all_model, framerate=120)
+            # if not self.software == 'CALMS21 (PAPER)':
+            #     # predict = frameshift_predict(data_test, len(data_test), scalar,
+            #     #                              self.all_model, framerate=self.frames2integ)
+            #     predict = bsoid_predict_numba_noscale([self.features_heldout[i]], self.all_model)
+            #     predict = np.hstack(predict)
+            # else:
+            #     predict = frameshift_predict(data_test, len(data_test), scalar,
+            #                                  self.all_model, framerate=120)
+            #
+            predict = bsoid_predict_numba_noscale([self.features_heldout[i]], self.all_model)
+            predict = np.hstack(predict)
+
             # check f1 scores per class, always exclude other (unlabeled data)
             self.all_f1_scores.append(f1_score(
                 self.targets_heldout[i][self.targets_heldout[i] != self.label_code_other],
@@ -238,14 +242,18 @@ class RF_Classify:
                                                       )
             self.iter0_model.fit(X_train, Y_train)
             # test on remaining held out data
-            if not self.software == 'CALMS21 (PAPER)':
-                # predict = frameshift_predict(data_test, len(data_test), scalar,
-                #                              self.iter0_model, framerate=self.frames2integ)
-                predict = bsoid_predict_numba_noscale([self.features_heldout[i]], self.iter0_model)
-                predict = np.hstack(predict)
-            else:
-                predict = frameshift_predict(data_test, len(data_test), scalar,
-                                             self.iter0_model, framerate=120)
+            # if not self.software == 'CALMS21 (PAPER)':
+            #     # predict = frameshift_predict(data_test, len(data_test), scalar,
+            #     #                              self.iter0_model, framerate=self.frames2integ)
+            #     predict = bsoid_predict_numba_noscale([self.features_heldout[i]], self.iter0_model)
+            #     predict = np.hstack(predict)
+            # else:
+            #     predict = frameshift_predict(data_test, len(data_test), scalar,
+            #                                  self.iter0_model, framerate=120)
+
+            predict = bsoid_predict_numba_noscale([self.features_heldout[i]], self.iter0_model)
+            predict = np.hstack(predict)
+
             # check f1 scores per class
             self.iter0_f1_scores.append(f1_score(
                 self.targets_heldout[i][self.targets_heldout[i] != self.label_code_other],
@@ -400,15 +408,19 @@ class RF_Classify:
                                                               class_weight='balanced_subsample'
                                                               )
                     self.iterX_model.fit(X_train[it], Y_train[it])
-                    if not self.software == 'CALMS21 (PAPER)':
-                        # predict = frameshift_predict(data_test, len(data_test), scalar,
-                        #                              self.iterX_model, framerate=self.frames2integ)
-                        predict = bsoid_predict_numba_noscale([self.features_heldout[i]], self.iterX_model)
-                        predict = np.hstack(predict)
+                    # if not self.software == 'CALMS21 (PAPER)':
+                    #     # predict = frameshift_predict(data_test, len(data_test), scalar,
+                    #     #                              self.iterX_model, framerate=self.frames2integ)
+                    #     predict = bsoid_predict_numba_noscale([self.features_heldout[i]], self.iterX_model)
+                    #     predict = np.hstack(predict)
+                    #
+                    # else:
+                    #     predict = frameshift_predict(data_test, len(data_test), scalar,
+                    #                                  self.iterX_model, framerate=120)
+                    predict = bsoid_predict_numba_noscale([self.features_heldout[i]], self.iterX_model)
+                    predict = np.hstack(predict)
 
-                    else:
-                        predict = frameshift_predict(data_test, len(data_test), scalar,
-                                                     self.iterX_model, framerate=120)
+
                     iterX_f1_scores[it] = f1_score(
                         self.targets_heldout[i][self.targets_heldout[i] != self.label_code_other],
                         predict[self.targets_heldout[i] != self.label_code_other],

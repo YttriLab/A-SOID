@@ -81,9 +81,21 @@ A-SOiD supports the following input types:
 ----
 > You can see an example of this using pandas in our docs: [Convert annotations to binary format](docs/export_annotations_to_binary_format.ipynb)
 ---
+
+## System Requirements
+### Hardware requirements
+A-SOiD requires only a standard computer with enough RAM to support the model training during active learning. For clustering, CPU and RAM requirements are increased. Refer to [B-SOiD](https://github.com/YttriLab/B-SOID) or our paper for details. 
+
+### Software requirements
+#### OS Requirements
+This package is supported for *Windows* but can be run on *Linux* computers given additional installation of require packages.
+
+#### Python Dependencies
+For dependencies please refer to the requirements.txt file. No additional requirements.
+
 ## Installation
 
-There are two ways to install A-SOiD. We recommend using a fresh environment in any case to avoid any installation conflicts.
+There are two ways to install A-SOiD. Installation will only take a couple of minutes. We recommend using a fresh environment in any case to avoid any installation conflicts.
 To simplify the process, we provide `asoid.yml` file that will do everything for you (see below).
 
 ### Download repository and install locally as python package within a new environment
@@ -159,6 +171,19 @@ You can run A-SOiD now from inside your environment by using (you do not have ch
 ````
 asoid app
 ````
+## Demo:
+
+We invite you to test A-SOiD using the [CalMS21](https://data.caltech.edu/records/s0vdx-0k302) data set. The data set can be used within the app by simply specifying the path to the train and test set files (see below). While you can reproduce our figures using the provided notebooks, the data set also allows an easy first use case to get familiar with all significant steps in A-SOiD.
+
+1. Download the data set and convert it into npy format using their provided script.
+2. Run A-SOiD and select 'CalMS21 (paper)' in the 'Upload Data' tab.
+3. Enter the full path to both train and test files from the first challenge (e.g. 'C:\Dataset\task1_classic_classification\calms21_task1_train.npy' and 'e.g. 'C:\Dataset\task1_classic_classification\calms21_task1_test.npy').
+4. Enter a directory and prefix to create the A-SOiD project in.
+5. Click on 'Preprocess' and follow the remaining workflow of the app. After successful importing the data set, you can now run the CalMS21 project as any other project in A-SOiD. 
+
+The overall runtime depends on your setup and parameters set during training, but should be completed within 1h of starting the project.
+Tested on: AMD Ryzen 9 6900HX 3.30 GHz and 16 GB RAM; Windows 11 Home
+
 
 ---
 ## Contributors:
