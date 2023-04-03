@@ -85,7 +85,7 @@ class Preprocess:
         self.targets_test = []
         self.software = None
         self.ftype = None
-        self.label_ftype = "csv"
+        self.label_ftype = ["csv", "tsv"]
         self.input_videos = None
         self.label_csvs = None
         self.pose_csvs = None
