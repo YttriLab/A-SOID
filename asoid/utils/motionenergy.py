@@ -375,7 +375,7 @@ class MotionEnergyMachine:
 
         return motion_energy_by_behavior
 
-    def view_motion_energy(self, motion_energy):
+    def view_motion_energy(self, motion_energy, view_selection = "Across sessions"):
 
         #TODO UI adjustment of color range
         #c_range = st.slider("Color range", min_value = 0 , max_value = 100, [0, 20])
@@ -385,22 +385,51 @@ class MotionEnergyMachine:
                             , subplot_titles= motion_energy_keys
                             )
 
-        for i, action_type in enumerate(motion_energy_keys):
-            #get all bouts per behavior
-            all_bouts = list(motion_energy[action_type].values())
-            #show the average motion energy across all bouts per behavior
-            avg_motion_energy = np.nanmean(all_bouts, axis=0)
-            fig.add_trace(go.Heatmap(z= avg_motion_energy
-                                     ,name=action_type
-                                     , showscale=True
-                                     #colorbar=dict(title='Intensity',
-                                     #              x=1.05, len=0.5),
-                                     ,zmin=c_range[0]
-                                     ,zmax=c_range[1]
-                                     ,colorscale= px.colors.sequential.Viridis
-                                     )
-                          ,col = i +1
-                          ,row = 1)
+        if view_selection == "Across sessions":
+            for i, action_type in enumerate(motion_energy_keys):
+                #get all bouts per behavior
+                all_bouts = list(motion_energy[action_type].values())
+                #show the average motion energy across all bouts per behavior
+                avg_motion_energy = np.nanmean(all_bouts, axis=0)
+                fig.add_trace(go.Heatmap(z= avg_motion_energy
+                                         ,name=action_type
+                                         , showscale=True
+                                         #colorbar=dict(title='Intensity',
+                                         #              x=1.05, len=0.5),
+                                         ,zmin=c_range[0]
+                                         ,zmax=c_range[1]
+                                         ,colorscale= px.colors.sequential.Viridis
+                                         )
+                              ,col = i +1
+                              ,row = 1)
+        elif view_selection == "Per session":
+            for i, action_type in enumerate(motion_energy_keys):
+                # get all bouts per behavior
+                #all_bouts = list(motion_energy[action_type].values())
+                # todo: add functionality to do per session per behavior
+                #get keys with same starting string (same session name)
+                all_bout_names = motion_energy[action_type].keys()
+                all_session_names = [x.split("_example")[0] for x in all_bout_names]
+                all_session_names = np.unique(all_session_names)
+
+                for bout_name, bout_me in motion_energy[action_type].items():
+                    # show the average motion energy across all bouts per behavior
+                    avg_motion_energy = np.nanmean(all_bouts, axis=0)
+                    fig.add_trace(go.Heatmap(z=avg_motion_energy
+                                             , name=action_type
+                                             , showscale=True
+                                             # colorbar=dict(title='Intensity',
+                                             #              x=1.05, len=0.5),
+                                             , zmin=c_range[0]
+                                             , zmax=c_range[1]
+                                             , colorscale=px.colors.sequential.Viridis
+                                             )
+                                  , col=i + 1
+                                  , row=1)
+        else:
+            raise ValueError("Invalid view selection: {}".format(view_selection))
+
+
 
         fig.update_layout(title='Motion energy')
         fig.update_xaxes(showticklabels = False)
@@ -453,7 +482,9 @@ class MotionEnergyMachine:
             try:
                 # try to load the file if it already exists
                 motion_energy = load_motion_energy(self.working_dir, self.prefix)
-                self.view_motion_energy(motion_energy)
+                view_selection = st.selectbox("Motion Energy view:", ("Across sessions", "Per session"))
+                if st.button("View Motion Energy", key="me_viewer"):
+                    self.view_motion_energy(motion_energy, view_selection)
 
             except FileNotFoundError:
                 if st.button("Calculate Motion Energy"):
@@ -471,7 +502,9 @@ class MotionEnergyMachine:
                             motion_info_box.error("Generate animations first.")
 
                 if motion_energy is not None:
-                    self.view_motion_energy(motion_energy)
+                    view_selection = st.selectbox("Motion Energy view:", ("Across sessions", "Per session"))
+                    if st.button("View Motion Energy", key= "me_viewer"):
+                        self.view_motion_energy(motion_energy, view_selection)
 
 
     def main(self):
