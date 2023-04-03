@@ -131,6 +131,8 @@ def load_labels_boris(path: str, fps: int = None):
         labels = pd.read_csv(path)
     elif path.name.endswith("tsv"):
         labels = pd.read_csv(path, sep='\t')
+    else:
+        raise ValueError(f"Label file {path.name} is not a csv or tsv file.")
 
     if fps is not None:
         # upsample labels to fit with pose estimation info
