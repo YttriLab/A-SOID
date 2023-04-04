@@ -36,7 +36,7 @@ def fast_nchoose2(n, k):
         return a
 
 
-@jit(nopython=True, parallel=True)
+@jit(nopython=True)
 def fast_running_mean(x, N):
     out = np.zeros_like(x, dtype=np.float64)
     dim_len = x.shape[0]
@@ -99,7 +99,7 @@ def unit_vector(vector):
     return vector / np.linalg.norm(vector)
 
 
-@jit(nopython=True, parallel=True)
+@jit(nopython=True)
 def fast_displacment(data, reduce=False):
     data_length = data.shape[0]
     if reduce:
@@ -119,7 +119,7 @@ def fast_displacment(data, reduce=False):
     return displacement_array
 
 
-@jit(nopython=True, parallel=True)
+@jit(nopython=True)
 def fast_length_angle(data, index):
     data_length = data.shape[0]
     length_2d_array = np.zeros((data_length, index.shape[1], 2), dtype=np.float64)
@@ -142,7 +142,7 @@ def fast_length_angle(data, index):
     return length_array, angle_array
 
 
-@jit(nopython=True, parallel=True)
+@jit(nopython=True)
 def fast_smooth(data, n):
     data_boxcar_avg = np.zeros((data.shape[0], data.shape[1]))
     for body_part in range(data.shape[1]):
@@ -150,7 +150,7 @@ def fast_smooth(data, n):
     return data_boxcar_avg
 
 
-@jit(nopython=True, parallel=True)
+@jit(nopython=True)
 def fast_feature_extraction(data, framerate, index, smooth):
     window = np.int(np.round(0.05 / (1 / framerate)) * 2 - 1)
     features = []
@@ -167,7 +167,7 @@ def fast_feature_extraction(data, framerate, index, smooth):
     return features
 
 
-@jit(nopython=True, parallel=True)
+@jit(nopython=True)
 def fast_feature_binning(features, framerate, index):
     binned_features_list = []
     for n in range(len(features)):
