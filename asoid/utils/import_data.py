@@ -127,7 +127,12 @@ def load_labels_boris(path: str, fps: int = None):
     so we save the BORIS lables as 100 ms time steps
     Optional: upsample each step into 3 resulting in 30Hz (or any other desired framerate) samples."""
 
-    labels = pd.read_csv(path)
+    if path.name.endswith("csv"):
+        labels = pd.read_csv(path)
+    elif path.name.endswith("tsv"):
+        labels = pd.read_csv(path, sep='\t')
+    else:
+        raise ValueError(f"Label file {path.name} is not a csv or tsv file.")
 
     if fps is not None:
         # upsample labels to fit with pose estimation info
