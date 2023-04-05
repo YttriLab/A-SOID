@@ -525,7 +525,7 @@ class MotionEnergyMachine:
         #get user input for egocentric alignment
         #TODO: limit selection to two
         with param_container:
-            st.text("Generate animations")
+            st.subheader("Generate animations")
             ego_container = st.container()
             polygon_container = st.container()
             animation_info_box = st.empty()
@@ -556,6 +556,7 @@ class MotionEnergyMachine:
 
         with motion_container:
             #for later
+            st.subheader("Load and view motion energy")
             motion_energy = dict()
             selected_me_behaviors = st.multiselect("Select behavioral classes for motion energy view",
                                                    self.annotation_classes, self.annotation_classes)

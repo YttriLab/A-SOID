@@ -225,19 +225,17 @@ class Viewer:
 
     def main(self):
 
-        label_exp = st.expander("View label files")
-        with label_exp:
-            self.upload_labels()
-            self.label_csvs = {}
-            if self.label_files:
-                for file in self.label_files:
-                    file.seek(0)
-                    temp_name = file.name
-                    labels = load_labels(file,origin = "BORIS", fps = self.framerate)
-                    self.label_csvs[temp_name] = labels
+        self.upload_labels()
+        self.label_csvs = {}
+        if self.label_files:
+            for file in self.label_files:
+                file.seek(0)
+                temp_name = file.name
+                labels = load_labels(file,origin = "BORIS", fps = self.framerate)
+                self.label_csvs[temp_name] = labels
 
-                for num, f_name in enumerate(self.label_csvs.keys()):
+            for num, f_name in enumerate(self.label_csvs.keys()):
 
-                    with st.expander(label = f_name ):
-                        self.plot_labels_matplotlib(self.label_csvs[f_name])
+                with st.expander(label = f_name ):
+                    self.plot_labels_matplotlib(self.label_csvs[f_name])
 

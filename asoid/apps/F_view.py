@@ -10,16 +10,20 @@ TITLE = "View"
 
 def main(config=None):
     st.markdown("""---""")
-    st.subheader("Viewer")
-    viewer = Viewer(config)
-    viewer.main()
-    st.subheader("Motion Energy")
-    if config is not None:
-        motion_energy = MotionEnergyMachine(config)
-        motion_energy.main()
+    viewer_tab, motion_energy_tab = st.tabs(["Viewer", "Motion Energy"])
+    with viewer_tab:
+        st.header("View annotation files or predictions")
+        viewer = Viewer(config)
+        viewer.main()
+    with motion_energy_tab:
 
-    else:
-        st.warning(NO_CONFIG_HELP)
+        st.header("Create animations and calculate motion energy")
+        if config is not None:
+            motion_energy = MotionEnergyMachine(config)
+            motion_energy.main()
+
+        else:
+            st.warning(NO_CONFIG_HELP)
 
 
 
