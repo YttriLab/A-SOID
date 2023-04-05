@@ -1,5 +1,5 @@
 import click
-import streamlit.cli
+import streamlit.web.cli as stcli
 import os
 
 @click.group()
@@ -11,7 +11,7 @@ def main_streamlit():
     dirname = os.path.dirname(__file__)
     filename = os.path.join(dirname, 'app.py')
     args = []
-    streamlit.cli._main_run(filename, args)
+    stcli._main_run(filename, args)
 
 if __name__ == "__main__":
     main()

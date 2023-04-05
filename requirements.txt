@@ -1,4 +1,4 @@
-streamlit~=1.11.0
+streamlit~=1.20.0
 streamlit_option_menu~=0.3.2
 hydralit~=1.0.14
 numpy~=1.22.4

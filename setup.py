@@ -30,7 +30,7 @@ setup(
                     ,"pandas"
                     ,"seaborn"
                       #streamlit 1.12.0 has an error with streamlit.cli...
-                    ,"streamlit~=1.11.0"
+                    ,"streamlit>=1.20.0"
                     ,"streamlit_option_menu"
                     ,"hydralit"
                     ,"opencv-python"
