@@ -3,7 +3,7 @@ import streamlit as st
 from asoid.app import swap_app
 from asoid.config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP
 from asoid.utils.unsupervised_discovery import Explorer
-from asoid.utils.motionenergy import MotionEnergyMachine
+
 
 
 CATEGORY = categories.DISCOVER
@@ -15,10 +15,6 @@ def main(config=None):
         st.subheader("Directed discovery")
         explorer = Explorer(config)
         explorer.main()
-
-        st.subheader("Motion Energy")
-        motion_energy = MotionEnergyMachine(config)
-        motion_energy.main()
 
     else:
         st.error(NO_CONFIG_HELP)

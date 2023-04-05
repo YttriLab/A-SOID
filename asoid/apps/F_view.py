@@ -1,9 +1,9 @@
 from asoid import categories
 import streamlit as st
 from asoid.app import swap_app
-from asoid.config.help_messages import IMPRESS_TEXT
+from asoid.config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP
 from asoid.utils.view_results import Viewer
-
+from asoid.utils.motionenergy import MotionEnergyMachine
 
 CATEGORY = categories.VIEW
 TITLE = "View"
@@ -13,6 +13,15 @@ def main(config=None):
     st.subheader("Viewer")
     viewer = Viewer(config)
     viewer.main()
+    st.subheader("Motion Energy")
+    if config is not None:
+        motion_energy = MotionEnergyMachine(config)
+        motion_energy.main()
+
+    else:
+        st.warning(NO_CONFIG_HELP)
+
+
 
     bottom_cont = st.container()
     with bottom_cont:
