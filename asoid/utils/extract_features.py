@@ -11,8 +11,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from stqdm import stqdm
 
-from utils.load_workspace import load_data, save_data
-from config.help_messages import BEHAVIOR_COLOR_SELECT_HELP
+from asoid.utils.load_workspace import load_data, save_data
+from asoid.config.help_messages import BEHAVIOR_COLOR_SELECT_HELP
 
 
 

@@ -5,11 +5,11 @@ from stqdm import stqdm
 import numpy as np
 import pandas as pd
 
-from utils.load_preprocess import select_software
-from utils.load_workspace import load_iterX, load_features
-from utils.extract_features import feature_extraction, feature_extraction_with_extr_scaler,frameshift_predict,bsoid_predict_numba,bsoid_predict_numba_noscale
-from utils.import_data import load_pose,get_bodyparts,get_animals
-from config.help_messages import *
+from asoid.utils.load_preprocess import select_software
+from asoid.utils.load_workspace import load_iterX, load_features
+from asoid.utils.extract_features import feature_extraction, feature_extraction_with_extr_scaler,frameshift_predict,bsoid_predict_numba,bsoid_predict_numba_noscale
+from asoid.utils.import_data import load_pose,get_bodyparts,get_animals
+from asoid.config.help_messages import *
 
 
 

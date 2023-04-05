@@ -1,4 +1,4 @@
-name: asoid-test
+name: asoid
 
 dependencies:
   - python=3.8

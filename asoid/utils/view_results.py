@@ -1,17 +1,17 @@
 import numpy as np
 import pandas as pd
 import streamlit as st
+
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from plotly.subplots import make_subplots
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.figure_factory as ff
 import matplotlib.colors as mcolors
 
 
-from config.help_messages import VIEW_LOADER_HELP
-from utils.import_data import load_labels
+from asoid.config.help_messages import VIEW_LOADER_HELP
+from asoid.utils.import_data import load_labels
 
 
 def label_blocks(df, clm_block):
@@ -88,12 +88,14 @@ class Viewer:
             self.framerate = config["Project"].getint("FRAMERATE")
             self.duration_min = config["Processing"].getfloat("MIN_DURATION")
 
+
         else:
             self.working_dir = None
             self.prefix = None
             self.annotation_classes = None
             self.framerate = None
             self.duration_min = None
+
 
         pass
 
@@ -236,5 +238,4 @@ class Viewer:
 
                 with st.expander(label = f_name ):
                     self.plot_labels_matplotlib(self.label_csvs[f_name])
-
 

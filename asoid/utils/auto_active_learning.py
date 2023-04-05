@@ -5,8 +5,8 @@ import plotly.graph_objects as go
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import f1_score
 import matplotlib.colors as mcolors
-from utils.extract_features import frameshift_predict, bsoid_predict_numba, bsoid_predict_numba_noscale
-from utils.load_workspace import load_features, load_test, save_data
+from asoid.utils.extract_features import frameshift_predict, bsoid_predict_numba, bsoid_predict_numba_noscale
+from asoid.utils.load_workspace import load_features, load_test, save_data
 
 
 def show_classifier_results(behavior_classes, all_score,
@@ -117,12 +117,13 @@ class RF_Classify:
 
     def __init__(self, working_dir, prefix, software,
                  init_ratio, max_iter, max_samples_iter,
-                 annotation_classes, features_heldout, targets_heldout, exclude_other):
+                 annotation_classes, features_heldout, targets_heldout, exclude_other, conf_threshold: float = 0.8):
         self.container = st.container()
         self.placeholder = self.container.empty()
         self.working_dir = working_dir
         self.prefix = prefix
         self.software = software
+        self.conf_threshold = conf_threshold
         self.init_ratio = init_ratio
         self.max_iter = max_iter
         self.max_samples_iter = max_samples_iter
@@ -133,7 +134,8 @@ class RF_Classify:
 
         # get label code for last class ('other') to exclude later on if applicable
         self.exclude_other = exclude_other
-        self.label_code_other = max(np.unique(np.hstack(self.targets_heldout)))
+        #self.label_code_other = max(np.unique(np.hstack(self.targets_heldout)))
+        self.label_code_other = max(np.arange(len(annotation_classes)))
         self.frames2integ = None
 
         self.all_model = None
@@ -356,14 +358,14 @@ class RF_Classify:
                         X_train[it] = self.iter0_X_train[i]
                         Y_train[it] = self.iter0_Y_train[i]
                         # retrieve iteration 0 predict probability
-                        idx_lowconf = np.where(self.iter0_predict_prob[i].max(1) < 0.8)[0]
+                        idx_lowconf = np.where(self.iter0_predict_prob[i].max(1) < self.conf_threshold)[0]
                         # identify all features/targets that were low predict prob
                         new_X_human = features_train[i][targets_train[i] != self.label_code_other][
                                       idx_lowconf, :]
                         new_Y_human = targets_train[i][targets_train[i] != self.label_code_other][
                             idx_lowconf]
                     else:
-                        idx_lowconf = np.where(self.iterX_predict_prob_list[it - 1][i].max(1) < 0.8)[0]
+                        idx_lowconf = np.where(self.iterX_predict_prob_list[it - 1][i].max(1) < self.conf_threshold)[0]
                         new_X_human = features_train[i][targets_train[i] != self.label_code_other][
                                       idx_lowconf, :]
                         new_Y_human = targets_train[i][targets_train[i] != self.label_code_other][

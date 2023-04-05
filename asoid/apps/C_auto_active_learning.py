@@ -1,17 +1,17 @@
 import os
 from pathlib import Path
 
-import categories
+from asoid import categories
 import numpy as np
 import pandas as pd
 import streamlit as st
-from app import swap_app
-from utils.auto_active_learning import show_classifier_results, RF_Classify
-from utils.load_workspace import load_features, load_test_targets, load_heldout, \
+from asoid.app import swap_app
+from asoid.utils.auto_active_learning import show_classifier_results, RF_Classify
+from asoid.utils.load_workspace import load_features, load_test_targets, load_heldout, \
     load_iter0, load_iterX, load_all_train
-from utils.project_utils import update_config
+from asoid.utils.project_utils import update_config
 
-from config.help_messages import INIT_RATIO_HELP, MAX_ITER_HELP, MAX_SAMPLES_HELP,\
+from asoid.config.help_messages import INIT_RATIO_HELP, MAX_ITER_HELP, MAX_SAMPLES_HELP,\
                                 SHOW_FINAL_RESULTS_HELP, RE_CLASSIFY_HELP, IMPRESS_TEXT, NO_CONFIG_HELP,\
                                 NO_FEATURES_HELP
 
@@ -33,13 +33,31 @@ def prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotat
     col1, col2 = st.columns(2)
 
     if exclude_other:
-        label_code_other = max(np.unique(np.hstack(targets_runlist)))
-        data_samples_per = [np.mean([len(np.where(targets_runlist[i] == be)[0])
-                                     for i in range(len(targets_runlist))]) for be in np.unique(targets_runlist) if
-                            be != label_code_other]
+        #this will fail if other has no labels and exclude the class before that instead (without warning)
+        #label_code_other = max(np.unique(np.hstack(targets_runlist)))
+        # data_samples_per = [np.mean([len(np.where(targets_runlist[i] == be)[0])
+        #                              for i in range(len(targets_runlist))]) for be in np.unique(targets_runlist) if
+        #                     be != label_code_other]
+        #exclude other by position
+        selected_class_num = np.arange((len(annotation_classes)))[:-1]
     else:
-        data_samples_per = [np.mean([len(np.where(targets_runlist[i] == be)[0])
-                                     for i in range(len(targets_runlist))]) for be in np.unique(targets_runlist)]
+        #data_samples_per = [np.mean([len(np.where(targets_runlist[i] == be)[0])
+        #                             for i in range(len(targets_runlist))]) for be in np.unique(targets_runlist)]
+        selected_class_num = np.arange((len(annotation_classes)))
+
+    data_samples_per =  []
+    for be in np.arange((len(selected_class_num))):
+        for i in range(len(targets_runlist)):
+            len_samples = [len(np.where(targets_runlist[i] == be)[0])
+                                 for i in range(len(targets_runlist))]
+        data_samples_per.append(np.mean(len_samples))
+
+    if not np.all(data_samples_per):
+        #if any selected class has no labels in the dataset, throw an error (very rare cases).
+        st.error( "Some of selected classes have no available labels! Return back to the data upload and deselect any annotation classes that have no label."\
+                  )
+        if not exclude_other:
+            st.warning("If this is a problem with 'other', you can exclude 'other' in the config or by recreating the project.")
 
     col1_exp = col1.expander('Initial sampling ratio'.upper(), expanded=True)
     col2_exp = col2.expander('Max number of iterations'.upper(), expanded=True)
@@ -64,6 +82,7 @@ def prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotat
     max_samples_iter = col2_bot_exp.number_input(f'Max samples amongst the '
                                                  f'{len(data_samples_per)} classes',
                                                  min_value=10, max_value=None, value=20, key='maxs3', help = MAX_SAMPLES_HELP)
+
 
     # update config (only the offline version)
 
@@ -93,6 +112,11 @@ def main(config=None):
         exclude_other = config["Project"].getboolean("EXCLUDE_OTHER")
         train_fx = config["Processing"].getfloat("TRAIN_FRACTION")
 
+        conf_threshold = config["Processing"].getfloat("CONF_THRESHOLD")
+        if conf_threshold is None:
+            #backwards compatability
+            conf_threshold = 0.8
+
         try:
             [_, all_X_train_list, all_Y_train_list, all_f1_scores, _, _] = \
                 load_all_train(working_dir, prefix)
@@ -114,7 +138,7 @@ def main(config=None):
                 if st.button('re-classify'.upper()):
                     rf_classifier = RF_Classify(working_dir, prefix, software,
                                                 init_ratio, max_iter, max_samples_iter,
-                                                annotation_classes, features_heldout, targets_heldout, exclude_other)
+                                                annotation_classes, features_heldout, targets_heldout, exclude_other, conf_threshold)
                     rf_classifier.main()
         except FileNotFoundError:
             #make sure the features were extracted:
@@ -124,7 +148,7 @@ def main(config=None):
                 if st.button('classify'.upper()):
                     rf_classifier = RF_Classify(working_dir, prefix, software,
                                                 init_ratio, max_iter, max_samples_iter,
-                                                annotation_classes, features_heldout, targets_heldout, exclude_other)
+                                                annotation_classes, features_heldout, targets_heldout, exclude_other, conf_threshold)
                     rf_classifier.main()
             except FileNotFoundError:
                 st.error(NO_FEATURES_HELP)

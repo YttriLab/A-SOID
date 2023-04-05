@@ -1,18 +1,31 @@
-import categories
+from asoid import categories
 import streamlit as st
-from app import swap_app
-from config.help_messages import IMPRESS_TEXT
-from utils.view_results import Viewer
-
+from asoid.app import swap_app
+from asoid.config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP
+from asoid.utils.view_results import Viewer
+from asoid.utils.motionenergy import MotionEnergyMachine
 
 CATEGORY = categories.VIEW
 TITLE = "View"
 
 def main(config=None):
     st.markdown("""---""")
+    viewer_tab, motion_energy_tab = st.tabs(["Viewer", "Motion Energy"])
+    with viewer_tab:
+        st.header("View annotation files or predictions")
+        viewer = Viewer(config)
+        viewer.main()
+    with motion_energy_tab:
 
-    viewer = Viewer(config)
-    viewer.main()
+        st.header("Create animations and calculate motion energy")
+        if config is not None:
+            motion_energy = MotionEnergyMachine(config)
+            motion_energy.main()
+
+        else:
+            st.warning(NO_CONFIG_HELP)
+
+
 
     bottom_cont = st.container()
     with bottom_cont:

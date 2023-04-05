@@ -9,11 +9,11 @@ import streamlit as st
 from PIL import Image
 from streamlit_option_menu import option_menu
 
-import apps as _stable_apps
-import categories as _categories
-import utilities
-from utils.load_workspace import load_features, load_iterX
-from config.help_messages import UPLOAD_CONFIG_HELP, IMPRESS_TEXT
+import asoid.apps as _stable_apps
+import asoid.categories as _categories
+from asoid import utilities
+from asoid.utils.load_workspace import load_features, load_iterX
+from asoid.config.help_messages import UPLOAD_CONFIG_HELP, IMPRESS_TEXT
 
 
 def get_url_app():
@@ -248,7 +248,7 @@ def main():
             with cc[0]:
                 hc.info_card(title='Upload Data', content='', bar_value=5,
                              icon_size="1.5rem", title_text_size="1rem", content_text_size="0.8rem",
-                             theme_override=theme_bad, key='first')
+                             theme_override=theme_bad, key='first2')
 
         _, mid_im, _ = st.columns([0.35, 1, 0.35])
         _, mid_im2, _ = st.columns([0.415, 1, 0.415])
