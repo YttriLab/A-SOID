@@ -2,14 +2,11 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import plotly.figure_factory as ff
-import matplotlib.colors as mcolors
 
+import datetime
 
 from config.help_messages import VIEW_LOADER_HELP
 from utils.import_data import load_labels
@@ -73,6 +70,27 @@ def get_block_boundaries(df, label_clm, cat_clm):
         block_dict[block] = block_list
 
     return block_dict
+
+def count_events(df_label):
+    """ This function counts the number of events for each label in a dataframe"""
+    df_label_cp = df_label.copy()
+    # prepare event counter
+    event_counter = pd.DataFrame(df_label_cp["labels"].unique(), columns=["labels"])
+    event_counter["events"] = 0
+
+    # Count the number of isolated blocks of labels for each unique label
+    # go through each unique label and create a binary column
+    for label in df_label_cp["labels"].unique():
+        df_label_cp[label] = (df_label_cp["labels"] == label)
+        df_label_cp[label].iloc[df_label_cp[label] == False] = np.NaN
+        # go through each unique label and count the number of isolated blocks
+        df_label_cp[f"{label}_block"] = np.where(df_label_cp[label].notnull(),
+                                                 (df_label_cp[label].notnull() & (df_label_cp[label] != df_label_cp[
+                                                     label].shift())).cumsum(),
+                                                 np.nan)
+        event_counter["events"].iloc[event_counter["labels"] == label] = df_label_cp[f"{label}_block"].max()
+
+    return event_counter
 
 
 
@@ -144,13 +162,13 @@ class Viewer:
         return labels
 
 
-    def plot_labels_single(self,df_label):
+    def plot_ethogram_single(self,df_label):
         """ This function plots the labels in a heatmap"""
 
         names = [f"{x}: {y}" for x, y in dict(zip(df_label['labels'].cat.codes, df_label['labels'] )).items()]
         # Count the number of unique values
         unique_values = df_label["labels"].unique()
-        num_values = len(unique_values)
+        num_values = len(unique_values) + 1
 
         # Define a colormap with one color per unique value
         colors = px.colors.qualitative.Light24[:num_values + 1]
@@ -165,7 +183,7 @@ class Viewer:
 
                            colorbar=dict(
                                tickmode='array',
-                               tickvals=np.arange(num_values) + 0.5,
+                               tickvals=np.arange(num_values),
                                ticktext= names,
                                tickfont=dict(size=14),
                                lenmode='fraction',
@@ -179,13 +197,60 @@ class Viewer:
 
         layout = go.Layout(
                             xaxis=dict(title='Frames'),
-                            yaxis=dict(title='Session', range=[0.7,1.2])
+                            yaxis=dict(title='Session', range=[0.7,1.2]),
+                            title_text="Ethogram"
                             )
 
         fig = go.Figure(data=[trace], layout=layout)
         fig.update_yaxes(showticklabels=False, showgrid=False, zeroline=False)
         fig.update_xaxes(zeroline=False)
         st.plotly_chart(fig, use_container_width=True)
+
+    def plot_heatmap_single(self,df_label):
+        """ This function plots the labels in a heatmap"""
+        df_heatmap = df_label.copy()
+        df_heatmap["session"] = 1
+
+        fig = px.density_heatmap(df_heatmap,x = "session", y="labels"
+                                 , width=500
+                                 , height=500
+                                 , histnorm="probability"
+                                 #, text_auto=True
+                                 )
+        fig.update_layout(xaxis = dict(title='Session', showticklabels=False, showgrid=False, zeroline=False),
+                        yaxis = dict(title='', autorange="reversed"),
+                        title_text = "Relative frequency of labels")
+
+
+        st.plotly_chart(fig, use_container_width=True)
+
+
+
+    def describe_labels_single(self, df_label):
+        """ This function describes the labels in a table"""
+
+        event_counter = count_events(df_label)
+
+        count_df = df_label.value_counts().to_frame().reset_index().rename(columns={0: "frame count"})
+        # heatmap already shows this information
+        #count_df["percentage"] = count_df["frame count"] / count_df["frame count"].sum() *100
+        self.framerate = 30
+        if self.framerate is not None:
+            count_df["total duration"] = count_df["frame count"] / self.framerate
+            count_df["total duration"] = count_df["total duration"].apply(lambda x: str(datetime.timedelta(seconds=x)))
+
+        count_df["bouts"] = event_counter["events"]
+
+        count_df.set_index("codes", inplace=True)
+        count_df.sort_index(inplace=True)
+        #rename all columns to include their units
+        count_df.rename(columns={"frame count": "frame count [-]",
+                                 "percentage": "percentage [%]",
+                                 "total duration": "total duration [hh:mm:ss]",
+                                 "bouts": "bouts [-]"},
+                        inplace=True)
+        #TODO: autosize columns with newer streamlit versions (e.g., using use_container_width=True)
+        st.dataframe(count_df)
 
     def main(self):
 
@@ -203,7 +268,17 @@ class Viewer:
                 with st.expander(label = f_name ):
                     try:
                         single_label = self.prep_labels_single(self.label_csvs[f_name])
-                        self.plot_labels_single(single_label)
+                        st.subheader("Ethogram")
+                        self.plot_ethogram_single(single_label)
+                        st.subheader("Label statistics")
+                        heatmap_clm, desc_clm = st.columns([0.4, 0.7])
+                        with heatmap_clm:
+                            self.plot_heatmap_single(single_label)
+                        with desc_clm:
+                            st.write("") #empty line to align the two columns
+                            st.write("Statistics")
+                            self.describe_labels_single(single_label)
+
                     except ValueError as e:
                         st.error(e)
                         st.warning("This error is likely due to the labels not being in the correct format."
