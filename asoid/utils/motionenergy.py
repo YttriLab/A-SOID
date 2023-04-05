@@ -19,6 +19,15 @@ from config.help_messages import VIEW_LOADER_HELP, POLY_COUNT_HELP ,SINGLE_POLY_
 from utils.load_workspace import load_data, load_motion_energy, save_data
 
 
+@st.cache_data
+def load_motion_energy_single(selected_behavior, working_dir, prefix):
+    """Loads motion energy for a single behavior"""
+    motion_energy_path = os.path.join(working_dir, prefix, "animations", selected_behavior,
+                                      "motion_energy.sav")
+    with open(motion_energy_path, 'rb') as fr:
+        temp_motion_energy = joblib.load(fr)
+
+    return temp_motion_energy
 
 """ Egocentric alignment"""
 def set_to_origin(mouse, ref_idx2: list):
@@ -462,12 +471,10 @@ class MotionEnergyMachine:
             with open(motion_energy_path, 'wb') as f:
                 joblib.dump(motion_energy[key], f)
 
-    @st.cache_data
+
     def load_motion_energy_single(self, selected_behavior):
         """Loads motion energy for a single behavior"""
-        motion_energy_path = os.path.join(self.working_dir, self.prefix, "animations", selected_behavior, "motion_energy.sav")
-        with open(motion_energy_path, 'rb') as fr:
-            temp_motion_energy = joblib.load(fr)
+        temp_motion_energy = load_motion_energy_single(selected_behavior, self.working_dir, self.prefix)
 
         return temp_motion_energy
 
@@ -530,13 +537,13 @@ class MotionEnergyMachine:
 
     def get_motionenergy(self):
 
-        param_container  = st.container()
-        motion_container = st.container()
+        param_container  = st.expander("Generate animations")
+        motion_container = st.expander("Calulate motion energy")
 
         #get user input for egocentric alignment
         #TODO: limit selection to two
         with param_container:
-            st.subheader("Generate animations")
+            #st.subheader("Generate animations")
             ego_container = st.container()
             polygon_container = st.container()
             animation_info_box = st.empty()
@@ -567,7 +574,7 @@ class MotionEnergyMachine:
 
         with motion_container:
             #for later
-            st.subheader("Load and view motion energy")
+            #st.subheader("Load and view motion energy")
             motion_energy = dict()
             selected_me_behaviors = st.multiselect("Select behavioral classes for motion energy view",
                                                    self.annotation_classes, self.annotation_classes)
