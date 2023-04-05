@@ -231,9 +231,11 @@ class MotionEnergyMachine:
                            ,help = SINGLE_POLY_HELP
                            ,key = "poly_select{}".format(poly)
                                             )
+            #add random number to key to avoid key error
+            rnd_add = np.random.random(1)
             color_selection = st.selectbox("Select a color for that polygon"
                                            , list(colors.keys())
-                                           ,key = "poly_select{}".format(poly)
+                                           ,key = "poly_select{}_{}".format(poly, rnd_add)
                                            ,)
 
             outline_dict[polygon_key] = dict(order = poly_selection
@@ -451,7 +453,7 @@ class MotionEnergyMachine:
             with open(motion_energy_path, 'wb') as f:
                 joblib.dump(motion_energy[key], f)
 
-    @st.cache(allow_output_mutation=True)
+    @st.cache_data
     def load_motion_energy_single(self, selected_behavior):
         """Loads motion energy for a single behavior"""
         motion_energy_path = os.path.join(self.working_dir, self.prefix, "animations", selected_behavior, "motion_energy.sav")
@@ -531,7 +533,7 @@ class MotionEnergyMachine:
             animation_info_box = st.empty()
             with ego_container:
                 egocentric_bps = st.multiselect("Select body parts to align pose estimation to:", self.keypoints
-                               #, max_selections  = 2 #only available for higher versions of streamlit
+                               , max_selections  = 2
                                ,help= EGO_SELECT_HELP)
 
                 if len(egocentric_bps) >= 2:
