@@ -11,6 +11,8 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 import plotly.graph_objects as go
 
+from PIL.ImageColor import getcolor
+
 from stqdm import stqdm
 
 from config.help_messages import VIEW_LOADER_HELP, POLY_COUNT_HELP ,SINGLE_POLY_HELP, EGO_SELECT_HELP
@@ -226,20 +228,26 @@ class MotionEnergyMachine:
         for poly in range(int(poly_count)):
             polygon_key = "Polygon {}".format(poly)
             st.write(polygon_key)
-            poly_selection = st.multiselect("Select the body parts to form the polygon"
+            clm_1, clm_2 = st.columns([0.7, 0.3])
+            poly_selection = clm_1.multiselect("Select the body parts to form the polygon"
                            ,self.keypoints
                            ,help = SINGLE_POLY_HELP
                            ,key = "poly_select{}".format(poly)
                                             )
-            #add random number to key to avoid key error
-            rnd_add = np.random.random(1)
-            color_selection = st.selectbox("Select a color for that polygon"
-                                           , list(colors.keys())
-                                           ,key = "poly_select{}_{}".format(poly, rnd_add)
-                                           ,)
+            #hex code for cyan
+            cyan = "#00ffff"
+
+            color_selection = clm_2.color_picker("Select a color for that polygon"
+                                                 , key="poly_select_{}".format(poly)
+                                                 , value = cyan
+                                                 , help = "If you want to change the color, just click on the color picker again."
+                                                          " If you want to use the same color again, just copy the hex code and paste it into another color picker."
+                                                          )
+
+
 
             outline_dict[polygon_key] = dict(order = poly_selection
-                                             ,color = colors[color_selection]
+                                             , color = getcolor(color_selection, "RGB")
                                             )
 
         #translate selected keypoints into indices
@@ -303,6 +311,7 @@ class MotionEnergyMachine:
                         animate_blobs(class_data_ego, video_name, outlines=outline_dict)
 
     def extract_frames_single(self, selected_behavior):
+        """ Extracts frames from videos for a single behavior"""
         video_import_path = os.path.join(self.working_dir, self.prefix, "animations")
         info_box = st.empty()
         # frame_list = {}
