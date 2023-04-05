@@ -7,9 +7,9 @@ import joblib
 import numpy as np
 import pandas as pd
 import streamlit as st
-from asoid.utils.import_data import load_pose, get_bodyparts, get_animals, load_labels
-from asoid.utils.project_utils import create_new_project, update_config
-from asoid.config.help_messages import POSE_ORIGIN_SELECT_HELP, FPS_HELP, MULTI_ANIMAL_HELP, MULTI_ANIMAL_SELECT_HELP,\
+from utils.import_data import load_pose, get_bodyparts, get_animals, load_labels
+from utils.project_utils import create_new_project, update_config
+from config.help_messages import POSE_ORIGIN_SELECT_HELP, FPS_HELP, MULTI_ANIMAL_HELP, MULTI_ANIMAL_SELECT_HELP,\
     BODYPART_SELECT, WORKING_DIR_HELP,PREFIX_HELP, DATA_DIR_IMPORT_HELP, POSE_DIR_IMPORT_HELP, POSE_ORIGIN_HELP,\
     POSE_SELECT_HELP, LABEL_DIR_IMPORT_HELP, LABEL_ORIGIN_HELP, LABEL_SELECT_HELP, PREPROCESS_HELP, EXCLUDE_OTHER_HELP,\
     INIT_CLASS_SELECT_HELP

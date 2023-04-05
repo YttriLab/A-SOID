@@ -1,9 +1,9 @@
-from asoid import categories
+import categories
 import streamlit as st
-from asoid.app import swap_app
-from asoid.config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP
-from asoid.utils.view_results import Viewer
-from asoid.utils.motionenergy import MotionEnergyMachine
+from app import swap_app
+from config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP
+from utils.view_results import Viewer
+from utils.motionenergy import MotionEnergyMachine
 
 CATEGORY = categories.VIEW
 TITLE = "View"

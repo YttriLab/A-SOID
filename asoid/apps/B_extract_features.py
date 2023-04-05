@@ -1,14 +1,14 @@
 import streamlit as st
 import numpy as np
-from asoid.app import swap_app
+from app import swap_app
 import os
-from asoid.utils.project_utils import update_config
-from asoid.utils.load_workspace import load_data, load_features
-from asoid.utils.extract_features import Extract, interactive_durations_dist
-from asoid.config.help_messages import SPLIT_CLASSES_HELP, BINS_SLIDER_HELP, MIN_DURATION_HELP, CALM_HELP, NUM_SPLITS_HELP,\
+from utils.project_utils import update_config
+from utils.load_workspace import load_data, load_features
+from utils.extract_features import Extract, interactive_durations_dist
+from config.help_messages import SPLIT_CLASSES_HELP, BINS_SLIDER_HELP, MIN_DURATION_HELP, CALM_HELP, NUM_SPLITS_HELP,\
                                 RE_EXTRACT_HELP, EXTRACT_FEATURES_HELP, IMPRESS_TEXT, NO_CONFIG_HELP
 
-from asoid import categories
+import categories
 
 CATEGORY = categories.EXTRACT_FEATURES
 TITLE = "Extract Features"

@@ -10,8 +10,8 @@ import plotly.figure_factory as ff
 import matplotlib.colors as mcolors
 
 
-from asoid.config.help_messages import VIEW_LOADER_HELP
-from asoid.utils.import_data import load_labels
+from config.help_messages import VIEW_LOADER_HELP
+from utils.import_data import load_labels
 
 
 def label_blocks(df, clm_block):

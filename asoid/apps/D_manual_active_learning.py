@@ -5,13 +5,13 @@ import pandas as pd
 import glob
 import joblib
 import streamlit as st
-from asoid.app import swap_app
-from asoid import categories
-from asoid.utils.load_workspace import load_features, load_test_targets, \
+from app import swap_app
+import categories
+from utils.load_workspace import load_features, load_test_targets, \
     load_iterX, load_new_pose, load_predict_proba
-from asoid.utils.manual_active_learning import Refine
+from utils.manual_active_learning import Refine
 
-from asoid.config.help_messages import NO_CONFIG_HELP, IMPRESS_TEXT
+from config.help_messages import NO_CONFIG_HELP, IMPRESS_TEXT
 
 CATEGORY = categories.REFINE
 TITLE = "Refine Behaviors"

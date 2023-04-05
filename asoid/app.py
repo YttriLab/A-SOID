@@ -9,11 +9,11 @@ import streamlit as st
 from PIL import Image
 from streamlit_option_menu import option_menu
 
-import asoid.apps as _stable_apps
-import asoid.categories as _categories
-from asoid import utilities
-from asoid.utils.load_workspace import load_features, load_iterX
-from asoid.config.help_messages import UPLOAD_CONFIG_HELP, IMPRESS_TEXT
+import apps as _stable_apps
+import categories as _categories
+import utilities
+from utils.load_workspace import load_features, load_iterX
+from config.help_messages import UPLOAD_CONFIG_HELP, IMPRESS_TEXT
 
 
 def get_url_app():
