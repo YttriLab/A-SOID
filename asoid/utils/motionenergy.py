@@ -491,8 +491,8 @@ class MotionEnergyMachine:
     def view_motion_energy(self, motion_energy):
         """Visualizes motion energy for all behaviors in motion_energy dictionary"""
         #TODO UI adjustment of color range
-        #c_range = st.slider("Color range", min_value = 0 , max_value = 100, [0, 20])
-        c_range = [0, 20]
+        c_range = st.slider("Pick color range for motion energy display", min_value = 0 , max_value = 100,value = [0, 20])
+        #c_range = [0, 20]
         motion_energy_keys = list(motion_energy.keys())
 
         n_cols = 5
@@ -574,7 +574,7 @@ class MotionEnergyMachine:
             motion_info_box = st.empty()
 
             #button to load motion energy
-            if st.button("Load & view Motion Energy", key="me_viewer"):
+            if st.checkbox("Load & view Motion Energy", key="me_load", value=False):
                 #load motion energy based on selected behaviors
                 for i in stqdm(range(len(selected_me_behaviors)), desc = "Collecting behaviors..."):
                     behavior = selected_me_behaviors[i]
@@ -607,6 +607,8 @@ class MotionEnergyMachine:
                     self.view_motion_energy(motion_energy)
                 else:
                     motion_info_box.error("No motion energy found. Generate animations first.")
+            else:
+                motion_info_box.info("Select behaviors to load motion energy.")
 
 
     def main(self):
