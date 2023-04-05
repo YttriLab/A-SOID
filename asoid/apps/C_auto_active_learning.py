@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from asoid import categories
+import categories
 import numpy as np
 import pandas as pd
 import streamlit as st
