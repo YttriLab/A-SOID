@@ -15,6 +15,8 @@ def get_requirements():
 setup(
     name='asoid',
     version= asoid.__version__,
+    setup_requires=["setuptools_scm"],
+    install_requires=get_requirements(),
     description='ASOiD: An active learning approach to behavioral classification',
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -24,13 +26,14 @@ setup(
     },
     url="https://github.com/YttriLab/A-SOID",
     author=['Jens F. Schweihoff','Alexander Hsu'],
-    entry_points={
-        "console_scripts": [
-                            "asoid =asoid.__main__:main"
-                            ]
-        },
+    keywords="Active learning, pose estimation, behavior analysis, neuroscience",
+    license="The Clear BSD License",
     packages=find_packages(),  # same as name
     include_package_data=True,
-    install_requires=get_requirements(),
+    entry_points={
+        "console_scripts": [
+            "asoid =asoid.__main__:main"
+        ]
+    },
     python_requires=">=3.7",
 )
