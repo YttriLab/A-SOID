@@ -155,9 +155,7 @@ def animate_blobs(arr, filename, outlines:dict, include_dots = False, center_shi
             #convert into list of tuples (cv2 input)
             #opencv does not take float, so convert points into int for px values
             bp_points1 = frame_coords.astype(int)
-            #pts = [(50, 50), (300, 190), (400, 10)]
             bp_points2 = list((map(tuple, bp_points1)))
-            #cv2.polylines(img, np.array([pts]), True, RED, 5)
             cv2.fillPoly(img, np.array([bp_points2]), color= poly_color)
             if include_dots:
                 for bp in bp_points2:
@@ -216,15 +214,6 @@ class MotionEnergyMachine:
 
     def select_outline(self):
         "Allows GUI selection of polygons made up by bodyparts as corners for blob animation"
-        # available colors
-        colors = dict(cyan = (255, 255, 0)
-                      , magenta = (255, 0, 255)
-                      , red = (255, 0,0)
-                      , lime = (0,255,0)
-                      , blue = (0,0,255)
-                      , yellow = (255, 255, 0)
-                      , white = (255, 255, 255)
-                      )
 
         poly_count = st.number_input("Number of Polygons"
                                      , help= POLY_COUNT_HELP
@@ -252,11 +241,13 @@ class MotionEnergyMachine:
                                                  , help = "If you want to change the color, just click on the color picker again."
                                                           " If you want to use the same color again, just copy the hex code and paste it into another color picker."
                                                           )
-
-
+            #convert to rgb from streamlit hex code
+            rgb_color = getcolor(color_selection, "RGB")
+            #convert to bgr for opencv (using np.array.tolist() first to convert to tuple to convert to int instead of int64)
+            bgr_color = tuple(np.array(rgb_color, dtype= int)[::-1].tolist())
 
             outline_dict[polygon_key] = dict(order = poly_selection
-                                             , color = getcolor(color_selection, "RGB")
+                                             , color = bgr_color
                                             )
 
         #translate selected keypoints into indices
@@ -568,8 +559,10 @@ class MotionEnergyMachine:
                     try:
                         self.create_blob_animation(sub_selected_classes, outline_dict, ref_origin_idx, ref_rot_idxs)
                         animation_info_box.info("Ready for motion energy calculcation.")
-                    except:
+                    except Exception as e:
                         animation_info_box.error("Enter required parameters first.")
+                        #print error for reporting
+                        print(e)
 
 
         with motion_container:
