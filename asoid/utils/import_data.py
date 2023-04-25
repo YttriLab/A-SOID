@@ -146,8 +146,8 @@ def load_labels_boris(path: str, fps: int = None):
         # correct the time column
         up_labels["time"] = np.arange(0, up_labels.shape[0]) / fps
 
-    elif upsample_rate < 1:
-        raise ValueError(f"Sample rate of label file is to high. Downsampling is not available at this point.")
+    elif upsample_rate < 0.99:
+        raise ValueError(f"Sample rate {time_step} of label file is to high with {fps} as video fps. Downsampling is not available at this point.")
 
     else:
         # nothing to do here
