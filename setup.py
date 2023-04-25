@@ -41,7 +41,7 @@ setup(
                     ,"plotly"
                     ,"pillow"
                     ,"joblib"
-                    ,"scipy"
+                    ,"scipy~=1.9.3"
                     ,"ipython"
                     ,"psutil"
                     ,"numba"
