@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from datetime import date
 from psutil import virtual_memory
 import streamlit as st
@@ -237,6 +238,42 @@ class Explorer:
         st.plotly_chart(fig)
         return group_types
 
+    def export_to_csv(self, new_targets):
+        """Export the new expanded assignments to individual csv files for external use"""
+        #get input label file names
+        label_file_names = [x.strip() for x in self.config["Data"].get("LABEL_INPUT_FILES").split(",")]
+        #get the new class names
+        new_class_list = [x for x in list(self.new_number_to_class.values()) if x != "other"]
+        #and that other is last!
+        new_class_list.append("other")
+        new_num_to_class = {n: x for n,x in enumerate(new_class_list)}
+        #iter through the expanded assignments (already split to correct size) and save as csv#
+        for num, j in enumerate(new_targets):
+            df = pd.Series(j)
+            for n_class, k_class in new_num_to_class.items():
+                df[df == n_class] = k_class
+
+            #TODO: add time column?
+            # add empty columns even if class not present!
+
+            # transform into binary
+            df_dummies = pd.get_dummies(df)
+            #make sure all classes are present (even if not present in this file)
+            for k_class in new_class_list:
+                if k_class not in df_dummies.columns:
+                    df_dummies[k_class] = 0
+            #add time column based on frame rate
+            df_dummies["time"] = df_dummies.index / self.framerate
+            #make time column new index
+            df_dummies = df_dummies.set_index("time")
+            # save as csv with new filename
+            fname = label_file_names[num].split(".")[0] + "_discovered.csv"
+            #create a new folder for this
+            os.makedirs(os.path.join(self.working_dir, self.prefix, "export"), exist_ok=True)
+            #save as csv
+            df_dummies.to_csv(os.path.join(self.working_dir, self.prefix, "export", fname))
+
+
 
     def export_to_new_project(self, new_targets, new_prefix = None):
         # create new project folder with prefix as name:
@@ -265,10 +302,11 @@ class Explorer:
         update_config(project_folder, updated_params=parameters_dict)
         st.success(f"Upload newly created project {new_prefix} to continue training with the new classes".upper())
 
-    def save_subclasses(self, selected_subclasses, new_prefix):
+    def save_subclasses(self, selected_subclasses, new_prefix, export_to_csv = False):
         """Save the selected subclasses to a new project
         :param selected_subclasses: list of selected subclasses
         :param new_prefix: prefix for new project
+        :param export_to_csv: if True, export to csv in current project dir, default False
         :return:"""
 
         idx_class = np.argwhere(self.target_set == self.selected_class_num)
@@ -320,6 +358,10 @@ class Explorer:
         sub_array_idx = np.cumsum(sub_array_lengths[:-1])
         # Split the array using `split`
         split_targets = np.split(new_targets, sub_array_idx)
+        if export_to_csv:
+            self.export_to_csv(split_targets)
+        else:
+            pass
         self.export_to_new_project(split_targets, new_prefix)
 
     def run_discovery(self):
@@ -377,6 +419,9 @@ class Explorer:
         valid_subclasses = [x for x in optional_subclasses if x != "Noise"]
         valid_subclasses_to_number = {s: i for i,s in enumerate(valid_subclasses)}
 
+        st.subheader("Export discovered classes to new project")
+        st.write("A new project will be created with the new classes added. You can then use this project to train a new classifier.")
+
         with st.form(key="new_class_submit_form"):
             selected_subclasses = st.multiselect(
                 'Select Groups to add to training set'
@@ -390,11 +435,14 @@ class Explorer:
                 ,help=PREFIX_HELP
                 ,key = "prefix_select_disc"
                 )
+            EXPORT_HELP = "Export the cluster assignments to a csv file for further analysis and external use."
+            csv_export_checkbox = st.checkbox("Export to csv", help=EXPORT_HELP)
 
             if st.form_submit_button("Save new classes",help=SAVE_NEW_HELP) and selected_subclasses:
                 # translate to numbers:
                 selected_subclasses_num = [valid_subclasses_to_number[x] for x in selected_subclasses]
-                self.save_subclasses(selected_subclasses_num, new_prefix)
+
+                self.save_subclasses(selected_subclasses_num, new_prefix, export_to_csv=csv_export_checkbox)
 
 
     def main(self):
@@ -414,7 +462,6 @@ class Explorer:
                     selected_class_str = self.select_class()
                 try:
                     self.load_results()
-                    print("Loaded results from file")
                     with cont:
                         #create checkbox to redo discovery
                         if st.checkbox("Redo discovery", key="redo_discovery_key"):
