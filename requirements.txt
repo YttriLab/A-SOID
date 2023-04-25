@@ -16,7 +16,7 @@ plotly
 tqdm
 stqdm
 numba~=0.52.0
-scipy
+scipy~=1.9.3
 moviepy
 pillow
 opencv-python
