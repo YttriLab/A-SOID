@@ -9,6 +9,7 @@ from plotly.subplots import make_subplots
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+from sklearn.ensemble import RandomForestClassifier
 import umap
 import hdbscan
 
@@ -19,6 +20,10 @@ from config.help_messages import CLASS_SELECT_HELP,CLUSTER_RANGE_HELP,START_DISC
     SUBCLASS_SELECT_HELP,SAVE_NEW_HELP, PREPARE_DATA_HELP, PREFIX_HELP
 from config.global_config import HDBSCAN_PARAMS,UMAP_PARAMS
 
+
+def reset_checkbox(check_box_key:str):
+    if check_box_key in st.session_state:
+        st.session_state[check_box_key] = False
 
 
 def plot_embedding(plt_reducer_embeddings,class_name):
@@ -97,6 +102,43 @@ def hdbscan_classification(umap_embeddings,cluster_range):
     soft_assignments = np.argmax(assign_prob,axis=1)
     return retained_hierarchy,assignments,assign_prob,soft_assignments
 
+def expand_assignments(assignments, features, model=None):
+    """ Train a classifier on the given features and assignments to assign noise to clusters. Then use the classifier to
+    assign the noise to clusters.
+    :param features: the features to train on
+    :param assignments: the assignments to train on from hdbscan
+    :param model: the model to use for training (optional). If not provided, a default random forest classifier is used.
+    :return: the expanded assignments
+    """
+    # todo: have config file for standard model parameters shared across all modules
+    if model is None:
+        noise_assignment_model = RandomForestClassifier(n_estimators=200, random_state=42, n_jobs=-1,
+                                                        criterion='gini',
+                                                        class_weight='balanced_subsample'
+                                                        )
+    else:
+        noise_assignment_model = model
+
+    # split features into noise and clusters
+    noise_idx = np.where(assignments == -1)[0]
+    cluster_idx = np.where(assignments >= 0)[0]
+    # features
+    noise_features = features[noise_idx]
+    cluster_features = features[cluster_idx]
+    # assignments
+    cluster_assignments = assignments[cluster_idx]
+
+    # train on clusters
+    noise_assignment_model.fit(cluster_features, cluster_assignments)
+    # predict on noise
+    noise_predictions = noise_assignment_model.predict(noise_features)
+    # combine predictions with clusters but keep positions of noise
+    expanded_assignments = np.zeros(features.shape[0])
+    expanded_assignments[noise_idx] = noise_predictions
+    expanded_assignments[cluster_idx] = cluster_assignments
+
+    return expanded_assignments, noise_assignment_model
+
 
 class Explorer:
 
@@ -132,6 +174,9 @@ class Explorer:
         # prep for later reassignment
         self.new_annotations = None
         self.new_number_to_class = self.number_to_class.copy()
+        #prep assignment_model
+        self.noise_assignment_model = None
+        self.expanded_assignments = None
 
         self.feature_extractor = Extract(self.working_dir, self.prefix, self.frames2integ, 1)
         self.data, _ = load_data(self.working_dir, self.prefix)
@@ -192,6 +237,7 @@ class Explorer:
         st.plotly_chart(fig)
         return group_types
 
+
     def export_to_new_project(self, new_targets, new_prefix = None):
         # create new project folder with prefix as name:
         if new_prefix is None:
@@ -220,6 +266,10 @@ class Explorer:
         st.success(f"Upload newly created project {new_prefix} to continue training with the new classes".upper())
 
     def save_subclasses(self, selected_subclasses, new_prefix):
+        """Save the selected subclasses to a new project
+        :param selected_subclasses: list of selected subclasses
+        :param new_prefix: prefix for new project
+        :return:"""
 
         idx_class = np.argwhere(self.target_set == self.selected_class_num)
         #original number of classes, ignoring other
@@ -230,9 +280,15 @@ class Explorer:
         class_name = self.number_to_class[self.selected_class_num]
         self.new_annotations = self.target_set.copy()
 
+        #train a classifier to assign noise to clusters
+        with st.spinner("Training classifier to assign noise to clusters"):
+            self.expanded_assignments, self.noise_assignment_model = expand_assignments(self.hdbscan_assignments
+                                                                                        ,self.scaled_feature_set_just_class)
+
+        #add new classes to new annotations and number to class
         for num, new_class in enumerate(selected_subclasses):
 
-            idx_sub_class = np.argwhere(self.hdbscan_assignments == new_class)
+            idx_sub_class = np.argwhere(self.expanded_assignments == new_class)
             idx_candidates = idx_class[idx_sub_class]
             # create new class
             new_class_num = org_num_classes + num
@@ -246,8 +302,10 @@ class Explorer:
         self.new_annotations[idx_other] = new_num_other
         self.new_number_to_class[new_num_other] = "other"
 
-        #Upsample targets to original framerate, then create new project
+        #TODO: Add frameshift prediction?
+        # Upsample targets to original framerate, then create new project
         # upsample labels to fit with pose estimation info
+
         sample_rate = 1 / self.framerate
         time_step = self.duration_min
         upsample_rate = time_step / sample_rate
@@ -265,11 +323,12 @@ class Explorer:
         self.export_to_new_project(split_targets, new_prefix)
 
     def run_discovery(self):
-
+        print("Running discovery")
 
         self.cluster_range = st.slider('Select a cluster range',
                                        0.1,10.0,(1.5,2.5),
-                                       help=CLUSTER_RANGE_HELP)
+                                       help=CLUSTER_RANGE_HELP,
+                                       key='cluster_range')
 
         if st.button("Start discovery",help=START_DISCOVERY_HELP):
 
@@ -297,7 +356,7 @@ class Explorer:
             with st.spinner('Clustering embedding...'):
                 self.hdbscan_clustering()
 
-            self.show_results()
+            st.success("Done. Uncheck 'Redo discovery' to view results and continue")
 
     def load_results(self):
         [self.scaled_feature_set_just_class,
@@ -355,9 +414,15 @@ class Explorer:
                     selected_class_str = self.select_class()
                 try:
                     self.load_results()
+                    print("Loaded results from file")
                     with cont:
-                        if st.checkbox("Redo discovery"):
+                        #create checkbox to redo discovery
+                        if st.checkbox("Redo discovery", key="redo_discovery_key"):
+                            # clear cache so it reloads from file rather than cache
+                            load_class_clusters.clear()
+                            load_class_embeddings.clear()
                             self.run_discovery()
+
                         else:
                             self.show_results()
 
