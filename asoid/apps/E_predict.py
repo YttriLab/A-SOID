@@ -1,6 +1,6 @@
 import categories
 import streamlit as st
-from app import swap_app
+# from app import swap_app
 
 from utils.predict_new_data import Predictor
 from config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP

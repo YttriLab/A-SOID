@@ -1,6 +1,6 @@
 import streamlit as st
 import numpy as np
-from app import swap_app
+# from app import swap_app
 import os
 from utils.project_utils import update_config
 from utils.load_workspace import load_data, load_features
@@ -11,7 +11,7 @@ from config.help_messages import SPLIT_CLASSES_HELP, BINS_SLIDER_HELP, MIN_DURAT
 import categories
 
 CATEGORY = categories.EXTRACT_FEATURES
-TITLE = "Extract Features"
+TITLE = "Extract features"
 
 
 def prompt_setup(prompt_container, software, framerate, annotation_classes,
@@ -107,11 +107,11 @@ def main(config=None):
     with bottom_cont:
         st.markdown("""---""")
         st.write('')
-        button_col1, button_col2, button_col3, button_col4, button_col5 = st.columns([3, 3, 1, 1, 1])
-        if button_col1.button('◀  PRIOR STEP'):
-            swap_app('A-data-preprocess')
-        if button_col5.button('NEXT STEP ▶'):
-            swap_app('C-auto-active-learning')
+        # button_col1, button_col2, button_col3, button_col4, button_col5 = st.columns([3, 3, 1, 1, 1])
+        # if button_col1.button('◀  PRIOR STEP'):
+        #     swap_app('A-data-preprocess')
+        # if button_col5.button('NEXT STEP ▶'):
+        #     swap_app('C-auto-active-learning')
         st.write('')
         st.markdown('<span style="color:grey">{}</span>'.format(IMPRESS_TEXT), unsafe_allow_html=True)
 

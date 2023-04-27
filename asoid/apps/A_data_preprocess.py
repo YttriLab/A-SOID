@@ -1,8 +1,8 @@
 import streamlit as st
+from apps import A_data_preprocess, B_extract_features
 from utils.project_utils import view_config_md
 from utils.load_preprocess import Preprocess
 from config.help_messages import IMPRESS_TEXT
-from app import swap_app
 
 import categories
 
@@ -23,11 +23,12 @@ def main(config=None):
 
         st.markdown("""---""")
         st.write('')
-        button_col1, button_col2, button_col3, button_col4, button_col5 = st.columns([3, 3, 1, 1, 1])
-        if button_col1.button('◀  PRIOR STEP'):
-            swap_app('A-data-preprocess')
-        if button_col5.button('NEXT STEP ▶'):
-            swap_app('B-extract-features')
+        # button_col1, button_col2, button_col3, button_col4, button_col5 = st.columns([3, 3, 1, 1, 1])
+        # if button_col1.button('◀  PRIOR STEP'):
+        #     # A_data_preprocess.main()
+        #     pass
+        # if button_col5.button('NEXT STEP ▶'):
+        #     B_extract_features.main()
         st.write('')
         st.markdown('<span style="color:grey">{}</span>'.format(IMPRESS_TEXT), unsafe_allow_html=True)
 

@@ -1,11 +1,11 @@
 import os
 from pathlib import Path
 
-from asoid import categories
+import categories
 import numpy as np
 import pandas as pd
 import streamlit as st
-from app import swap_app
+# from app import swap_app
 from utils.auto_active_learning import show_classifier_results, RF_Classify
 from utils.load_workspace import load_features, load_test_targets, load_heldout, \
     load_iter0, load_iterX, load_all_train
@@ -16,7 +16,7 @@ from config.help_messages import INIT_RATIO_HELP, MAX_ITER_HELP, MAX_SAMPLES_HEL
                                 NO_FEATURES_HELP
 
 CATEGORY = categories.CLASSIFY_BEHAVIORS
-TITLE = "Active Learning"
+TITLE = "Active learning"
 
 
 def prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotation_classes):
@@ -115,7 +115,7 @@ def main(config=None):
         conf_threshold = config["Processing"].getfloat("CONF_THRESHOLD")
         if conf_threshold is None:
             #backwards compatability
-            conf_threshold = 0.8
+            conf_threshold = 0.5
 
         try:
             [_, all_X_train_list, all_Y_train_list, all_f1_scores, _, _] = \
@@ -159,11 +159,11 @@ def main(config=None):
 
         st.markdown("""---""")
         st.write('')
-        button_col1, button_col2, button_col3, button_col4, button_col5 = st.columns([3, 3, 1, 1, 1])
-        if button_col1.button('◀  PRIOR STEP'):
-            swap_app('B-extract-features')
-        if button_col5.button('NEXT STEP ▶'):
-            swap_app('E-predict')
+        # button_col1, button_col2, button_col3, button_col4, button_col5 = st.columns([3, 3, 1, 1, 1])
+        # if button_col1.button('◀  PRIOR STEP'):
+        #     swap_app('B-extract-features')
+        # if button_col5.button('NEXT STEP ▶'):
+        #     swap_app('E-predict')
         st.write('')
         st.markdown('<span style="color:grey">{}</span>'.format(IMPRESS_TEXT), unsafe_allow_html=True)
 

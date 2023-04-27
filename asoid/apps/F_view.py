@@ -1,6 +1,6 @@
 import categories
 import streamlit as st
-from app import swap_app
+# from app import swap_app
 from config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP
 from utils.view_results import Viewer
 from utils.motionenergy import MotionEnergyMachine
