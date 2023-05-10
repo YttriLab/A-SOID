@@ -193,10 +193,9 @@ def bsoid_extract_numba(data, fps):
 
 def feature_extraction(train_datalist, num_train, framerate):
     f_integrated = []
-    for i in stqdm(range(num_train), desc="Extracting spatiotemporal features from pose"):
-        with st.spinner('Extracting features from pose...'):
-            binned_features = bsoid_extract_numba([train_datalist[i]], framerate)
-            f_integrated.append(binned_features[0])  # getting only the non-shifted
+    for i in range(num_train):
+        binned_features = bsoid_extract_numba([train_datalist[i]], framerate)
+        f_integrated.append(binned_features[0])  # getting only the non-shifted
     features = np.vstack([f_integrated[m] for m in range(len(f_integrated))])
     scaler = StandardScaler()
     scaler.fit(features)
@@ -205,10 +204,9 @@ def feature_extraction(train_datalist, num_train, framerate):
 
 def feature_extraction_with_extr_scaler(train_datalist, num_train, framerate, scaler):
     f_integrated = []
-    for i in stqdm(range(num_train), desc="Extracting spatiotemporal features from pose"):
-        with st.spinner('Extracting features from pose...'):
-            binned_features = bsoid_extract_numba([train_datalist[i]], framerate)
-            f_integrated.append(binned_features[0])  # getting only the non-shifted
+    for i in range(num_train):
+        binned_features = bsoid_extract_numba([train_datalist[i]], framerate)
+        f_integrated.append(binned_features[0])  # getting only the non-shifted
     features = np.vstack([f_integrated[m] for m in range(len(f_integrated))])
     scaled_features = scaler.transform(features)
     return features, scaled_features
