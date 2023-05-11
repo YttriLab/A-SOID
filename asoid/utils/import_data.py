@@ -2,7 +2,6 @@ import os
 import pandas as pd
 import numpy as np
 import h5py
-import streamlit as st
 
 
 def get_animals(df: pd.DataFrame, lvl=1):
