@@ -1,13 +1,14 @@
 import click
 import os
 import configparser as cfg
+import asoid
 
 import sys
 # get current dir
 dirname = os.path.dirname(__file__)
 sys.path.append(dirname)
 
-from headless import Project
+from core import Project
 
 def load_streamlit_config(dirname):
     config = cfg.ConfigParser()
@@ -69,6 +70,15 @@ def main_predict(project_path, pose_files, pose_origin, verbose):
     click.echo("Predicting on new pose files...")
     asoid_project = Project(project_path, verbose=verbose)
     _ = asoid_project.predict(pose_files, pose_origin)
+
+@main.command("info")
+def main_diagnostics():
+    """Runs the A-SOiD diagnostics"""
+    click.echo("A-SOiD diagnostics:")
+    click.echo("Python version: " + sys.version)
+    click.echo("Python path: " + sys.executable)
+    click.echo("A-SOiD path: " + os.path.dirname(asoid.__file__))
+    click.echo("A-SOiD version: " + asoid.__version__)
 
 
 if __name__ == "__main__":

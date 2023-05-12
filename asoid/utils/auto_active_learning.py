@@ -5,8 +5,8 @@ import plotly.graph_objects as go
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import f1_score
 import matplotlib.colors as mcolors
-from utils.extract_features import frameshift_predict, bsoid_predict_numba, bsoid_predict_numba_noscale
-from utils.load_workspace import load_features, load_test, save_data
+from asoid.utils.extract_features import frameshift_predict, bsoid_predict_numba, bsoid_predict_numba_noscale
+from asoid.utils.load_workspace import load_features, load_test, save_data
 
 
 def show_classifier_results(behavior_classes, all_score,

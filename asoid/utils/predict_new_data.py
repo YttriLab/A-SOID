@@ -5,25 +5,23 @@ from stqdm import stqdm
 import numpy as np
 import pandas as pd
 
-from utils.load_preprocess import select_software
-from utils.load_workspace import load_iterX, load_features
-from utils.extract_features import feature_extraction, feature_extraction_with_extr_scaler,frameshift_predict,bsoid_predict_numba,bsoid_predict_numba_noscale
-from utils.import_data import load_pose,get_bodyparts,get_animals
-from config.help_messages import *
+from asoid.utils.load_preprocess import select_software
+from asoid.utils.load_workspace import load_iterX, load_features
+from asoid.utils.extract_features import feature_extraction, feature_extraction_with_extr_scaler,frameshift_predict,bsoid_predict_numba,bsoid_predict_numba_noscale
+from asoid.utils.import_data import load_pose,get_bodyparts,get_animals
+from asoid.config.help_messages import *
 
-
-
-def save_predictions(labels,source_file_name,behavior_classes,sample_rate):
-    """takes numerical labels and transforms back into one-hot encoded file (BORIS style). Saves as csv"""
-
-    df = pd.DataFrame(labels,columns=["labels"])
+def convert_predictions_to_dataframe(predictions,behavior_classes,sample_rate):
+    df = pd.DataFrame(predictions,columns=["labels"])
     time_clm = np.round(np.arange(0,df.shape[0]) / sample_rate,2)
     # convert numbers into behavior names
     class_dict = {i: x for i,x in enumerate(behavior_classes)}
     df["classes"] = df["labels"].copy()
     for cl_idx,cl_name in class_dict.items():
         df["classes"].iloc[df["labels"] == cl_idx] = cl_name
+    return df
 
+def convert_dataframe_to_dummies(df,behavior_classes):
     # for simplicity let's convert this back into BORIS type file
     dummy_df = pd.get_dummies(df["classes"])
     #add 0 columns for each class that wasn't predicted in the file
@@ -31,12 +29,21 @@ def save_predictions(labels,source_file_name,behavior_classes,sample_rate):
     for not_predicted_class in not_predicted_classes:
         dummy_df[not_predicted_class] = 0
 
-    dummy_df["time"] = time_clm
-    dummy_df = dummy_df.set_index("time")
+    return dummy_df
 
+def save_dataframe_to_csv(df,source_file_name):
     # save to csv
     file_name = source_file_name.split(".")[0]
-    dummy_df.to_csv(file_name + "_labels.csv")
+    df.to_csv(file_name + "_labels.csv")
+
+def save_predictions(labels,source_file_name,behavior_classes,sample_rate):
+    """takes numerical labels and transforms back into one-hot encoded file (BORIS style). Saves as csv"""
+
+    df = convert_predictions_to_dataframe(labels,behavior_classes,sample_rate)
+    dummy_df = convert_dataframe_to_dummies(df,behavior_classes)
+
+    # save to csv
+    save_dataframe_to_csv(dummy_df,source_file_name)
 
 
 class Predictor:

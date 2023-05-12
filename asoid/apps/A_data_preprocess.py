@@ -1,10 +1,10 @@
 import streamlit as st
-from utils.project_utils import view_config_md
-from utils.load_preprocess import Preprocess
-from config.help_messages import IMPRESS_TEXT
-from app import swap_app
+from asoid.utils.project_utils import view_config_md
+from asoid.utils.load_preprocess import Preprocess
+from asoid.config.help_messages import IMPRESS_TEXT
+from asoid.app import swap_app
 
-import categories
+import asoid.categories as categories
 
 CATEGORY = categories.PREPROCESS_DATA
 TITLE = "Preprocess data"

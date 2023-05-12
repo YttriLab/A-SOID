@@ -1,17 +1,17 @@
 import os
 from pathlib import Path
 
-import categories
+import asoid.categories as categories
 import numpy as np
 import pandas as pd
 import streamlit as st
-from app import swap_app
-from utils.auto_active_learning import show_classifier_results, RF_Classify
-from utils.load_workspace import load_features, load_test_targets, load_heldout, \
+from asoid.app import swap_app
+from asoid.utils.auto_active_learning import show_classifier_results, RF_Classify
+from asoid.utils.load_workspace import load_features, load_test_targets, load_heldout, \
     load_iter0, load_iterX, load_all_train
-from utils.project_utils import update_config
+from asoid.utils.project_utils import update_config
 
-from config.help_messages import INIT_RATIO_HELP, MAX_ITER_HELP, MAX_SAMPLES_HELP,\
+from asoid.config.help_messages import INIT_RATIO_HELP, MAX_ITER_HELP, MAX_SAMPLES_HELP,\
                                 SHOW_FINAL_RESULTS_HELP, RE_CLASSIFY_HELP, IMPRESS_TEXT, NO_CONFIG_HELP,\
                                 NO_FEATURES_HELP
 

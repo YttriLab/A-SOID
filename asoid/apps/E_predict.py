@@ -1,9 +1,9 @@
-import categories
+import asoid.categories as categories
 import streamlit as st
-from app import swap_app
+from asoid.app import swap_app
 
-from utils.predict_new_data import Predictor
-from config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP
+from asoid.utils.predict_new_data import Predictor
+from asoid.config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP
 
 CATEGORY = categories.PREDICT
 TITLE = "Predict behaviors"

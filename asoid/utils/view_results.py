@@ -8,8 +8,8 @@ from plotly.subplots import make_subplots
 
 import datetime
 
-from config.help_messages import VIEW_LOADER_HELP
-from utils.import_data import load_labels
+from asoid.config.help_messages import VIEW_LOADER_HELP
+from asoid.utils.import_data import load_labels
 
 
 def label_blocks(df, clm_block):

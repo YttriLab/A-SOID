@@ -1,8 +1,8 @@
 import streamlit as st
 import os
 import joblib
-from utils.project_utils import load_config
-import utils.loading_utils as lu
+from asoid.utils.project_utils import load_config
+import asoid.utils.loading_utils as lu
 
 
 def _load_sav(path, name, filename):

@@ -1,6 +1,6 @@
 import os
 import joblib
-from utils.project_utils import load_config
+from asoid.utils.project_utils import load_config
 
 
 """Functions to load data from project folder, streamlit implementation is at load_workspace.py"""
