@@ -27,7 +27,7 @@ of user-defined behaviors and discovered subactions.
 
 ## Overview: 
 
-![DLS_Stim](asoid/images/GUI_overview.png)
+![GUI overview](asoid/images/GUI_overview.png)
 
 A-SOiD is a streamlit-based application that integrates the core features of [A-SOiD](https://www.biorxiv.org/content/10.1101/2022.11.04.515138v1) into a user-friendly,
 no-coding required GUI solution that can be downloaded and used on custom data.
@@ -183,6 +183,99 @@ We invite you to test A-SOiD using the [CalMS21](https://data.caltech.edu/record
 
 The overall runtime depends on your setup and parameters set during training, but should be completed within 1h of starting the project.
 Tested on: AMD Ryzen 9 6900HX 3.30 GHz and 16 GB RAM; Windows 11 Home
+
+# Running A-SOiD without the GUI
+### or: How to use asoid.core and asoid CLI
+
+
+There are two ways on how to interact with asoid without the GUI.
+
+
+1. asoid CLI, which is a command line interface to asoid.core. The CLI is a wrapper around asoid.core and can be used to run some external functionalities of asoid. The CLI is also used to run the GUI itself.
+2. asoid.core module, which gives you access to some core functionalities of asoid, such as the prediction of new files using previously trained classifiers.
+
+## asoid CLI
+
+Run the CLI with the following command to get some basic overview of the available commands:
+```bash
+asoid --help
+```
+at time of writing the output is:
+```bash
+Usage: asoid [OPTIONS] COMMAND [ARGS]...
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  app      Runs the A-SOiD streamlit app
+  info     Runs the A-SOiD diagnostics
+  predict  Uses A-SOiD classifier to predict on new pose files.
+```
+
+### Predict new data using a previously trained classifier
+
+```bash
+asoid predict [OPTIONS] PROJECT_PATH POSE_FILES
+```
+
+```
+  Uses A-SOiD classifier to predict on new pose files.
+
+  :param project_path: path to project containing config file
+
+  :param pose_files: list of paths to pose files, or path to folder with pose
+  files, or path to single pose file
+
+  :param pose_origin: origin of the pose files, if not specified, the origin
+  from the config file is used
+
+  :param verbose: verbose output
+
+  :output: the predictions are saved as .csv files in the same directory as
+  the pose files
+
+Options:
+  -origin TEXT  origin of the pose files, if not specified, the origin from
+                the config file is used
+  -verbose      verbose output
+  --help        Show this message and exit.
+```
+
+### Get some info
+
+The info command is used to run the diagnostics of asoid. Use this function if your are reporting an issue, to give us some information about your system and the asoid installation.
+
+```bash
+asoid info
+```
+The output might look like this:
+```bash
+A-SOiD diagnostics:
+Python version: 3.8.15 (default, Nov 24 2022, 14:38:14) [MSC v.1916 64 bit (AMD64)]
+Python path: C:\Users\Asoidonaut\anaconda3\envs\asoid\python.exe
+A-SOiD path: C:\Users\Asoidonaut\anaconda3\envs\asoid\lib\site-packages\asoid
+A-SOiD version: 0.3
+```
+
+## asoid.core
+
+asoid.core is a python module that gives you access to some core functionalities of asoid. You can use it to run some of the functionalities of asoid without the GUI.
+
+For example, you can use it to predict new data using a previously trained classifier. 
+
+Quick example:
+```python
+import asoid.core as acore
+
+# load the project
+project = acore.Project('path/to/project')
+#predict new data
+predictions = project.predict('path/to/pose/files')
+```
+
+See [Run A-SOiD as a script](docs/run_asoid_as_script.ipynb) for more details.
+
 
 
 ---
