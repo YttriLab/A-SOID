@@ -127,18 +127,31 @@ def load_labels_boris(path: str, fps: int = None):
     so we save the BORIS lables as 100 ms time steps
     Optional: upsample each step into 3 resulting in 30Hz (or any other desired framerate) samples."""
 
-    if path.name.endswith("csv"):
+    if path.endswith("csv"):
+        # load labels with standard pandas csv reader and "," as seperator
         labels = pd.read_csv(path)
-    elif path.name.endswith("tsv"):
+
+        #if ; is used as seperator, the labels are not loaded correctly and the first column is a merge of all columns
+        # we expect at least 2 columns, one for time and one for the label
+        if labels.shape[1] == 1:
+            # load labels with standard pandas csv reader and ";" as seperator
+            labels = pd.read_csv(path, sep=';')
+
+    elif path.endswith("tsv"):
         labels = pd.read_csv(path, sep='\t')
     else:
-        raise ValueError(f"Label file {path.name} is not a csv or tsv file.")
+        raise ValueError(f"Label file {path} is not a csv or tsv file.")
+    if "Time" in labels.columns:
+        # rename time column to time if it is called Time
+        labels.rename(columns={"Time": "time"}, inplace=True)
 
     if fps is not None:
         # upsample labels to fit with pose estimation info
         sample_rate = 1 / fps
         # fixed critical error, BORIS does not always reset time if you label two observations at once
+
         time_step = labels["time"][1] - labels["time"][0]
+
         upsample_rate = time_step / sample_rate
     else:
         upsample_rate = 1
