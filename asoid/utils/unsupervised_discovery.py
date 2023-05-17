@@ -309,13 +309,13 @@ class Explorer:
         :param export_to_csv: if True, export to csv in current project dir, default False
         :return:"""
 
-        idx_class = np.argwhere(self.target_set == self.selected_class_num)
-        #original number of classes, ignoring other
-        num_other = len(self.classes)
-        org_num_classes = num_other -1
-
+        # get index of all classes
+        class_idx_dict = {x: np.argwhere(self.target_set == x) for x in self.number_to_class.keys()}
+        #subset the data to selected class
 
         class_name = self.number_to_class[self.selected_class_num]
+
+        # make a copy of the original data
         self.new_annotations = self.target_set.copy()
 
         #train a classifier to assign noise to clusters
@@ -323,22 +323,54 @@ class Explorer:
             self.expanded_assignments, self.noise_assignment_model = expand_assignments(self.hdbscan_assignments
                                                                                         ,self.scaled_feature_set_just_class)
 
+        # check if all subclasses are selected, so we can remove the original class
+        if len(selected_subclasses) == len(np.unique(self.expanded_assignments)):
+            st.info("All subclasses selected, the original class will be removed.")
+            #remove original class from the class list
+            temp_classes = self.classes.copy()
+            temp_classes.remove(self.number_to_class[self.selected_class_num])
+
+        else:
+            st.info("Original class will be kept, only selected subclasses will be exported.")
+            temp_classes = self.classes.copy()
+
+        #pop "Other" class, will be added back later
+        temp_classes.remove("other")
+
+        #set num_classes
+        num_classes = len(temp_classes)
+        self.new_number_to_class = {n: x for n, x in enumerate(temp_classes)}
+
+        #reset the other classes to new number
+        for new_n_class, k_class in self.new_number_to_class.items():
+            old_n_class = self.class_to_number[k_class]
+            curr_idx = class_idx_dict[old_n_class]
+            self.new_annotations[curr_idx] = new_n_class
+
+        #get index of selected class
+        idx_class = class_idx_dict[self.selected_class_num]
+
         #add new classes to new annotations and number to class
         for num, new_class in enumerate(selected_subclasses):
 
             idx_sub_class = np.argwhere(self.expanded_assignments == new_class)
             idx_candidates = idx_class[idx_sub_class]
             # create new class
-            new_class_num = org_num_classes + num
+            new_class_num = num_classes + num
             self.new_annotations[idx_candidates] = new_class_num
             self.new_number_to_class[new_class_num] = 'Sub-{} group {}'.format(class_name,new_class)
 
-
         #now that all new classes have been added, reset other to the last position
-        idx_other = np.argwhere(self.target_set == num_other)
+        #original number of classes, ignoring other
+        num_other = self.class_to_number["other"]
+        # get index of other class
+        idx_other = class_idx_dict[num_other]
+
+        # reset other class to last position
         new_num_other = new_class_num + 1
         self.new_annotations[idx_other] = new_num_other
         self.new_number_to_class[new_num_other] = "other"
+
 
         #TODO: Add frameshift prediction?
         # Upsample targets to original framerate, then create new project
