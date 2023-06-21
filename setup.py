@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='asoid',
-    version='0.2.3',
+    version='0.2.4',
     description='ASOiD: An active learning approach to behavioral classification',
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -31,6 +31,7 @@ setup(
                     ,"seaborn"
                       #streamlit 1.12.0 has an error with streamlit.cli...
                     ,"streamlit~=1.11.0"
+                    ,"altair~=4.1.0"
                     ,"streamlit_option_menu"
                     ,"hydralit"
                     ,"opencv-python"
