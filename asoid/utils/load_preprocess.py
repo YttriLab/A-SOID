@@ -498,9 +498,6 @@ class Preprocess:
         project_folder, _ = create_new_project(self.working_dir, self.prefix, overwrite=True)
         with open(os.path.join(project_folder, 'data.sav'), 'wb') as f:
             """Save data as npy file"""
-            print("SAVING DATA")
-            print(np.array(self.processed_input_data, dtype=object).shape)
-            print(np.array(self.targets, dtype=object).shape)
             # data
             joblib.dump(
                 [np.array(self.processed_input_data, dtype=object), np.array(self.targets, dtype=object)]
