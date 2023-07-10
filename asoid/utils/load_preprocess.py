@@ -500,7 +500,7 @@ class Preprocess:
             """Save data as npy file"""
             # data
             joblib.dump(
-                [np.array(self.processed_input_data), np.array(self.targets)]
+                [np.array(self.processed_input_data, dtype=object), np.array(self.targets, dtype=object)]
                 , f
             )
         # with open(os.path.join(project_folder, 'test.sav'), 'wb') as f:
@@ -564,7 +564,7 @@ class Preprocess:
         col_left, _, col_right = st.columns([1, 1, 1])
         col_left.info('Processed a total of **{}** .{} files, and compiled into a '
                       '**{}** data list.'.format(len(self.processed_input_data), self.ftype,
-                                                 np.array(self.processed_input_data).shape))
+                                                 np.array(self.processed_input_data, dtype=object).shape))
         col_right.success("Continue on with next module".upper())
 
     def main(self):
