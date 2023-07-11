@@ -200,7 +200,7 @@ class Explorer:
             """Save data as npy file"""
             # data
             joblib.dump(
-                [np.array(self.processed_input_data), np.array(new_targets)]
+                [np.array(self.processed_input_data, dtype = object), np.array(new_targets, dtype = object)]
                 ,f
             )
         #update empty config with previous project
