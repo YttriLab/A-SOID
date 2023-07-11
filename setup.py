@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='asoid',
-    version='0.2.5',
+    version='0.2.5b',
     description='ASOiD: An active learning approach to behavioral classification',
     long_description=long_description,
     long_description_content_type="text/markdown",
