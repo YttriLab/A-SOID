@@ -141,7 +141,7 @@ def main(config=None):
                                                 annotation_classes, features_heldout, targets_heldout, exclude_other, conf_threshold)
                     rf_classifier.main()
         except FileNotFoundError:
-            #make sure the features were extracted:
+            # make sure the features were extracted:
             try:
                 init_ratio, max_iter, max_samples_iter, features_heldout, targets_heldout = \
                     prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotation_classes)
@@ -152,6 +152,7 @@ def main(config=None):
                     rf_classifier.main()
             except FileNotFoundError:
                 st.error(NO_FEATURES_HELP)
+        st.session_state['page'] = 'Step 4'
     else:
         st.error(NO_CONFIG_HELP)
     bottom_cont = st.container()

@@ -99,6 +99,7 @@ def main(config=None):
             if st.button('EXTRACT FEATURES'.upper()):
                 extractor = Extract(working_dir, prefix, frames2integ, num_splits)
                 extractor.main()
+        st.session_state['page'] = 'Step 3'
 
     else:
         st.error(NO_CONFIG_HELP)

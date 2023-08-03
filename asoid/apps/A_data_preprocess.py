@@ -17,7 +17,7 @@ def main(config=None):
     else:
         processor = Preprocess()
         processor.main()
-
+    st.session_state['page'] = 'Step 2'
     bottom_cont = st.container()
     with bottom_cont:
 

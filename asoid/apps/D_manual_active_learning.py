@@ -18,7 +18,8 @@ from moviepy.editor import VideoFileClip
 from utils.load_workspace import load_features, load_test_targets, \
     load_iterX, load_new_pose, load_predict_proba
 from utils.manual_active_learning import Refine
-from utils.load_workspace import load_iterX, load_features
+from utils.load_workspace import load_iterX, load_features, save_data
+
 from utils.extract_features import feature_extraction, feature_extraction_with_extr_scaler, \
     frameshift_predict, frameshift_predict_proba, bsoid_predict_numba, bsoid_predict_numba_noscale
 from utils.import_data import load_pose, get_bodyparts, get_animals
@@ -108,7 +109,7 @@ def create_labeled_vid(labels, counts, frames2integ,
     fontColor = (0, 0, 255)
     thickness_text = 1
     lineType = 2
-
+    all_ex_idx = {key: [] for key in annotation_classes}
     for b in np.unique(labels):
         with st.spinner(f'generating videos for behavior {annotation_classes[int(b)]}'):
             idx_b = np.where(labels == b)[0]
@@ -116,7 +117,7 @@ def create_labeled_vid(labels, counts, frames2integ,
                 examples_b = np.random.choice(idx_b, counts, replace=False)
             except:
                 examples_b = np.random.choice(idx_b, len(idx_b), replace=False)
-
+            behav_ex_idx = []
             for ex, example_b in enumerate(stqdm(examples_b, desc="creating videos")):
                 video_name = 'behavior_{}_example_{}.mp4'.format(annotation_classes[int(b)], int(ex))
                 grp_images = []
@@ -170,6 +171,8 @@ def create_labeled_vid(labels, counts, frames2integ,
                 vid_prefix = video_name.rpartition('.mp4')[0]
                 gif_name = f"{vid_prefix}.gif"
                 videoClip.write_gif(os.path.join(output_path, gif_name))
+                behav_ex_idx.append(idx_b[example_b])
+        all_ex_idx[annotation_classes[int(b)]] = behav_ex_idx
     return
 
 
@@ -194,7 +197,7 @@ def create_videos(processed_input_data, scalar, iterX_model, framerate, frames2i
             with st.spinner('Predicting behavior from features...'):
                 predict = bsoid_predict_numba_noscale([scaled_features[i]], iterX_model)
                 predict_arr = np.array(predict).flatten()
-        create_labeled_vid(predict_arr, num_outliers, frames2integ,
+        examples_idx = create_labeled_vid(predict_arr, num_outliers, frames2integ,
                            framerate, output_fps, annotation_classes,
                            frame_dir, shortvid_dir)
         st.balloons()
@@ -385,13 +388,20 @@ def main(config=None):
                                                 if st.session_state['refinements'][behav_choice][i]["submitted"] == False:
                                                     st.session_state['refinements'][behav_choice][i][
                                                         "choice"] = behav_choice
+                                                    st.session_state['refinements'][behav_choice][i][
+                                                        "submitted"] = True
                                                     # st.experimental_rerun()
                                             else:
                                                 if st.session_state['refinements'][behav_choice][i]["submitted"] == False:
                                                     st.session_state['refinements'][behav_choice][i][
                                                         "choice"] = None
+                                # st.write(st.session_state['refinements'])
+                                save_data(working_dir, prefix, 'refinements.sav',
+                                          [temporary_location, st.session_state['refinements']
+                                           ])
+
                                                     # st.experimental_rerun()
-                                        st.write(st.session_state['refinements'])
+                                        # st.write(st.session_state['refinements'])
 
                                         # np.
                                         # try:

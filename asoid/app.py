@@ -71,6 +71,7 @@ def index():
                                               'Step 3',
                                               'Step 4',
                                               'Step 5'],
+                                     value=st.session_state['page'],
 
                                      label_visibility='collapsed')
 
@@ -201,6 +202,8 @@ def main():
         unsafe_allow_html=True,
     )
     header_container = st.container()
+    if 'page' not in st.session_state:
+        st.session_state['page'] = 'Step 1'
 
     # if in main menu, display applications, see above index for item layout
     with st.sidebar:
@@ -303,19 +306,40 @@ def main():
     if nav_options == 'Menu':
         index()
     elif 'Upload Data' in nav_options:
-        A_data_preprocess.main(config=project_config)
+        try:
+            A_data_preprocess.main(config=project_config)
+        except:
+            A_data_preprocess.main(config=None)
     elif 'Extract Features' in nav_options:
-        B_extract_features.main(config=project_config)
+        try:
+            B_extract_features.main(config=project_config)
+        except:
+            B_extract_features.main(config=None)
     elif 'Active Learning' in nav_options:
-        C_auto_active_learning.main(config=project_config)
+        try:
+            C_auto_active_learning.main(config=project_config)
+        except:
+            C_auto_active_learning.main(config=None)
     elif 'Refine Behaviors' in nav_options:
-        D_manual_active_learning.main(config=project_config)
+        try:
+            D_manual_active_learning.main(config=project_config)
+        except:
+            D_manual_active_learning.main(config=None)
     elif 'Predict' in nav_options:
-        E_predict.main(config=project_config)
+        try:
+            E_predict.main(config=project_config)
+        except:
+            E_predict.main(config=None)
     elif 'View' in nav_options:
-        F_view.main(config=project_config)
+        try:
+            F_view.main(config=project_config)
+        except:
+            F_view.main(config=None)
     elif 'Discover' in nav_options:
-        G_unsupervised_discovery.main(config=project_config)
+        try:
+            G_unsupervised_discovery.main(config=project_config)
+        except:
+            G_unsupervised_discovery.main(config=None)
 
     # if session_state.app == "index":
     #     application_function = functools.partial(
