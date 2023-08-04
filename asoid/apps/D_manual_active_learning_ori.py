@@ -29,10 +29,10 @@ def prompt_setup(software, ftype, threshold):
     else:
         new_videos = left_expand.file_uploader('Upload video files',
                                                accept_multiple_files=True,
-                                               type=['avi', 'mp4'], key='video')
+                                               type=['avi', 'mp4'], key='video_ori')
         new_pose_csvs = right_expand.file_uploader('Upload corresponding pose csv files',
                                                    accept_multiple_files=True,
-                                                   type=ftype, key='pose')
+                                                   type=ftype, key='pose_ori')
         new_pose_list = []
         for i, f in enumerate(new_pose_csvs):
             current_pose = pd.read_csv(new_pose_csvs[i],

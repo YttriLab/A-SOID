@@ -100,6 +100,13 @@ def load_iterX(path, name):
     return [i for i in data]
 
 
+@st.cache_data
+def load_refinement(path, name):
+    # working dir is already the prefix (if user directly put in the project folder as working dir)
+    data = _load_sav(path, name, 'refinements.sav')
+    return [i for i in data]
+
+
 # TODO: deprecate
 def query_workspace():
     working_dir = st.sidebar.text_input('Enter the prior A-SOiD working directory:')

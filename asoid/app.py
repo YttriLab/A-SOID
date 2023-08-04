@@ -7,6 +7,7 @@ import streamlit as st
 from PIL import Image
 from streamlit_option_menu import option_menu
 import base64
+from io import StringIO
 
 from apps import *
 from config.help_messages import UPLOAD_CONFIG_HELP, IMPRESS_TEXT
@@ -63,18 +64,15 @@ def index():
                 f"font-family:Avenir; font-weight:normal'>Get Started by Selecting a Step</h1> "
                 , unsafe_allow_html=True)
 
-
-
     selected_step = st.select_slider('',
                                      options=['Step 1',
                                               'Step 2',
                                               'Step 3',
                                               'Step 4',
-                                              'Step 5'],
+                                              'Step 5',
+                                              'Step 6'],
                                      value=st.session_state['page'],
-
                                      label_visibility='collapsed')
-
 
     colL, colR = st.columns(2)
     if selected_step == 'Step 1':
@@ -94,67 +92,61 @@ def index():
 
     elif selected_step == 'Step 2':
         colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
-                       f"font-family:Avenir; font-weight:normal'> Step 2: Extract spatio-temporal features from pose"
-                       f"", unsafe_allow_html=True)
+                      f"font-family:Avenir; font-weight:normal'> Step 2: Extract spatio-temporal features from pose"
+                      f"", unsafe_allow_html=True)
         colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
-                       f"font-family:Avenir; font-weight:normal'> In this step,"
-                       f" you will examine the distribution of your annotated behaviors. "
-                       f"Once you define your minimum duration, features are then computed "
-                       f"across time.", unsafe_allow_html=True)
+                      f"font-family:Avenir; font-weight:normal'> In this step,"
+                      f" you will examine the distribution of your annotated behaviors. "
+                      f"Once you define your minimum duration, features are then computed "
+                      f"across time.", unsafe_allow_html=True)
         colR.markdown("<p style='text-align: right; color: grey; '>" + img_to_html(step2_fname, width=350) + "</p>",
-                       unsafe_allow_html=True)
+                      unsafe_allow_html=True)
     elif selected_step == 'Step 3':
         colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
-                       f"font-family:Avenir; font-weight:normal'> Step 3: Training a classifier"
-                       f"", unsafe_allow_html=True)
+                      f"font-family:Avenir; font-weight:normal'> Step 3: Training a classifier"
+                      f"", unsafe_allow_html=True)
         colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
-                       f"font-family:Avenir; font-weight:normal'> In this step,"
-                       f" you will build a machine learning classifier. "
-                       f"A-SOiD automatically balances your training data to prevent  "
-                       f"emphasis on large classes.", unsafe_allow_html=True)
+                      f"font-family:Avenir; font-weight:normal'> In this step,"
+                      f" you will build a machine learning classifier. "
+                      f"A-SOiD automatically balances your training data to prevent  "
+                      f"emphasis on large classes.", unsafe_allow_html=True)
         colR.markdown("<p style='text-align: right; color: grey; '>" + img_to_html(step3_fname, width=350) + "</p>",
-                       unsafe_allow_html=True)
+                      unsafe_allow_html=True)
     elif selected_step == 'Step 4':
         colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
-                       f"font-family:Avenir; font-weight:normal'> Step 4: Manual refinement on new data"
-                       f"", unsafe_allow_html=True)
+                      f"font-family:Avenir; font-weight:normal'> Step 4: Manual refinement on new data"
+                      f"", unsafe_allow_html=True)
         colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
-                       f"font-family:Avenir; font-weight:normal'> In this step,"
-                       f" you will refine the low confidence behaviors. "
-                       f"The refinements will be added to the training dataset."
-                       f"", unsafe_allow_html=True)
+                      f"font-family:Avenir; font-weight:normal'> In this step,"
+                      f" you will refine the low confidence behaviors. "
+                      f"The refinements will be added to the training dataset."
+                      f"", unsafe_allow_html=True)
         colR.markdown("<p style='text-align: right; color: grey; '>" + img_to_html(step4_fname, width=350) + "</p>",
-                       unsafe_allow_html=True)
+                      unsafe_allow_html=True)
 
     elif selected_step == 'Step 5':
         colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
-                       f"font-family:Avenir; font-weight:normal'> Step 5: Discover subtle differences within behavior"
-                       f"", unsafe_allow_html=True)
+                      f"font-family:Avenir; font-weight:normal'> Step 5: Discover subtle differences within behavior"
+                      f"", unsafe_allow_html=True)
         colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
-                       f"font-family:Avenir; font-weight:normal'> In this step,"
-                       f" you can run unsupervised learning on a particular behavior to get "
-                       f"segmented behaviors."
-                       f"", unsafe_allow_html=True)
+                      f"font-family:Avenir; font-weight:normal'> In this step,"
+                      f" you can run unsupervised learning on a particular behavior to get "
+                      f"segmented behaviors."
+                      f"", unsafe_allow_html=True)
         colR.markdown("<p style='text-align: right; color: grey; '>" + img_to_html(step5_fname, width=350) + "</p>",
-                       unsafe_allow_html=True)
-    # st.write("---")
-    # st.markdown(f" <h1 style='text-align: center; color: #FFFFFF; font-size:18px; "
-    #             f"font-family:Avenir; font-weight:normal'> Step 3: training a classifier"
-    #             f"", unsafe_allow_html=True)
-    # st.markdown("<p style='text-align: center; color: grey; '>" + img_to_html(step3_fname, width=300) + "</p>",
-    #             unsafe_allow_html=True)
-    # st.write("---")
-    # st.markdown(f" <h1 style='text-align: center; color: #FFFFFF; font-size:18px; "
-    #             f"font-family:Avenir; font-weight:normal'> Step 4: manual refinement on new data"
-    #             f"", unsafe_allow_html=True)
-    # st.markdown("<p style='text-align: center; color: grey; '>" + img_to_html(step4_fname, width=250) + "</p>",
-    #             unsafe_allow_html=True)
-    # st.write("---")
-    # st.markdown(f" <h1 style='text-align: center; color: #FFFFFF; font-size:18px; "
-    #             f"font-family:Avenir; font-weight:normal'> Step 5: discover subtle differences within behavior"
-    #             f"", unsafe_allow_html=True)
-    # st.markdown("<p style='text-align: center; color: grey; '>" + img_to_html(step5_fname, width=250) + "</p>",
-    #             unsafe_allow_html=True)
+                      unsafe_allow_html=True)
+
+    elif selected_step == 'Step 6':
+        colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
+                      f"font-family:Avenir; font-weight:normal'> Step 5: Discover subtle differences within behavior"
+                      f"", unsafe_allow_html=True)
+        colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
+                      f"font-family:Avenir; font-weight:normal'> In this step,"
+                      f" you can run unsupervised learning on a particular behavior to get "
+                      f"segmented behaviors."
+                      f"", unsafe_allow_html=True)
+        colR.markdown("<p style='text-align: right; color: grey; '>" + img_to_html(step5_fname, width=350) + "</p>",
+                      unsafe_allow_html=True)
 
     bottom_cont = st.container()
 
@@ -168,9 +160,6 @@ def main():
     HERE = Path(__file__).parent.resolve()
     logo_fname_ = HERE.joinpath("images/asoid_logo.png")
     logo_im_ = Image.open(logo_fname_)
-    # TODO: Decide on one, delete over
-    logo_fname = HERE.joinpath("images/asoid_logo_wtext.png")
-    logo_im = Image.open(logo_fname)
     # set webpage icon and layout
     st.set_page_config(
         page_title="A-SOiD",
@@ -204,34 +193,47 @@ def main():
     header_container = st.container()
     if 'page' not in st.session_state:
         st.session_state['page'] = 'Step 1'
+    if 'config' not in st.session_state:
+        st.session_state['config'] = None
 
     # if in main menu, display applications, see above index for item layout
     with st.sidebar:
         le, ri = header_container.columns([1, 1])
 
-        uploaded_config = le.file_uploader('upload config file'.upper()
-                                           , type='ini'
-                                           , help=UPLOAD_CONFIG_HELP)
+        with le.form("upload config file".upper(), clear_on_submit=True):
+            uploaded_config = st.file_uploader("FILE UPLOADER", type='ini', help=UPLOAD_CONFIG_HELP)
+            if st.session_state['config'] is None:
+                submitted = st.form_submit_button("UPLOAD!")
 
-        if uploaded_config is not None:
-            # Make temp file path from uploaded file
-            with tempfile.NamedTemporaryFile(mode="wb", delete=False) as temp:
-                bytes_data = uploaded_config.getvalue()
-                temp.write(bytes_data)
-            project_config = cfg.ConfigParser()
-            project_config.optionxform = str
-            with open(temp.name) as file:
-                project_config.read_file(file)
+                if submitted and uploaded_config is not None:
+                    # To convert to a string based IO:
+                    stringio = StringIO(uploaded_config.getvalue().decode("utf-8"))
+
+                    # read stringio
+                    project_config = cfg.ConfigParser()
+                    project_config.optionxform = str
+                    project_config.read_file(stringio)
+                    st.session_state['config'] = project_config
+                    # le.success("UPLOADED!")
+                    st.experimental_rerun()
+
+            elif st.session_state['config'] is not None:
+                cleared = st.form_submit_button("CLEAR!")
+                if cleared:
+                    st.session_state['config'] = None
+                    st.session_state['page'] = None
+                    st.experimental_rerun()
 
         _, mid_im, _ = st.columns([0.35, 1, 0.35])
-        _, mid_im2, _ = st.columns([0.415, 1, 0.415])
+
         mid_im.image(logo_im_)
-        if mid_im2.button("Start A-SOiD"):
-            A_data_preprocess.main()
+        # start_button = st.button("START")
+        # if mid_im2.button("START"):
+        #     A_data_preprocess.main()
         st.write('---')
         try:
-            sections = [x for x in project_config.keys() if x != "DEFAULT"]
-            for parameter, value in project_config[sections[0]].items():
+            sections = [x for x in st.session_state['config'].keys() if x != "DEFAULT"]
+            for parameter, value in st.session_state['config'][sections[0]].items():
                 if parameter == 'PROJECT_PATH':
                     working_dir = value
                 elif parameter == 'PROJECT_NAME':
@@ -239,15 +241,18 @@ def main():
                 elif parameter == 'CLASSES':
                     annotations = value
             menu_options = ['Menu', 'Upload Data ✔', 'Extract Features', 'Active Learning',
-                            'Refine Behaviors', 'Predict', "View", "Discover"]
+                            'Refine Behaviors', 'Create New Dataset', 'Predict', "View", "Discover"]
+            st.session_state['page'] = 'Step 2'
             try:
                 [features_train, _, _, _] = load_features(working_dir, prefix)
                 menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔', 'Active Learning',
-                                'Refine Behaviors', 'Predict', "View", "Discover"]
+                                'Refine Behaviors', 'Create New Dataset', 'Predict', "View", "Discover"]
+                st.session_state['page'] = 'Step 3'
                 try:
                     [_, _, _, scores, _, _] = load_iterX(working_dir, prefix)
                     menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔', 'Active Learning ✔',
-                                    'Refine Behaviors', 'Predict', "View", "Discover"]
+                                    'Refine Behaviors', 'Create New Dataset', 'Predict', "View", "Discover"]
+                    st.session_state['page'] = 'Step 4'
                 except:
                     pass
 
@@ -256,13 +261,14 @@ def main():
 
         except:
             menu_options = ['Menu', 'Upload Data', 'Extract Features', 'Active Learning',
-                            'Refine Behaviors', 'Predict', "View", "Discover"]
+                            'Refine Behaviors', 'Create New Dataset', 'Predict', 'View', 'Discover']
 
         app_names = np.array(['index',
                               'A-data-preprocess',
                               'B-extract-features',
                               'C-auto-active-learning',
                               'D-manual-active-learning',
+                              'E-create-new-training'
                               'E-predict',
                               'F-view',
                               'G-unsupervised-discovery',
@@ -271,6 +277,7 @@ def main():
                         'upload',
                         'bar-chart-line',
                         'diagram-2',
+                        'images',
                         'images',
                         'file-earmark-plus',
                         'binoculars',
@@ -300,63 +307,49 @@ def main():
                                           "background-color": '#f6386d'},
                                   }
                                   )
-        # for i in range(len(menu_options)):
-        #     if nav_options == menu_options[i]:
-        #         swap_app(app_names[i])
+
     if nav_options == 'Menu':
         index()
     elif 'Upload Data' in nav_options:
         try:
-            A_data_preprocess.main(config=project_config)
+            A_data_preprocess.main(config=st.session_state['config'])
         except:
             A_data_preprocess.main(config=None)
     elif 'Extract Features' in nav_options:
         try:
-            B_extract_features.main(config=project_config)
+            B_extract_features.main(config=st.session_state['config'])
         except:
             B_extract_features.main(config=None)
     elif 'Active Learning' in nav_options:
         try:
-            C_auto_active_learning.main(config=project_config)
+            C_auto_active_learning.main(ri=ri, config=st.session_state['config'])
         except:
-            C_auto_active_learning.main(config=None)
+            C_auto_active_learning.main(ri=ri, config=None)
     elif 'Refine Behaviors' in nav_options:
         try:
-            D_manual_active_learning.main(config=project_config)
+            D_manual_active_learning.main(ri=ri, config=st.session_state['config'])
         except:
-            D_manual_active_learning.main(config=None)
+            D_manual_active_learning.main(ri=ri, config=None)
+    elif 'Create New Dataset' in nav_options:
+        try:
+            E_create_new_training.main(ri=ri, config=st.session_state['config'])
+        except:
+            E_create_new_training.main(ri=ri, config=None)
     elif 'Predict' in nav_options:
         try:
-            E_predict.main(config=project_config)
+            E_predict.main(config=st.session_state['config'])
         except:
             E_predict.main(config=None)
     elif 'View' in nav_options:
         try:
-            F_view.main(config=project_config)
+            F_view.main(config=st.session_state['config'])
         except:
             F_view.main(config=None)
     elif 'Discover' in nav_options:
         try:
-            G_unsupervised_discovery.main(config=project_config)
+            G_unsupervised_discovery.main(config=st.session_state['config'])
         except:
             G_unsupervised_discovery.main(config=None)
-
-    # if session_state.app == "index":
-    #     application_function = functools.partial(
-    #         index, application_options=application_options,
-    #     )
-    #
-    # else:
-    #     try:
-    #         application_function = functools.partial(
-    #             application_options[session_state.app].main, config=project_config,
-    #         )
-    #     except:
-    #         application_function = functools.partial(
-    #             application_options[session_state.app].main, config=None,
-    #         )
-
-    # application_function()
 
 
 if __name__ == "__main__":

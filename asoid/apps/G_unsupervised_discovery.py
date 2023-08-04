@@ -1,12 +1,9 @@
-import categories
 import streamlit as st
-# from app import swap_app
+
 from config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP
 from utils.unsupervised_discovery import Explorer
 
 
-
-CATEGORY = categories.DISCOVER
 TITLE = "Unsupervised discovery"
 
 def main(config=None):

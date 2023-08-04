@@ -1,21 +1,15 @@
 import os
-from pathlib import Path
 
-import categories
 import numpy as np
-import pandas as pd
 import streamlit as st
-# from app import swap_app
+from config.help_messages import INIT_RATIO_HELP, MAX_ITER_HELP, MAX_SAMPLES_HELP, \
+    SHOW_FINAL_RESULTS_HELP, RE_CLASSIFY_HELP, IMPRESS_TEXT, NO_CONFIG_HELP, \
+    NO_FEATURES_HELP
 from utils.auto_active_learning import show_classifier_results, RF_Classify
-from utils.load_workspace import load_features, load_test_targets, load_heldout, \
+from utils.load_workspace import load_features, load_heldout, \
     load_iter0, load_iterX, load_all_train
 from utils.project_utils import update_config
 
-from config.help_messages import INIT_RATIO_HELP, MAX_ITER_HELP, MAX_SAMPLES_HELP,\
-                                SHOW_FINAL_RESULTS_HELP, RE_CLASSIFY_HELP, IMPRESS_TEXT, NO_CONFIG_HELP,\
-                                NO_FEATURES_HELP
-
-CATEGORY = categories.CLASSIFY_BEHAVIORS
 TITLE = "Active learning"
 
 
@@ -93,7 +87,7 @@ def prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotat
             MAX_SAMPLES_ITER=max_samples_iter,
         )
     }
-    update_config(os.path.join(working_dir,prefix),updated_params=parameters_dict)
+    st.session_state['config'] = update_config(os.path.join(working_dir,prefix),updated_params=parameters_dict)
 
 
 
@@ -101,7 +95,7 @@ def prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotat
     return init_ratio, max_iter, max_samples_iter, features_heldout, targets_heldout
 
 
-def main(config=None):
+def main(ri=None, config=None):
     st.markdown("""---""")
     if config is not None:
 
@@ -111,10 +105,15 @@ def main(config=None):
         software = config["Project"].get("PROJECT_TYPE")
         exclude_other = config["Project"].getboolean("EXCLUDE_OTHER")
         train_fx = config["Processing"].getfloat("TRAIN_FRACTION")
-
         conf_threshold = config["Processing"].getfloat("CONF_THRESHOLD")
+        iteration = config["Processing"].getint("ITERATION")
+        selected_iter = ri.selectbox('select iteration number', np.arange(iteration+1))
+        project_dir = os.path.join(working_dir, prefix)
+        iter_folder = str.join('', ('iteration-', str(selected_iter)))
+        os.makedirs(os.path.join(project_dir, iter_folder), exist_ok=True)
+
         if conf_threshold is None:
-            #backwards compatability
+            # backwards compatability
             conf_threshold = 0.5
 
         try:
@@ -159,12 +158,6 @@ def main(config=None):
     with bottom_cont:
 
         st.markdown("""---""")
-        st.write('')
-        # button_col1, button_col2, button_col3, button_col4, button_col5 = st.columns([3, 3, 1, 1, 1])
-        # if button_col1.button('◀  PRIOR STEP'):
-        #     swap_app('B-extract-features')
-        # if button_col5.button('NEXT STEP ▶'):
-        #     swap_app('E-predict')
         st.write('')
         st.markdown('<span style="color:grey">{}</span>'.format(IMPRESS_TEXT), unsafe_allow_html=True)
 

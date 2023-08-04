@@ -3,31 +3,25 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import glob
-import joblib
 import streamlit as st
 import io
 import ffmpeg
-# from app import swap_app
+
 import cv2
 from stqdm import stqdm
-import random
 import re
-import categories
+
 import base64
 from moviepy.editor import VideoFileClip
-from utils.load_workspace import load_features, load_test_targets, \
-    load_iterX, load_new_pose, load_predict_proba
-from utils.manual_active_learning import Refine
+from utils.load_workspace import load_new_pose
 from utils.load_workspace import load_iterX, load_features, save_data
 
-from utils.extract_features import feature_extraction, feature_extraction_with_extr_scaler, \
-    frameshift_predict, frameshift_predict_proba, bsoid_predict_numba, bsoid_predict_numba_noscale
-from utils.import_data import load_pose, get_bodyparts, get_animals
+from utils.extract_features import feature_extraction_with_extr_scaler, \
+    bsoid_predict_numba, bsoid_predict_numba_noscale
 from config.help_messages import *
 
 from config.help_messages import NO_CONFIG_HELP, IMPRESS_TEXT
 
-CATEGORY = categories.REFINE
 TITLE = "Refine behaviors"
 
 
@@ -171,16 +165,23 @@ def create_labeled_vid(labels, counts, frames2integ,
                 vid_prefix = video_name.rpartition('.mp4')[0]
                 gif_name = f"{vid_prefix}.gif"
                 videoClip.write_gif(os.path.join(output_path, gif_name))
-                behav_ex_idx.append(idx_b[example_b])
+                behav_ex_idx.append(example_b)
         all_ex_idx[annotation_classes[int(b)]] = behav_ex_idx
-    return
+
+    return all_ex_idx
 
 
 def create_videos(processed_input_data, scalar, iterX_model, framerate, frames2integ,
                   num_outliers, output_fps, annotation_classes,
                   frame_dir, shortvid_dir):
-    if st.button("Predict labels and create example videos"):
-        st.info('Predicting labels... ')
+    examples_idx = None
+    scaled_features = [None]
+    predict_arr = None
+    examples_idx = None
+    action_button = st.button("Predict labels and create example videos")
+    message_box = st.empty()
+    if action_button:
+        message_box.info('Predicting labels... ')
         features = []
         scaled_features = []
         # extract features, bin them
@@ -198,9 +199,11 @@ def create_videos(processed_input_data, scalar, iterX_model, framerate, frames2i
                 predict = bsoid_predict_numba_noscale([scaled_features[i]], iterX_model)
                 predict_arr = np.array(predict).flatten()
         examples_idx = create_labeled_vid(predict_arr, num_outliers, frames2integ,
-                           framerate, output_fps, annotation_classes,
-                           frame_dir, shortvid_dir)
+                                          framerate, output_fps, annotation_classes,
+                                          frame_dir, shortvid_dir)
         st.balloons()
+        message_box.success('Cleared. Type "R" to refresh.')
+    return scaled_features[0], predict_arr, examples_idx
 
 
 def prompt_setup(software, ftype, threshold, framerate, working_dir, prefix):
@@ -208,16 +211,17 @@ def prompt_setup(software, ftype, threshold, framerate, working_dir, prefix):
     left_expand = left_col.expander('Select a video file:', expanded=True)
     right_expand = right_col.expander('Select the corresponding pose file:', expanded=True)
     p_cutoff = None
-    num_outliers = None
+    num_outliers = 0
     output_fps = None
     frame_dir = None
     shortvid_dir = None
+    new_videos = None
     new_pose_list = None
     if software == 'CALMS21 (PAPER)':
         ROOT = Path(__file__).parent.parent.parent.resolve()
         new_pose_sav = os.path.join(ROOT.joinpath("new_test"), './new_pose.sav')
         new_pose_list = load_new_pose(new_pose_sav)
-        new_videos = None
+        # new_videos = None
     else:
         new_videos = left_expand.file_uploader('Upload video files',
                                                accept_multiple_files=False,
@@ -269,11 +273,15 @@ def prompt_setup(software, ftype, threshold, framerate, working_dir, prefix):
                     st.experimental_rerun()
         except:
             pass
+
     return new_videos, new_pose_list, p_cutoff, num_outliers, output_fps, frame_dir, shortvid_dir
 
 
-def main(config=None):
+def main(ri=None, config=None):
     st.markdown("""---""")
+    # ri.button('hi')
+    # add a dropdown for iteration
+
     if config is not None:
         working_dir = config["Project"].get("PROJECT_PATH")
         prefix = config["Project"].get("PROJECT_NAME")
@@ -285,8 +293,10 @@ def main(config=None):
         iteration = config["Processing"].getint("ITERATION")
         framerate = config["Project"].getint("FRAMERATE")
         duration_min = config["Processing"].getfloat("MIN_DURATION")
-
-
+        selected_iter = ri.selectbox('select iteration number', np.arange(iteration+1))
+        project_dir = os.path.join(working_dir, prefix)
+        iter_folder = str.join('', ('iteration-', str(selected_iter)))
+        os.makedirs(os.path.join(project_dir, iter_folder), exist_ok=True)
 
         if software == 'CALMS21 (PAPER)':
             ROOT = Path(__file__).parent.parent.parent.resolve()
@@ -301,9 +311,13 @@ def main(config=None):
                                                        {k: {'choice': None, 'submitted': False}
                                                         for k in range(num_outliers)}
                                                    for key in annotation_classes}
-            # st.write(st.session_state['refinements'])
-            # for b_chosen in list(user_choices.keys()):
-            #     user_choices[b_chosen] = {key: [] for key in range(num_outliers)}
+            if 'scaled_features' not in st.session_state:
+                st.session_state['scaled_features'] = None
+            if 'predict' not in st.session_state:
+                st.session_state['predict'] = None
+            if 'examples_idx' not in st.session_state:
+                st.session_state['examples_idx'] = None
+
             if new_videos is not None and len(new_pose_list) > 0:
                 if os.path.exists(new_videos.name):
                     temporary_location = f'{new_videos.name}'
@@ -324,98 +338,79 @@ def main(config=None):
                                 frames2integ = round(float(framerate) * (duration_min / 0.1))
                                 [_, _, scalar, _] = load_features(working_dir, prefix)
                                 [iterX_model, _, _, _, _, _] = load_iterX(working_dir, prefix)
-                                create_videos(new_pose_list, scalar, iterX_model, framerate, frames2integ,
-                                              num_outliers, output_fps, annotation_classes,
-                                              frame_dir=frame_dir, shortvid_dir=shortvid_dir)
 
+                                st.session_state['scaled_features'], st.session_state['predict'], \
+                                    st.session_state['examples_idx'] = create_videos(new_pose_list, scalar, iterX_model,
+                                                                                     framerate,
+                                                                                     frames2integ,
+                                                                                     num_outliers, output_fps,
+                                                                                     annotation_classes,
+                                                                                     frame_dir=frame_dir,
+                                                                                     shortvid_dir=shortvid_dir)
                             else:
-                                col_option, col_msg = st.columns(2)
-                                # col_msg.success('refinement candidates have been saved!')
-                                if col_option.checkbox('Redo? Uncheck after check to prevent from auto-clearing',
-                                                       False,
-                                                       key='vr'):
-                                    try:
-                                        for file_name in glob.glob(shortvid_dir + "/*"):
-                                            os.remove(file_name)
-                                    except:
-                                        pass
-
                                 behav_choice = st.selectbox("Select the behavior: ", annotation_classes,
                                                             index=int(0),
                                                             key="behavior_choice")
                                 checkbox_autofill = st.checkbox('autofill')
                                 alltabs = st.tabs([f'{i}' for i in range(num_outliers)])
+                                st.write('')
+                                st.write('')
 
-                                # if not st.session_state['refinements'][behav_choice]:
-                                # st.write(st.session_state['refinements'])
+                                col_option, _, col_msg = st.columns([1, 1, 1])
+                                clear_vid_button = col_option.button('CLEAR?', key='vr')
+                                if clear_vid_button:
+                                    try:
+                                        for file_name in glob.glob(shortvid_dir + "/*"):
+                                            os.remove(file_name)
+                                        st.session_state['examples_idx'] = None
+                                        st.session_state['refinements'] = {key:
+                                                                               {k: {'choice': None, 'submitted': False}
+                                                                                for k in range(num_outliers)}
+                                                                           for key in annotation_classes}
+                                        col_msg.info('Cleared. Type "R" to refresh.')
+                                    except:
+                                        pass
+                                else:
+                                    for i, tab_ in enumerate(alltabs):
+                                        with tab_:
+                                            try:
+                                                colL, colR = st.columns([3, 1])
+                                                file_ = open(
+                                                    os.path.join(shortvid_dir, f'behavior_{behav_choice}_example_{i}.gif'),
+                                                    "rb")
+                                                contents = file_.read()
+                                                data_url = base64.b64encode(contents).decode("utf-8")
+                                                file_.close()
+                                                colL.markdown(
+                                                    f'<img src="data:image/gif;base64,{data_url}" alt="gif">',
+                                                    unsafe_allow_html=True,
+                                                )
+                                                with colR.form(key=f'form_{i}'):
+                                                    returned_choice = st.radio("Select the correct class: ",
+                                                                               annotation_classes,
+                                                                               index=annotation_classes.index(behav_choice),
+                                                                               key="radio_{}".format(i))
+                                                    if st.form_submit_button("Submit",
+                                                                             "Press to confirm your choice"):
+                                                        st.session_state['refinements'][behav_choice][i]["submitted"] = True
+                                                        st.session_state['refinements'][behav_choice][i]["choice"] = returned_choice
+                                                    if checkbox_autofill:
+                                                        if st.session_state['refinements'][behav_choice][i]["submitted"] == False:
+                                                            st.session_state['refinements'][behav_choice][i]["choice"] = behav_choice
+                                                            st.session_state['refinements'][behav_choice][i]["submitted"] = True
+                                                    else:
+                                                        if st.session_state['refinements'][behav_choice][i]["submitted"] == False:
+                                                            st.session_state['refinements'][behav_choice][i]["choice"] = None
+                                            except:
+                                                st.warning('no video'.upper())
 
-                                for i, tab_ in enumerate(alltabs):
-                                    with tab_:
-                                        colL, colR = st.columns([3, 1])
-                                        file_ = open(
-                                            os.path.join(shortvid_dir, f'behavior_{behav_choice}_example_{i}.gif'),
-                                            "rb")
-                                        contents = file_.read()
-                                        data_url = base64.b64encode(contents).decode("utf-8")
-                                        file_.close()
-                                        colL.markdown(
-                                            f'<img src="data:image/gif;base64,{data_url}" alt="gif">',
-                                            unsafe_allow_html=True,
-                                        )
-                                        # st.write([annotation_classes[i] for i in range(len(annotation_classes))],
-                                        #          'hello')
-                                        with colR.form(key=f'form_{i}'):
-                                            returned_choice = st.radio("Select the correct class: ",
-                                                                         annotation_classes,
-                                                                         index=annotation_classes.index(behav_choice),
-                                                                         key="radio_{}".format(i))
-
-                                            # st.session_state['refinements'][behav_choice][i]["submitted"] = \
-                                            #     st.form_submit_button("Submit",
-                                            #                           "Press to confirm your choice")
-                                            if st.form_submit_button("Submit",
-                                                                      "Press to confirm your choice"):
-                                                # st.write('hello')
-                                                st.session_state['refinements'][behav_choice][i]["submitted"] = True
-                                                st.session_state['refinements'][behav_choice][i][
-                                                    "choice"] = returned_choice
-                                            # else:
-                                            #     st.experimental_rerun()
-
-                                            # if st.session_state['refinements'][behav_choice][i]["submitted"] == True:
-
-                                            if checkbox_autofill:
-                                                if st.session_state['refinements'][behav_choice][i]["submitted"] == False:
-                                                    st.session_state['refinements'][behav_choice][i][
-                                                        "choice"] = behav_choice
-                                                    st.session_state['refinements'][behav_choice][i][
-                                                        "submitted"] = True
-                                                    # st.experimental_rerun()
-                                            else:
-                                                if st.session_state['refinements'][behav_choice][i]["submitted"] == False:
-                                                    st.session_state['refinements'][behav_choice][i][
-                                                        "choice"] = None
-                                # st.write(st.session_state['refinements'])
-                                save_data(working_dir, prefix, 'refinements.sav',
-                                          [temporary_location, st.session_state['refinements']
-                                           ])
-
-                                                    # st.experimental_rerun()
-                                        # st.write(st.session_state['refinements'])
-
-                                        # np.
-                                        # try:
-                                        #     if returned_choice == 'other':
-                                        #         new_behav = colR.text_input('input name of behavior', )
-                                        #     st.write(new_behav)
-                                        # except:
-                                        #     pass
-                                        # st.session_state['refinements'][behav_choice][i] = returned_choice
-                                        # user_choices[behav_choice][i] = returned_choice
-                                        # st.write(st.session_state['refinements'])
-                                            # st.write(user_choices)
-
-
+                                    save_data(project_dir, iter_folder, 'refinements.sav',
+                                              [temporary_location,
+                                               st.session_state['scaled_features'],
+                                               st.session_state['predict'],
+                                               st.session_state['examples_idx'],
+                                               st.session_state['refinements']
+                                               ])
 
     else:
         st.error(NO_CONFIG_HELP)
@@ -424,12 +419,6 @@ def main(config=None):
     with bottom_cont:
 
         st.markdown("""---""")
-        st.write('')
-        # button_col1, button_col2, button_col3, button_col4, button_col5 = st.columns([3, 3, 1, 1, 1])
-        # if button_col1.button('◀  PRIOR STEP'):
-        #     swap_app('C-auto-active-learning')
-        # if button_col5.button('NEXT STEP ▶'):
-        #     swap_app('E-predict')
         st.write('')
         st.markdown('<span style="color:grey">{}</span>'.format(IMPRESS_TEXT), unsafe_allow_html=True)
 
