@@ -14,7 +14,7 @@ TITLE = "Active learning"
 
 
 def prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotation_classes):
-    [_, targets_runlist, _, _] = load_features(working_dir, prefix)
+    [features, targets, _, _] = load_features(working_dir, prefix)
     # if software == 'CALMS21 (PAPER)':
     #     ROOT = Path(__file__).parent.parent.parent.resolve()
     #     targets_test_csv = os.path.join(ROOT.joinpath("test"), './test_labels.csv')
@@ -23,7 +23,7 @@ def prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotat
     # else:
         #features_heldout, targets_heldout = load_heldout(working_dir, prefix)
         # targets_test = np.hstack(load_test_targets(working_dir, prefix))
-    features_heldout, targets_heldout = load_heldout(working_dir, prefix)
+    # features_heldout, targets_heldout = load_heldout(working_dir, prefix)
     col1, col2 = st.columns(2)
 
     if exclude_other:
@@ -39,12 +39,12 @@ def prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotat
         #                             for i in range(len(targets_runlist))]) for be in np.unique(targets_runlist)]
         selected_class_num = np.arange((len(annotation_classes)))
 
-    data_samples_per =  []
-    for be in np.arange((len(selected_class_num))):
-        for i in range(len(targets_runlist)):
-            len_samples = [len(np.where(targets_runlist[i] == be)[0])
-                                 for i in range(len(targets_runlist))]
-        data_samples_per.append(np.mean(len_samples))
+    data_samples_per = [len(np.where(targets == be)[0]) for be in np.arange((len(selected_class_num)))]
+    # if I want 10 samples as minimum, what do I need to put as min_ratio?
+    min_samples  = 10
+    smallest_class_num = np.min(data_samples_per)
+    min_ratio_ = np.round(min_samples/smallest_class_num, 2)
+    max_samps_iter = np.ceil(len(data_samples_per)*10).astype(int)
 
     if not np.all(data_samples_per):
         #if any selected class has no labels in the dataset, throw an error (very rare cases).
@@ -58,9 +58,9 @@ def prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotat
     col2_bot_exp = col2.expander('Samples per iteration'.upper(), expanded=True)
 
     if 'init_ratio' not in st.session_state:
-        st.session_state.init_ratio = float(train_fx)
+        st.session_state.init_ratio = min_ratio_
         init_ratio = col1_exp.number_input("Select an initial sampling ratio",
-            min_value=0.0, max_value=1.0, value=0.01, key='init3', help = INIT_RATIO_HELP)
+            min_value=0.0, max_value=1.0, value=min_ratio_, key='init3', help = INIT_RATIO_HELP)
 
     else:
         init_ratio = col1_exp.number_input(
@@ -68,17 +68,15 @@ def prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotat
             min_value=0.0, max_value=1.0, value=st.session_state.init_ratio, key='init3', help = INIT_RATIO_HELP)
         st.session_state.init_ratio = init_ratio
     # give user info about samples
-    info_text = [f"{annotation_classes[i]} [{round(data_samples_per[i] * st.session_state.init_ratio, 2)}]" for i in range(len(data_samples_per))]
+    info_text = [f"{annotation_classes[i]} [{round(data_samples_per[i] * st.session_state.init_ratio, 2)}]"
+                 for i in range(len(data_samples_per))]
     col1_exp.info('On average, samples to train per class: \n\n' + ";  ".join(info_text))
-
     max_iter = col2_exp.number_input('Max number of self-learning iterations',
                                      min_value=1, max_value=None, value=100, key='maxi3', help = MAX_ITER_HELP)
     max_samples_iter = col2_bot_exp.number_input(f'Max samples amongst the '
                                                  f'{len(data_samples_per)} classes',
-                                                 min_value=10, max_value=None, value=20, key='maxs3', help = MAX_SAMPLES_HELP)
-
-
-    # update config (only the offline version)
+                                                 min_value=10, max_value=None, value=max_samps_iter,
+                                                 key='maxs3', help = MAX_SAMPLES_HELP)
 
     parameters_dict = {
         "Processing": dict(
@@ -89,14 +87,13 @@ def prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotat
     }
     st.session_state['config'] = update_config(os.path.join(working_dir,prefix),updated_params=parameters_dict)
 
-
-
     # return init_ratio, max_iter, max_samples_iter, targets_test
-    return init_ratio, max_iter, max_samples_iter, features_heldout, targets_heldout
+    return init_ratio, max_iter, max_samples_iter
 
 
 def main(ri=None, config=None):
     st.markdown("""---""")
+
     if config is not None:
 
         working_dir = config["Project"].get("PROJECT_PATH")
@@ -132,22 +129,22 @@ def main(ri=None, config=None):
             if not redo_container.checkbox('Re-classify behaviors', help = RE_CLASSIFY_HELP):
                 message_container.success(f'This prefix had been classified.')
             else:
-                init_ratio, max_iter, max_samples_iter, features_heldout, targets_heldout = \
+                init_ratio, max_iter, max_samples_iter = \
                     prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotation_classes)
                 if st.button('re-classify'.upper()):
                     rf_classifier = RF_Classify(working_dir, prefix, software,
                                                 init_ratio, max_iter, max_samples_iter,
-                                                annotation_classes, features_heldout, targets_heldout, exclude_other, conf_threshold)
+                                                annotation_classes, exclude_other, conf_threshold)
                     rf_classifier.main()
         except FileNotFoundError:
             # make sure the features were extracted:
             try:
-                init_ratio, max_iter, max_samples_iter, features_heldout, targets_heldout = \
+                init_ratio, max_iter, max_samples_iter = \
                     prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotation_classes)
                 if st.button('classify'.upper()):
                     rf_classifier = RF_Classify(working_dir, prefix, software,
                                                 init_ratio, max_iter, max_samples_iter,
-                                                annotation_classes, features_heldout, targets_heldout, exclude_other, conf_threshold)
+                                                annotation_classes, exclude_other, conf_threshold)
                     rf_classifier.main()
             except FileNotFoundError:
                 st.error(NO_FEATURES_HELP)

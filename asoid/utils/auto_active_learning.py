@@ -3,6 +3,8 @@ import streamlit as st
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from stqdm import stqdm
 from sklearn.metrics import f1_score
 import matplotlib.colors as mcolors
 from utils.extract_features import frameshift_predict, bsoid_predict_numba, bsoid_predict_numba_noscale
@@ -117,7 +119,7 @@ class RF_Classify:
 
     def __init__(self, working_dir, prefix, software,
                  init_ratio, max_iter, max_samples_iter,
-                 annotation_classes, features_heldout, targets_heldout, exclude_other, conf_threshold: float = 0.8):
+                 annotation_classes, exclude_other, conf_threshold: float = 0.8):
         self.container = st.container()
         self.placeholder = self.container.empty()
         self.working_dir = working_dir
@@ -129,8 +131,10 @@ class RF_Classify:
         self.max_samples_iter = max_samples_iter
         self.annotation_classes = annotation_classes
         # self.targets_test = targets_test
-        self.features_heldout = features_heldout
-        self.targets_heldout = targets_heldout
+        self.features_train = []
+        self.targets_train = []
+        self.features_heldout = []
+        self.targets_heldout = []
 
         # get label code for last class ('other') to exclude later on if applicable
         self.exclude_other = exclude_other
@@ -164,23 +168,35 @@ class RF_Classify:
         self.perf_by_class = {k: [] for k in annotation_classes}
         self.perf2beat_by_class = {k: [] for k in annotation_classes}
 
+    def split_data(self):
+        [features, targets, shuffled_splits, self.frames2integ] = \
+            load_features(self.working_dir, self.prefix)
+        # partitioning into N randomly selected train/test splits
+        seeds = np.arange(shuffled_splits)
+        for seed in stqdm(seeds, desc="Randomly partitioning into 70/30..."):
+            X_train, X_test, y_train, y_test = train_test_split(features, targets,
+                                                                test_size=0.20, random_state=seed)
+            self.features_train.append(X_train)
+            self.targets_train.append(y_train)
+            self.features_heldout.append(X_test)
+            self.targets_heldout.append(y_test)
+
     def subsampled_classify(self):
-        [features_train, targets_train, scalar, self.frames2integ] = load_features(self.working_dir, self.prefix)
-        # data_test = load_test(self.working_dir, self.prefix)
-        # st.info(f'Training with all available to compare...'.upper())
-        for i in range(len(features_train)):
+        self.split_data()
+
+        for i in range(len(self.features_train)):
             X_all = []
             Y_all = []
 
-            unique_classes = np.unique(np.hstack([np.hstack(targets_train), np.hstack(self.targets_heldout)]))
+            unique_classes = np.unique(np.hstack([np.hstack(self.targets_train), np.hstack(self.targets_heldout)]))
             #remove other if exclude other
             if self.exclude_other:
                 unique_classes = unique_classes[unique_classes != self.label_code_other]
 
             # go through each class and select the all samples from the features and targets
             for sample_label in unique_classes:
-                    X_all.append(features_train[i][targets_train[i] == sample_label][:])
-                    Y_all.append(targets_train[i][targets_train[i] == sample_label][:])
+                    X_all.append(self.features_train[i][self.targets_train[i] == sample_label][:])
+                    Y_all.append(self.targets_train[i][self.targets_train[i] == sample_label][:])
 
             X_all_train = np.vstack(X_all)
             Y_all_train = np.hstack(Y_all)
@@ -212,27 +228,27 @@ class RF_Classify:
                 predict[self.targets_heldout[i] != self.label_code_other],
                 average='macro'))
             self.all_predict_prob.append(
-                self.all_model.predict_proba(features_train[i][targets_train[i] != self.label_code_other]
+                self.all_model.predict_proba(self.features_train[i][self.targets_train[i] != self.label_code_other]
                                              ))
             self.all_X_train.append(X_all_train)
             self.all_Y_train.append(Y_all_train)
 
-        for i in range(len(features_train)):
+        for i in range(len(self.features_train)):
             X = []
             Y = []
 
             # find the available amount of samples in the trainset,
             # take only the initial ratio and only classes that are in test
             # this returns 0 for samples that are not available
-            samples2train = [int(np.sum(targets_train[i] == b) * self.init_ratio)
+            samples2train = [int(np.sum(self.targets_train[i] == b) * self.init_ratio)
                              for b in unique_classes]
 
             # go through each class and select the number of samples from the features and targets
             for n_samples, sample_label in zip(samples2train, unique_classes):
                 # if there are samples in the train
                 if n_samples > 0:
-                    X.append(features_train[i][targets_train[i] == sample_label][:n_samples])
-                    Y.append(targets_train[i][targets_train[i] == sample_label][:n_samples])
+                    X.append(self.features_train[i][self.targets_train[i] == sample_label][:n_samples])
+                    Y.append(self.targets_train[i][self.targets_train[i] == sample_label][:n_samples])
 
             X_train = np.vstack(X)
             Y_train = np.hstack(Y)
@@ -266,7 +282,7 @@ class RF_Classify:
                 predict[self.targets_heldout[i] != self.label_code_other],
                 average='macro'))
             self.iter0_predict_prob.append(self.iter0_model.predict_proba(
-                features_train[i][targets_train[i] != self.label_code_other]
+                self.features_train[i][self.targets_train[i] != self.label_code_other]
                 ))
             self.iter0_X_train.append(X_train)
             self.iter0_Y_train.append(Y_train)
@@ -323,6 +339,7 @@ class RF_Classify:
         with st.spinner("Subsampled classfication..."):
         #print("Subsampled classfication...")
             self.subsampled_classify()
+
         #print("Showing subsampled performance...")
         with st.spinner("Preparing plot..."):
             self.show_subsampled_performance()
@@ -333,11 +350,6 @@ class RF_Classify:
         #print("All done.")
 
     def self_learn(self):
-        [features_train,
-         targets_train,
-         scalar,
-         _] = load_features(self.working_dir, self.prefix)
-        # data_test = load_test(self.working_dir, self.prefix)
         X_train = dict()
         Y_train = dict()
         iterX_predict_prob = dict()
@@ -352,7 +364,7 @@ class RF_Classify:
                 iterX_macro_scores_it = []
                 iterX_f1_scores_it = []
                 sampled_idx = []
-                for i in range(len(targets_train)):
+                for i in range(len(self.targets_train)):
                     if it == 0:
                         # start with iter0 data (retrieve from above)
                         X_train[it] = self.iter0_X_train[i]
@@ -360,15 +372,15 @@ class RF_Classify:
                         # retrieve iteration 0 predict probability
                         idx_lowconf = np.where(self.iter0_predict_prob[i].max(1) < self.conf_threshold)[0]
                         # identify all features/targets that were low predict prob
-                        new_X_human = features_train[i][targets_train[i] != self.label_code_other][
+                        new_X_human = self.features_train[i][self.targets_train[i] != self.label_code_other][
                                       idx_lowconf, :]
-                        new_Y_human = targets_train[i][targets_train[i] != self.label_code_other][
+                        new_Y_human = self.targets_train[i][self.targets_train[i] != self.label_code_other][
                             idx_lowconf]
                     else:
                         idx_lowconf = np.where(self.iterX_predict_prob_list[it - 1][i].max(1) < self.conf_threshold)[0]
-                        new_X_human = features_train[i][targets_train[i] != self.label_code_other][
+                        new_X_human = self.features_train[i][self.targets_train[i] != self.label_code_other][
                                       idx_lowconf, :]
-                        new_Y_human = targets_train[i][targets_train[i] != self.label_code_other][
+                        new_Y_human = self.targets_train[i][self.targets_train[i] != self.label_code_other][
                             idx_lowconf]
                     np.random.seed(i)
                     try:
@@ -432,7 +444,7 @@ class RF_Classify:
                         average='macro')
                     iterX_macro_scores_it.append(iterX_macro_scores[it])
                     iterX_predict_prob[it] = self.iterX_model.predict_proba(
-                        features_train[i][targets_train[i] != self.label_code_other]
+                        self.features_train[i][self.targets_train[i] != self.label_code_other]
                         )
                     iterX_predict_prob_it.append(iterX_predict_prob[it])
                 len_low_conf = [len(np.where(iterX_predict_prob_it[ii].max(1) < 0.5)[0])

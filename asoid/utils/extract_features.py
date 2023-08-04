@@ -508,20 +508,29 @@ class Extract:
 
     def save_features_targets(self):
         # save partitioned datasets, useful for cross-validation
+        # save_data(self.working_dir, self.prefix, 'feats_targets.sav',
+        #           [self.features_train,
+        #            self.targets_train,
+        #            self.scalar,
+        #            self.frames2integ])
+
+        # save_data(self.working_dir, self.prefix, 'heldout_feats_targets.sav',
+        #           [self.features_heldout,
+        #            self.targets_heldout])
+
         save_data(self.working_dir, self.prefix, 'feats_targets.sav',
-                  [self.features_train,
-                   self.targets_train,
-                   self.scalar,
+                  [self.features,
+                   self.targets_mode,
+                   # self.scalar,
+                   self.shuffled_splits,
                    self.frames2integ])
 
-        save_data(self.working_dir, self.prefix, 'heldout_feats_targets.sav',
-                  [self.features_heldout,
-                   self.targets_heldout])
+
         
     def main(self):
         self.extract_features()
         self.downsample_labels()
-        self.shuffle_data()
+        # self.shuffle_data()
         self.save_features_targets()
         col_left, _, col_right = st.columns([1, 1, 1])
         col_right.success("Continue on with next module".upper())
