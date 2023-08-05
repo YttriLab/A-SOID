@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from stqdm import stqdm
+import os
 from sklearn.metrics import f1_score
 import matplotlib.colors as mcolors
 from utils.extract_features import frameshift_predict, bsoid_predict_numba, bsoid_predict_numba_noscale
@@ -117,13 +118,15 @@ def show_classifier_results(behavior_classes, all_score,
 
 class RF_Classify:
 
-    def __init__(self, working_dir, prefix, software,
+    def __init__(self, working_dir, prefix, iteration_dir, software,
                  init_ratio, max_iter, max_samples_iter,
                  annotation_classes, exclude_other, conf_threshold: float = 0.8):
         self.container = st.container()
         self.placeholder = self.container.empty()
         self.working_dir = working_dir
         self.prefix = prefix
+        self.project_dir = os.path.join(working_dir, prefix)
+        self.iter_dir = iteration_dir
         self.software = software
         self.conf_threshold = conf_threshold
         self.init_ratio = init_ratio
@@ -170,7 +173,7 @@ class RF_Classify:
 
     def split_data(self):
         [features, targets, shuffled_splits, self.frames2integ] = \
-            load_features(self.working_dir, self.prefix)
+            load_features(self.project_dir, self.iter_dir)
         # partitioning into N randomly selected train/test splits
         seeds = np.arange(shuffled_splits)
         for seed in stqdm(seeds, desc="Randomly partitioning into 70/30..."):
@@ -533,7 +536,7 @@ class RF_Classify:
         self.placeholder.plotly_chart(fig, use_container_width=True)
 
     def save_subsampled_info(self):
-        save_data(self.working_dir, self.prefix, 'iter0.sav',
+        save_data(self.project_dir, self.iter_dir, 'iter0.sav',
                   [self.iter0_model,
                    self.iter0_X_train,
                    self.iter0_Y_train,
@@ -542,7 +545,7 @@ class RF_Classify:
                    self.iter0_predict_prob])
 
     def save_all_train_info(self):
-        save_data(self.working_dir, self.prefix, 'all_train.sav',
+        save_data(self.project_dir, self.iter_dir, 'all_train.sav',
                   [self.all_model,
                    self.all_X_train,
                    self.all_Y_train,
@@ -551,7 +554,7 @@ class RF_Classify:
                    self.all_predict_prob])
 
     def save_final_model_info(self):
-        save_data(self.working_dir, self.prefix, 'iterX.sav',
+        save_data(self.project_dir, self.iter_dir, 'iterX.sav',
                   [self.iterX_model,
                    self.iterX_X_train_list,
                    self.iterX_Y_train_list,

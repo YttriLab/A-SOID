@@ -1,7 +1,7 @@
 import configparser as cfg
 import tempfile
 from pathlib import Path
-
+import os
 import numpy as np
 import streamlit as st
 from PIL import Image
@@ -227,9 +227,6 @@ def main():
         _, mid_im, _ = st.columns([0.35, 1, 0.35])
 
         mid_im.image(logo_im_)
-        # start_button = st.button("START")
-        # if mid_im2.button("START"):
-        #     A_data_preprocess.main()
         st.write('---')
         try:
             sections = [x for x in st.session_state['config'].keys() if x != "DEFAULT"]
@@ -240,16 +237,18 @@ def main():
                     prefix = value
                 elif parameter == 'CLASSES':
                     annotations = value
+            project_dir = os.path.join(working_dir, prefix)
+            iteration_0 = 'iteration-0'
             menu_options = ['Menu', 'Upload Data ✔', 'Extract Features', 'Active Learning',
                             'Refine Behaviors', 'Create New Dataset', 'Predict', "View", "Discover"]
             st.session_state['page'] = 'Step 2'
             try:
-                [features_train, _, _, _] = load_features(working_dir, prefix)
+                [_, _, _, _] = load_features(project_dir, iteration_0)
                 menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔', 'Active Learning',
                                 'Refine Behaviors', 'Create New Dataset', 'Predict', "View", "Discover"]
                 st.session_state['page'] = 'Step 3'
                 try:
-                    [_, _, _, scores, _, _] = load_iterX(working_dir, prefix)
+                    [_, _, _, _, _, _] = load_iterX(project_dir, iteration_0)
                     menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔', 'Active Learning ✔',
                                     'Refine Behaviors', 'Create New Dataset', 'Predict', "View", "Discover"]
                     st.session_state['page'] = 'Step 4'

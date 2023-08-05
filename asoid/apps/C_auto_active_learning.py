@@ -13,8 +13,9 @@ from utils.project_utils import update_config
 TITLE = "Active learning"
 
 
-def prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotation_classes):
-    [features, targets, _, _] = load_features(working_dir, prefix)
+def prompt_setup(software, train_fx, working_dir, prefix, iteration_dir, exclude_other, annotation_classes):
+    project_dir = os.path.join(working_dir, prefix)
+    [_, targets, _, _] = load_features(project_dir, iteration_dir)
     # if software == 'CALMS21 (PAPER)':
     #     ROOT = Path(__file__).parent.parent.parent.resolve()
     #     targets_test_csv = os.path.join(ROOT.joinpath("test"), './test_labels.csv')
@@ -114,12 +115,12 @@ def main(ri=None, config=None):
             conf_threshold = 0.5
 
         try:
-            [_, all_X_train_list, all_Y_train_list, all_f1_scores, _, _] = \
-                load_all_train(working_dir, prefix)
-            [_, iter0_X_train, iter0_Y_train, iter0_f1_scores, _, _] = \
-                load_iter0(working_dir, prefix)
-            [_, iterX_X_train_list, iterX_Y_train_list, iterX_f1_scores, _, _] = \
-                load_iterX(working_dir, prefix)
+            [_, _, _, all_f1_scores, _, _] = \
+                load_all_train(project_dir, iter_folder)
+            [_, _, iter0_Y_train, iter0_f1_scores, _, _] = \
+                load_iter0(project_dir, iter_folder)
+            [_, _, iterX_Y_train_list, iterX_f1_scores, _, _] = \
+                load_iterX(project_dir, iter_folder)
             if st.checkbox('Show final results', key='sr', value=True, help = SHOW_FINAL_RESULTS_HELP):
                 show_classifier_results(annotation_classes, all_f1_scores,
                                         iter0_f1_scores, iter0_Y_train,
@@ -130,9 +131,9 @@ def main(ri=None, config=None):
                 message_container.success(f'This prefix had been classified.')
             else:
                 init_ratio, max_iter, max_samples_iter = \
-                    prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotation_classes)
+                    prompt_setup(software, train_fx, working_dir, prefix, iter_folder, exclude_other, annotation_classes)
                 if st.button('re-classify'.upper()):
-                    rf_classifier = RF_Classify(working_dir, prefix, software,
+                    rf_classifier = RF_Classify(working_dir, prefix, iter_folder, software,
                                                 init_ratio, max_iter, max_samples_iter,
                                                 annotation_classes, exclude_other, conf_threshold)
                     rf_classifier.main()
@@ -140,9 +141,9 @@ def main(ri=None, config=None):
             # make sure the features were extracted:
             try:
                 init_ratio, max_iter, max_samples_iter = \
-                    prompt_setup(software, train_fx, working_dir, prefix, exclude_other, annotation_classes)
+                    prompt_setup(software, train_fx, working_dir, prefix, iter_folder, exclude_other, annotation_classes)
                 if st.button('classify'.upper()):
-                    rf_classifier = RF_Classify(working_dir, prefix, software,
+                    rf_classifier = RF_Classify(working_dir, prefix, iter_folder, software,
                                                 init_ratio, max_iter, max_samples_iter,
                                                 annotation_classes, exclude_other, conf_threshold)
                     rf_classifier.main()

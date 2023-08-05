@@ -1,5 +1,5 @@
 import math
-
+import os
 import matplotlib.colors as mcolors
 import numpy as np
 import pandas as pd
@@ -442,6 +442,8 @@ class Extract:
 
         self.working_dir = working_dir
         self.prefix = prefix
+        self.project_dir = os.path.join(working_dir, prefix)
+        self.iteration_0 = 'iteration-0'
         self.frames2integ = frames2integ
         self.shuffled_splits = shuffled_splits
 
@@ -518,7 +520,7 @@ class Extract:
         #           [self.features_heldout,
         #            self.targets_heldout])
 
-        save_data(self.working_dir, self.prefix, 'feats_targets.sav',
+        save_data(self.project_dir, self.iteration_0, 'feats_targets.sav',
                   [self.features,
                    self.targets_mode,
                    # self.scalar,

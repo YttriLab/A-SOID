@@ -70,8 +70,13 @@ def main(config=None):
         annotation_classes = [x.strip() for x in config["Project"].get("CLASSES").split(",")]
         software = config["Project"].get("PROJECT_TYPE")
         framerate = config["Project"].getfloat("FRAMERATE")
+        iteration = config["Processing"].getint("ITERATION")
+        project_dir = os.path.join(working_dir, prefix)
+        iter_folder = str.join('', ('iteration-', str(iteration)))
+        os.makedirs(os.path.join(project_dir, iter_folder), exist_ok=True)
+
         try:
-            [_, _, _, _] = load_features(working_dir, prefix)
+            [_, _, _, _] = load_features(project_dir, iter_folder)
             prompt_container = st.container()
             message_container = st.container()
             redo_container = st.container()
