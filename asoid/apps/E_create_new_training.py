@@ -20,7 +20,6 @@ def create_new_training_features_targets(project_dir, selected_iter, new_feature
     # incorporate new features/targets into existing training
     appended_features = np.vstack((features, new_features))
     appended_targets = np.hstack((targets, new_targets))
-    st.write(appended_targets.shape, appended_features.shape)
     # save into new iteration folder
     save_data(project_dir, new_iter_folder, 'feats_targets.sav',
               [appended_features,
@@ -33,6 +32,8 @@ def create_new_training_features_targets(project_dir, selected_iter, new_feature
         )
     }
     st.session_state['config'] = update_config(project_dir, updated_params=parameters_dict)
+    st.success(f'Included new training data into :orange[ITERATION {selected_iter+1}]. Updated config.')
+    st.balloons()
 
 
 def main(ri=None, config=None):
@@ -42,7 +43,7 @@ def main(ri=None, config=None):
         working_dir = config["Project"].get("PROJECT_PATH")
         prefix = config["Project"].get("PROJECT_NAME")
         iteration = config["Processing"].getint("ITERATION")
-        selected_iter = ri.selectbox('select iteration number', np.arange(iteration+1))
+        selected_iter = ri.selectbox('select iteration number', np.arange(iteration+1), iteration)
         project_dir = os.path.join(working_dir, prefix)
         iter_folder = str.join('', ('iteration-', str(selected_iter)))
         os.makedirs(os.path.join(project_dir, iter_folder), exist_ok=True)
@@ -60,7 +61,7 @@ def main(ri=None, config=None):
              st.session_state['examples_idx'],
              st.session_state['refinements']] = load_refinement(
                 os.path.join(project_dir, iter_folder), selected_refine_dir)
-        # st.write(st.session_state['refinements'])
+        # st.write(st.session_state)
         new_feats_byclass = []
         new_targets_byclass = []
         for i, annotation_cls in enumerate(list(st.session_state['examples_idx'].keys())):
@@ -78,14 +79,12 @@ def main(ri=None, config=None):
                 pass
         new_features = np.vstack(new_feats_byclass)
         new_targets = np.hstack(new_targets_byclass)
-
-
-        create_button = st.button(f'Create iteration {iteration+1} training dataset'.upper())
-        if create_button:
-            create_new_training_features_targets(project_dir, selected_iter, new_features, new_targets)
-
-
-
+        if selected_refine_dir is not None:
+            create_button = st.button(f'Create :orange[ITERATION {selected_iter+1}] training dataset')
+            if create_button:
+                create_new_training_features_targets(project_dir, selected_iter, new_features, new_targets)
+        else:
+            st.markdown(f'Move to :orange[Active Learning] to retrain classifier')
 
     else:
         st.error(NO_CONFIG_HELP)

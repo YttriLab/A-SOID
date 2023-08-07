@@ -47,9 +47,6 @@ def prompt_setup(prompt_container, software, framerate, annotation_classes,
                                                 value=10, key='ns',
                                                 help = NUM_SPLITS_HELP+ CALM_HELP)
         frames2integ = round(framerate * (duration_min / 0.1))
-
-        #update config (only the offline version)
-
         parameters_dict = {
             "Processing": dict(
                 N_SHUFFLED_SPLIT=num_splits,
