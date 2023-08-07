@@ -404,6 +404,7 @@ def main(ri=None, config=None):
                                                                                 for k in range(num_outliers)}
                                                                            for key in annotation_classes}
                                         col_msg.info('Cleared. Type "R" to refresh.')
+                                        st.session_state['disabled'] = False
                                     except:
                                         pass
 
