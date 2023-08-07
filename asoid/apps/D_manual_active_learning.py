@@ -301,13 +301,13 @@ def prompt_setup(software, ftype, annotation_classes, threshold, framerate, vide
     return p_cutoff, num_outliers, output_fps, frame_dir, shortvid_dir
 
 
-def prompt_setup_existing(threshold, framerate, videos_dir, project_dir, iter_dir, refined_vid_dirs):
-    video_name = refined_vid_dirs.rpartition('_refine_vids')[0]
+def prompt_setup_existing(threshold, framerate, videos_dir, project_dir, iter_dir, selected_refine_dir):
+    video_name = selected_refine_dir.rpartition('_refine_vids')[0]
     p_cutoff = None
     num_outliers = 0
     output_fps = None
     frame_dir = None
-    shortvid_dir = os.path.join(project_dir, iter_dir, refined_vid_dirs)
+    shortvid_dir = os.path.join(project_dir, iter_dir, selected_refine_dir)
     st.session_state['disabled'] = True
     col1, col3 = st.columns(2)
     col1_exp = col1.expander('Parameters'.upper(), expanded=True)
@@ -389,18 +389,19 @@ def main(ri=None, config=None):
         else:
             if 'disabled' not in st.session_state:
                 st.session_state['disabled'] = False
-            # if 'uploaded_vid' not in st.session_state:
-            #     st.session_state['uploaded_vid'] = None
+            if 'video_path' not in st.session_state:
+                st.session_state['video_path'] = None
             if 'uploaded_pose' not in st.session_state:
                 st.session_state['uploaded_pose'] = []
 
             if 'refinements' not in st.session_state:
                 try:
-                    [temporary_location,
+                    [st.session_state['video_path'],
                      st.session_state['features'],
                      st.session_state['predict'],
                      st.session_state['examples_idx'],
-                     st.session_state['refinements']] = load_refinement(project_dir, iter_folder)
+                     st.session_state['refinements']] = load_refinement(os.path.join(project_dir, iter_folder),
+                                                                        selected_refine_dir)
                 except:
                     st.session_state['refinements'] = {key:
                                                            {k: {'choice': None, 'submitted': False}
@@ -525,8 +526,8 @@ def main(ri=None, config=None):
                                                     st.warning('no video'.upper())
                                         st.write(st.session_state['refinements'])
                                         # if save_button:
-                                        save_data(project_dir, iter_folder, 'refinements.sav',
-                                                  [temporary_location,
+                                        save_data(shortvid_dir, 'refinements.sav',
+                                                  [st.session_state['video_path'],
                                                    st.session_state['features'],
                                                    st.session_state['predict'],
                                                    st.session_state['examples_idx'],
@@ -537,10 +538,9 @@ def main(ri=None, config=None):
                     prompt_setup_existing(threshold, framerate,
                                           videos_dir, project_dir, iter_folder,
                                           selected_refine_dir)
-                temporary_location = videos_dir
-                st.write(temporary_location)
-                st.session_state['disabled'] = True
 
+                st.session_state['video_path'] = os.path.join(videos_dir, selected_refine_dir.rpartition('_refine_vids')[0])
+                st.session_state['disabled'] = True
                 behav_choice = st.selectbox("Select the behavior: ", annotation_classes,
                                             index=int(0),
                                             key="behavior_choice")
@@ -551,7 +551,6 @@ def main(ri=None, config=None):
                 st.write('')
 
                 col_option, col_option2, col_msg = st.columns([1, 1, 1])
-                # save_button = col_option.button('save/update refinement file'.upper())
                 clear_vid_button = col_option.button('clear video and choice?'.upper(), key='vr')
 
                 if clear_vid_button:
@@ -613,8 +612,8 @@ def main(ri=None, config=None):
                                 st.warning('no video'.upper())
                     st.write(st.session_state['refinements'])
                     # if save_button:
-                    save_data(project_dir, iter_folder, 'refinements.sav',
-                              [temporary_location,
+                    save_data(os.path.join(project_dir, iter_folder), selected_refine_dir, 'refinements.sav',
+                              [st.session_state['video_path'],
                                st.session_state['features'],
                                st.session_state['predict'],
                                st.session_state['examples_idx'],
