@@ -11,7 +11,7 @@ from io import StringIO
 
 from apps import *
 from config.help_messages import UPLOAD_CONFIG_HELP, IMPRESS_TEXT
-from utils.load_workspace import load_features, load_iterX
+from utils.load_workspace import load_features, load_iterX, load_refinement
 
 
 def img_to_bytes(img_path):
@@ -237,8 +237,12 @@ def main():
                     prefix = value
                 elif parameter == 'CLASSES':
                     annotations = value
+            for parameter, value in st.session_state['config'][sections[2]].items():
+                if parameter == "ITERATION":
+                    current_iter_num = value
             project_dir = os.path.join(working_dir, prefix)
             iteration_0 = 'iteration-0'
+            current_iter = str.join('', ('iteration-', str(current_iter_num)))
             menu_options = ['Menu', 'Upload Data ✔', 'Extract Features', 'Active Learning',
                             'Refine Behaviors', 'Create New Dataset', 'Predict', "View", "Discover"]
             st.session_state['page'] = 'Step 2'
@@ -252,9 +256,15 @@ def main():
                     menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔', 'Active Learning ✔',
                                     'Refine Behaviors', 'Create New Dataset', 'Predict', "View", "Discover"]
                     st.session_state['page'] = 'Step 4'
+                    try:
+                        [_, _, _, _, _] = load_refinement(project_dir, current_iter)
+                        menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔', 'Active Learning ✔',
+                                        'Refine Behaviors ✔', 'Create New Dataset', 'Predict', "View", "Discover"]
+                        st.session_state['page'] = 'Step 5'
+                    except:
+                        pass
                 except:
                     pass
-
             except:
                 pass
 

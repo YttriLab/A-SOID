@@ -105,7 +105,7 @@ def main(ri=None, config=None):
         train_fx = config["Processing"].getfloat("TRAIN_FRACTION")
         conf_threshold = config["Processing"].getfloat("CONF_THRESHOLD")
         iteration = config["Processing"].getint("ITERATION")
-        selected_iter = ri.selectbox('select iteration number', np.arange(iteration+1))
+        selected_iter = ri.selectbox('select iteration number', np.arange(iteration+1), iteration)
         project_dir = os.path.join(working_dir, prefix)
         iter_folder = str.join('', ('iteration-', str(selected_iter)))
         os.makedirs(os.path.join(project_dir, iter_folder), exist_ok=True)

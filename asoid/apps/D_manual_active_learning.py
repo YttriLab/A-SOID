@@ -6,7 +6,7 @@ import glob
 import streamlit as st
 import io
 import ffmpeg
-
+from io import StringIO
 import cv2
 from stqdm import stqdm
 import re
@@ -14,9 +14,9 @@ import re
 import base64
 from moviepy.editor import VideoFileClip
 from utils.load_workspace import load_new_pose
-from utils.load_workspace import load_iterX, load_features, save_data
+from utils.load_workspace import load_iterX, load_features, save_data, load_refinement
 
-from utils.extract_features import feature_extraction_with_extr_scaler, \
+from utils.extract_features import feature_extraction, \
     bsoid_predict_numba, bsoid_predict_numba_noscale
 from config.help_messages import *
 
@@ -171,85 +171,99 @@ def create_labeled_vid(labels, counts, frames2integ,
     return all_ex_idx
 
 
-def create_videos(processed_input_data, scalar, iterX_model, framerate, frames2integ,
+def create_videos(processed_input_data, iterX_model, framerate, frames2integ,
                   num_outliers, output_fps, annotation_classes,
                   frame_dir, shortvid_dir):
     examples_idx = None
-    scaled_features = [None]
+    features = [None]
     predict_arr = None
     examples_idx = None
     action_button = st.button("Predict labels and create example videos")
     message_box = st.empty()
     if action_button:
+        st.session_state['disabled'] = True
         message_box.info('Predicting labels... ')
-        features = []
-        scaled_features = []
         # extract features, bin them
+        features = []
         for i, data in enumerate(processed_input_data):
             # using feature scaling from training set
-            feats, scaled_feats = feature_extraction_with_extr_scaler([data]
-                                                                      , 1
-                                                                      , frames2integ
-                                                                      , scalar
-                                                                      )
+            feats, _ = feature_extraction([data], 1, frames2integ)
             features.append(feats)
-            scaled_features.append(scaled_feats)
-        for i in stqdm(range(len(scaled_features)), desc="Behavior prediction from spatiotemporal features"):
+            # scaled_features.append(scaled_feats)
+        for i in stqdm(range(len(features)), desc="Behavior prediction from spatiotemporal features"):
             with st.spinner('Predicting behavior from features...'):
-                predict = bsoid_predict_numba_noscale([scaled_features[i]], iterX_model)
+                predict = bsoid_predict_numba_noscale([features[i]], iterX_model)
                 predict_arr = np.array(predict).flatten()
         examples_idx = create_labeled_vid(predict_arr, num_outliers, frames2integ,
                                           framerate, output_fps, annotation_classes,
                                           frame_dir, shortvid_dir)
         st.balloons()
-        message_box.success('Cleared. Type "R" to refresh.')
-    return scaled_features[0], predict_arr, examples_idx
+        message_box.success('Done. Type "R" to refresh.')
+
+    return features[0], predict_arr, examples_idx
 
 
-def prompt_setup(software, ftype, threshold, framerate, working_dir, prefix):
+def prompt_setup(software, ftype, annotation_classes, threshold, framerate, videos_dir, project_dir, iter_dir):
     left_col, right_col = st.columns(2)
-    left_expand = left_col.expander('Select a video file:', expanded=True)
-    right_expand = right_col.expander('Select the corresponding pose file:', expanded=True)
+    le_exapnder = left_col.expander('upload video'.upper(), expanded=True)
+    ri_exapnder = right_col.expander('upload pose'.upper(), expanded=True)
     p_cutoff = None
     num_outliers = 0
     output_fps = None
     frame_dir = None
     shortvid_dir = None
-    new_videos = None
-    new_pose_list = None
+
     if software == 'CALMS21 (PAPER)':
         ROOT = Path(__file__).parent.parent.parent.resolve()
         new_pose_sav = os.path.join(ROOT.joinpath("new_test"), './new_pose.sav')
         new_pose_list = load_new_pose(new_pose_sav)
-        # new_videos = None
     else:
-        new_videos = left_expand.file_uploader('Upload video files',
+
+        new_videos = le_exapnder.file_uploader('Upload video files'.upper(),
                                                accept_multiple_files=False,
                                                type=['avi', 'mp4'], key='video')
-        new_pose_csvs = [right_expand.file_uploader('Upload corresponding pose csv files',
-                                                    accept_multiple_files=False,
-                                                    type=ftype, key='pose')]
+        new_pose_csvs = [ri_exapnder.file_uploader('Upload corresponding pose csv files',
+                                                   accept_multiple_files=False,
+                                                   type=ftype, key='pose')]
+
         try:
+            st.session_state['uploaded_vid'] = new_videos
             new_pose_list = []
             for i, f in enumerate(new_pose_csvs):
-                current_pose = pd.read_csv(new_pose_csvs[i],
-                                           header=[0, 1, 2], sep=",", index_col=0)
+                current_pose = pd.read_csv(f,
+                                           header=[0, 1, 2], sep=",", index_col=0
+                                           )
                 idx_selected = np.array([0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16])
                 new_pose_list.append(np.array(current_pose.iloc[:, idx_selected]))
+            st.session_state['uploaded_pose'] = new_pose_list
             col1, col3 = st.columns(2)
             col1_exp = col1.expander('Parameters'.upper(), expanded=True)
-            # col2_exp = col2.expander('Samples to refine'.upper(), expanded=True)
             col3_exp = col3.expander('Output folders'.upper(), expanded=True)
+
             p_cutoff = col1_exp.number_input('Threshold value to sample outliers from',
-                                             min_value=0.0, max_value=1.0, value=threshold)
+                                             min_value=0.0, max_value=1.0, value=threshold,
+                                             disabled=st.session_state.disabled)
+
             num_outliers = col1_exp.number_input('Number of potential outliers to refine',
-                                                 min_value=10, max_value=None, value=20)
+                                                 min_value=10, max_value=None, value=20,
+                                                 disabled=st.session_state.disabled)
+            st.session_state['refinements'] = {key:
+                                                   {k: {'choice': None, 'submitted': False}
+                                                    for k in range(num_outliers)}
+                                               for key in annotation_classes}
+
             output_fps = col1_exp.number_input('Video playback fps',
-                                               min_value=1, max_value=None, value=5)
+                                               min_value=1, max_value=None, value=5,
+                                               disabled=st.session_state.disabled)
+
             col1_exp.write(f'equivalent to {round(output_fps / framerate, 2)} X speed')
             frame_dir = col3_exp.text_input('Enter a directory for frames',
-                                            os.path.join(working_dir, prefix, new_videos.name.rpartition('.mp4')[0],
-                                                         'pngs'),
+                                            os.path.join(videos_dir,
+                                                         str.join('', (
+                                                             st.session_state['uploaded_vid'].name.rpartition('.mp4')[
+                                                                 0],
+                                                             '_pngs'))),
+                                            disabled=st.session_state.disabled, on_change=disable
                                             )
 
             try:
@@ -261,8 +275,12 @@ def prompt_setup(software, ftype, threshold, framerate, working_dir, prefix):
                     st.experimental_rerun()
 
             shortvid_dir = col3_exp.text_input('Enter a directory for refined videos',
-                                               os.path.join(working_dir, prefix, new_videos.name.rpartition('.mp4')[0],
-                                                            'refine_vids'),
+                                               os.path.join(project_dir, iter_dir,
+                                                            str.join('', (
+                                                                st.session_state['uploaded_vid'].name.rpartition(
+                                                                    '.mp4')[0],
+                                                                '_refine_vids'))),
+                                               disabled=st.session_state.disabled, on_change=disable
                                                )
             try:
                 os.listdir(shortvid_dir)
@@ -274,14 +292,15 @@ def prompt_setup(software, ftype, threshold, framerate, working_dir, prefix):
         except:
             pass
 
-    return new_videos, new_pose_list, p_cutoff, num_outliers, output_fps, frame_dir, shortvid_dir
+    return p_cutoff, num_outliers, output_fps, frame_dir, shortvid_dir
+
+
+def disable():
+    st.session_state["disabled"] = True
 
 
 def main(ri=None, config=None):
     st.markdown("""---""")
-    # ri.button('hi')
-    # add a dropdown for iteration
-
     if config is not None:
         working_dir = config["Project"].get("PROJECT_PATH")
         prefix = config["Project"].get("PROJECT_NAME")
@@ -293,10 +312,12 @@ def main(ri=None, config=None):
         iteration = config["Processing"].getint("ITERATION")
         framerate = config["Project"].getint("FRAMERATE")
         duration_min = config["Processing"].getfloat("MIN_DURATION")
-        selected_iter = ri.selectbox('select iteration number', np.arange(iteration+1))
+        selected_iter = ri.selectbox('select iteration number', np.arange(iteration + 1))
         project_dir = os.path.join(working_dir, prefix)
         iter_folder = str.join('', ('iteration-', str(selected_iter)))
         os.makedirs(os.path.join(project_dir, iter_folder), exist_ok=True)
+        videos_dir = os.path.join(project_dir, 'videos')
+        os.makedirs(videos_dir, exist_ok=True)
 
         if software == 'CALMS21 (PAPER)':
             ROOT = Path(__file__).parent.parent.parent.resolve()
@@ -304,26 +325,35 @@ def main(ri=None, config=None):
             targets_test_df = pd.read_csv(targets_test_csv, header=0)
             targets_test = np.array(targets_test_df['annotation'])
         else:
-            [new_videos, new_pose_list, p_cutoff, num_outliers, output_fps, frame_dir, shortvid_dir] = \
-                prompt_setup(software, ftype, threshold, framerate, working_dir, prefix)
+            if 'disabled' not in st.session_state:
+                st.session_state['disabled'] = False
+            if 'uploaded_vid' not in st.session_state:
+                st.session_state['uploaded_vid'] = None
+            if 'uploaded_pose' not in st.session_state:
+                st.session_state['uploaded_pose'] = []
+
             if 'refinements' not in st.session_state:
                 st.session_state['refinements'] = {key:
                                                        {k: {'choice': None, 'submitted': False}
-                                                        for k in range(num_outliers)}
+                                                        for k in range(20)}
                                                    for key in annotation_classes}
-            if 'scaled_features' not in st.session_state:
-                st.session_state['scaled_features'] = None
+            [p_cutoff, num_outliers, output_fps, frame_dir, shortvid_dir] = \
+                prompt_setup(software, ftype, annotation_classes,
+                             threshold, framerate,
+                             videos_dir, project_dir, iter_folder)
+
+            if 'features' not in st.session_state:
+                st.session_state['features'] = None
             if 'predict' not in st.session_state:
                 st.session_state['predict'] = None
             if 'examples_idx' not in st.session_state:
                 st.session_state['examples_idx'] = None
-
-            if new_videos is not None and len(new_pose_list) > 0:
-                if os.path.exists(new_videos.name):
-                    temporary_location = f'{new_videos.name}'
+            if st.session_state['uploaded_vid'] is not None and len(st.session_state['uploaded_pose']) > 0:
+                if os.path.exists(os.path.join(videos_dir, st.session_state['uploaded_vid'].name)):
+                    temporary_location = str(os.path.join(videos_dir, st.session_state['uploaded_vid'].name))
                 else:
-                    g = io.BytesIO(new_videos.read())  # BytesIO Object
-                    temporary_location = f'{new_videos.name}'
+                    g = io.BytesIO(st.session_state['uploaded_vid'].read())  # BytesIO Object
+                    temporary_location = str(os.path.join(videos_dir, st.session_state['uploaded_vid'].name))
                     with open(temporary_location, 'wb') as out:  # Open temporary file as bytes
                         out.write(g.read())  # Read bytes into file
                     out.close()
@@ -332,15 +362,16 @@ def main(ri=None, config=None):
                     if len(framedir_) < 2:
                         frame_extraction(video_file=temporary_location, frame_dir=frame_dir)
                     else:
+
                         if os.path.exists(shortvid_dir):
                             viddir_ = os.listdir(shortvid_dir)
                             if len(viddir_) < 2:
                                 frames2integ = round(float(framerate) * (duration_min / 0.1))
-                                [_, _, scalar, _] = load_features(working_dir, prefix)
-                                [iterX_model, _, _, _, _, _] = load_iterX(working_dir, prefix)
+                                [iterX_model, _, _, _, _, _] = load_iterX(project_dir, iter_folder)
 
-                                st.session_state['scaled_features'], st.session_state['predict'], \
-                                    st.session_state['examples_idx'] = create_videos(new_pose_list, scalar, iterX_model,
+                                st.session_state['features'], st.session_state['predict'], \
+                                    st.session_state['examples_idx'] = create_videos(st.session_state['uploaded_pose'],
+                                                                                     iterX_model,
                                                                                      framerate,
                                                                                      frames2integ,
                                                                                      num_outliers, output_fps,
@@ -348,16 +379,21 @@ def main(ri=None, config=None):
                                                                                      frame_dir=frame_dir,
                                                                                      shortvid_dir=shortvid_dir)
                             else:
+                                st.session_state['disabled'] = True
+
                                 behav_choice = st.selectbox("Select the behavior: ", annotation_classes,
                                                             index=int(0),
                                                             key="behavior_choice")
+
                                 checkbox_autofill = st.checkbox('autofill')
                                 alltabs = st.tabs([f'{i}' for i in range(num_outliers)])
                                 st.write('')
                                 st.write('')
 
-                                col_option, _, col_msg = st.columns([1, 1, 1])
-                                clear_vid_button = col_option.button('CLEAR?', key='vr')
+                                col_option, col_option2, col_msg = st.columns([1, 1, 1])
+                                save_button = col_option.button('save/update refinement file'.upper())
+                                clear_vid_button = col_option2.button('clear video and choice?'.upper(), key='vr')
+
                                 if clear_vid_button:
                                     try:
                                         for file_name in glob.glob(shortvid_dir + "/*"):
@@ -370,13 +406,15 @@ def main(ri=None, config=None):
                                         col_msg.info('Cleared. Type "R" to refresh.')
                                     except:
                                         pass
+
                                 else:
                                     for i, tab_ in enumerate(alltabs):
                                         with tab_:
                                             try:
                                                 colL, colR = st.columns([3, 1])
                                                 file_ = open(
-                                                    os.path.join(shortvid_dir, f'behavior_{behav_choice}_example_{i}.gif'),
+                                                    os.path.join(shortvid_dir,
+                                                                 f'behavior_{behav_choice}_example_{i}.gif'),
                                                     "rb")
                                                 contents = file_.read()
                                                 data_url = base64.b64encode(contents).decode("utf-8")
@@ -385,32 +423,42 @@ def main(ri=None, config=None):
                                                     f'<img src="data:image/gif;base64,{data_url}" alt="gif">',
                                                     unsafe_allow_html=True,
                                                 )
+
                                                 with colR.form(key=f'form_{i}'):
                                                     returned_choice = st.radio("Select the correct class: ",
                                                                                annotation_classes,
-                                                                               index=annotation_classes.index(behav_choice),
+                                                                               index=annotation_classes.index(
+                                                                                   behav_choice),
                                                                                key="radio_{}".format(i))
                                                     if st.form_submit_button("Submit",
                                                                              "Press to confirm your choice"):
-                                                        st.session_state['refinements'][behav_choice][i]["submitted"] = True
-                                                        st.session_state['refinements'][behav_choice][i]["choice"] = returned_choice
+                                                        st.session_state['refinements'][behav_choice][i][
+                                                            "submitted"] = True
+                                                        st.session_state['refinements'][behav_choice][i][
+                                                            "choice"] = returned_choice
                                                     if checkbox_autofill:
-                                                        if st.session_state['refinements'][behav_choice][i]["submitted"] == False:
-                                                            st.session_state['refinements'][behav_choice][i]["choice"] = behav_choice
-                                                            st.session_state['refinements'][behav_choice][i]["submitted"] = True
+                                                        if st.session_state['refinements'][behav_choice][i][
+                                                            "submitted"] == False:
+                                                            st.session_state['refinements'][behav_choice][i][
+                                                                "choice"] = behav_choice
+                                                            st.session_state['refinements'][behav_choice][i][
+                                                                "submitted"] = True
                                                     else:
-                                                        if st.session_state['refinements'][behav_choice][i]["submitted"] == False:
-                                                            st.session_state['refinements'][behav_choice][i]["choice"] = None
+                                                        if st.session_state['refinements'][behav_choice][i][
+                                                            "submitted"] == False:
+                                                            st.session_state['refinements'][behav_choice][i][
+                                                                "choice"] = None
                                             except:
                                                 st.warning('no video'.upper())
-
-                                    save_data(project_dir, iter_folder, 'refinements.sav',
-                                              [temporary_location,
-                                               st.session_state['scaled_features'],
-                                               st.session_state['predict'],
-                                               st.session_state['examples_idx'],
-                                               st.session_state['refinements']
-                                               ])
+                                    # st.write(st.session_state['refinements'])
+                                    if save_button:
+                                        save_data(project_dir, iter_folder, 'refinements.sav',
+                                                  [temporary_location,
+                                                   st.session_state['features'],
+                                                   st.session_state['predict'],
+                                                   st.session_state['examples_idx'],
+                                                   st.session_state['refinements']
+                                                   ])
 
     else:
         st.error(NO_CONFIG_HELP)
