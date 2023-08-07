@@ -253,13 +253,16 @@ def main():
                 st.session_state['page'] = 'Step 3'
                 try:
                     [_, _, _, _, _, _] = load_iterX(project_dir, iteration_0)
-                    menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔', 'Active Learning ✔',
+                    menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔',
+                                    f'Active Learning iter{current_iter_num}',
                                     'Refine Behaviors', 'Create New Dataset', 'Predict', "View", "Discover"]
                     st.session_state['page'] = 'Step 4'
                     try:
                         [_, _, _, _, _] = load_refinement(project_dir, current_iter)
-                        menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔', 'Active Learning ✔',
-                                        'Refine Behaviors ✔', 'Create New Dataset', 'Predict', "View", "Discover"]
+                        menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔',
+                                        f'Active Learning iter{current_iter_num}',
+                                        f'Refine Behaviors iter{current_iter_num}',
+                                        'Create New Dataset', 'Predict', "View", "Discover"]
                         st.session_state['page'] = 'Step 5'
                     except:
                         pass

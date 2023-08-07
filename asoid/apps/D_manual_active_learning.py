@@ -10,7 +10,7 @@ from io import StringIO
 import cv2
 from stqdm import stqdm
 import re
-
+# import time
 import base64
 from moviepy.editor import VideoFileClip
 from utils.load_workspace import load_new_pose
@@ -212,7 +212,9 @@ def prompt_setup(software, ftype, annotation_classes, threshold, framerate, vide
     output_fps = None
     frame_dir = None
     shortvid_dir = None
-
+    # new_videos = None
+    # new_pose_csvs = None
+    # st.write(new_videos)
     if software == 'CALMS21 (PAPER)':
         ROOT = Path(__file__).parent.parent.parent.resolve()
         new_pose_sav = os.path.join(ROOT.joinpath("new_test"), './new_pose.sav')
@@ -226,7 +228,7 @@ def prompt_setup(software, ftype, annotation_classes, threshold, framerate, vide
                                                    accept_multiple_files=False,
                                                    type=ftype, key='pose')]
 
-        try:
+        if new_videos is not None and new_pose_csvs[0] is not None:
             st.session_state['uploaded_vid'] = new_videos
             new_pose_list = []
             for i, f in enumerate(new_pose_csvs):
@@ -247,10 +249,10 @@ def prompt_setup(software, ftype, annotation_classes, threshold, framerate, vide
             num_outliers = col1_exp.number_input('Number of potential outliers to refine',
                                                  min_value=10, max_value=None, value=20,
                                                  disabled=st.session_state.disabled)
-            st.session_state['refinements'] = {key:
-                                                   {k: {'choice': None, 'submitted': False}
-                                                    for k in range(num_outliers)}
-                                               for key in annotation_classes}
+            # st.session_state['refinements'] = {key:
+            #                                        {k: {'choice': None, 'submitted': False}
+            #                                         for k in range(num_outliers)}
+            #                                    for key in annotation_classes}
 
             output_fps = col1_exp.number_input('Video playback fps',
                                                min_value=1, max_value=None, value=5,
@@ -272,7 +274,8 @@ def prompt_setup(software, ftype, annotation_classes, threshold, framerate, vide
             except FileNotFoundError:
                 if col3_exp.button('create frame directory'):
                     os.makedirs(frame_dir, exist_ok=True)
-                    st.experimental_rerun()
+                    col3_exp.info('Created. Type "R" to refresh.')
+                    # st.experimental_rerun()
 
             shortvid_dir = col3_exp.text_input('Enter a directory for refined videos',
                                                os.path.join(project_dir, iter_dir,
@@ -288,9 +291,64 @@ def prompt_setup(software, ftype, annotation_classes, threshold, framerate, vide
             except FileNotFoundError:
                 if col3_exp.button('create refined video directory'):
                     os.makedirs(shortvid_dir, exist_ok=True)
-                    st.experimental_rerun()
-        except:
-            pass
+                    col3_exp.info('Created. Type "R" to refresh.')
+                    # st.experimental_rerun()
+        else:
+            # st.write('hi')
+            st.session_state['uploaded_pose'] = []
+            st.session_state['uploaded_vid'] = None
+
+    return p_cutoff, num_outliers, output_fps, frame_dir, shortvid_dir
+
+
+def prompt_setup_existing(threshold, framerate, videos_dir, project_dir, iter_dir, refined_vid_dirs):
+    video_name = refined_vid_dirs.rpartition('_refine_vids')[0]
+    p_cutoff = None
+    num_outliers = 0
+    output_fps = None
+    frame_dir = None
+    shortvid_dir = os.path.join(project_dir, iter_dir, refined_vid_dirs)
+    st.session_state['disabled'] = True
+    col1, col3 = st.columns(2)
+    col1_exp = col1.expander('Parameters'.upper(), expanded=True)
+    col3_exp = col3.expander('Output folders'.upper(), expanded=True)
+
+    p_cutoff = col1_exp.number_input('Threshold value to sample outliers from',
+                                     min_value=0.0, max_value=1.0, value=threshold,
+                                     disabled=st.session_state.disabled)
+
+    num_outliers = col1_exp.number_input('Number of potential outliers to refine',
+                                         min_value=10, max_value=None, value=20,
+                                         disabled=st.session_state.disabled)
+
+    output_fps = col1_exp.number_input('Video playback fps',
+                                       min_value=1, max_value=None, value=5,
+                                       disabled=st.session_state.disabled)
+
+    col1_exp.write(f'equivalent to {round(output_fps / framerate, 2)} X speed')
+    frame_dir = col3_exp.text_input('Enter a directory for frames',
+                                    os.path.join(videos_dir,
+                                                 str.join('', (
+                                                     video_name,
+                                                     '_pngs'))),
+                                    disabled=st.session_state.disabled, on_change=disable
+                                    )
+
+    try:
+        os.listdir(frame_dir)
+        col3_exp.success(f'Entered **{frame_dir}** as the frame directory.')
+    except FileNotFoundError:
+        if col3_exp.button('create frame directory'):
+            os.makedirs(frame_dir, exist_ok=True)
+            st.experimental_rerun()
+
+    try:
+        os.listdir(shortvid_dir)
+        col3_exp.success(f'Entered **{shortvid_dir}** as the refined video directory.')
+    except FileNotFoundError:
+        if col3_exp.button('create refined video directory'):
+            os.makedirs(shortvid_dir, exist_ok=True)
+            st.experimental_rerun()
 
     return p_cutoff, num_outliers, output_fps, frame_dir, shortvid_dir
 
@@ -312,12 +370,16 @@ def main(ri=None, config=None):
         iteration = config["Processing"].getint("ITERATION")
         framerate = config["Project"].getint("FRAMERATE")
         duration_min = config["Processing"].getfloat("MIN_DURATION")
-        selected_iter = ri.selectbox('select iteration number', np.arange(iteration + 1))
+        selected_iter = ri.selectbox('select iteration number', np.arange(iteration + 1), iteration)
         project_dir = os.path.join(working_dir, prefix)
         iter_folder = str.join('', ('iteration-', str(selected_iter)))
         os.makedirs(os.path.join(project_dir, iter_folder), exist_ok=True)
         videos_dir = os.path.join(project_dir, 'videos')
         os.makedirs(videos_dir, exist_ok=True)
+        refined_vid_dirs = [d for d in os.listdir(os.path.join(project_dir, iter_folder))
+                            if os.path.isdir(os.path.join(project_dir, iter_folder, d))]
+        selected_refine_dir = ri.selectbox('select existing refinement videos', refined_vid_dirs)
+        # st.write(len(os.listdir(os.path.join(project_dir, iter_folder, selected_refine_dir))))
 
         if software == 'CALMS21 (PAPER)':
             ROOT = Path(__file__).parent.parent.parent.resolve()
@@ -327,132 +389,142 @@ def main(ri=None, config=None):
         else:
             if 'disabled' not in st.session_state:
                 st.session_state['disabled'] = False
-            if 'uploaded_vid' not in st.session_state:
-                st.session_state['uploaded_vid'] = None
+            # if 'uploaded_vid' not in st.session_state:
+            #     st.session_state['uploaded_vid'] = None
             if 'uploaded_pose' not in st.session_state:
                 st.session_state['uploaded_pose'] = []
 
             if 'refinements' not in st.session_state:
-                st.session_state['refinements'] = {key:
-                                                       {k: {'choice': None, 'submitted': False}
-                                                        for k in range(20)}
-                                                   for key in annotation_classes}
-            [p_cutoff, num_outliers, output_fps, frame_dir, shortvid_dir] = \
-                prompt_setup(software, ftype, annotation_classes,
-                             threshold, framerate,
-                             videos_dir, project_dir, iter_folder)
-
+                try:
+                    [temporary_location,
+                     st.session_state['features'],
+                     st.session_state['predict'],
+                     st.session_state['examples_idx'],
+                     st.session_state['refinements']] = load_refinement(project_dir, iter_folder)
+                except:
+                    st.session_state['refinements'] = {key:
+                                                           {k: {'choice': None, 'submitted': False}
+                                                            for k in range(20)}
+                                                       for key in annotation_classes}
             if 'features' not in st.session_state:
                 st.session_state['features'] = None
             if 'predict' not in st.session_state:
                 st.session_state['predict'] = None
             if 'examples_idx' not in st.session_state:
                 st.session_state['examples_idx'] = None
-            if st.session_state['uploaded_vid'] is not None and len(st.session_state['uploaded_pose']) > 0:
-                if os.path.exists(os.path.join(videos_dir, st.session_state['uploaded_vid'].name)):
-                    temporary_location = str(os.path.join(videos_dir, st.session_state['uploaded_vid'].name))
-                else:
-                    g = io.BytesIO(st.session_state['uploaded_vid'].read())  # BytesIO Object
-                    temporary_location = str(os.path.join(videos_dir, st.session_state['uploaded_vid'].name))
-                    with open(temporary_location, 'wb') as out:  # Open temporary file as bytes
-                        out.write(g.read())  # Read bytes into file
-                    out.close()
-                if os.path.exists(frame_dir):
-                    framedir_ = os.listdir(frame_dir)
-                    if len(framedir_) < 2:
-                        frame_extraction(video_file=temporary_location, frame_dir=frame_dir)
+
+            if selected_refine_dir is None or \
+                    len(os.listdir(os.path.join(project_dir, iter_folder, selected_refine_dir))) < 2:
+
+                [p_cutoff, num_outliers, output_fps, frame_dir, shortvid_dir] = \
+                    prompt_setup(software, ftype, annotation_classes,
+                                 threshold, framerate,
+                                 videos_dir, project_dir, iter_folder)
+                if st.session_state['video'] is not None and len(st.session_state['uploaded_pose']) > 0:
+                    if os.path.exists(os.path.join(videos_dir, st.session_state['video'].name)):
+                        temporary_location = str(os.path.join(videos_dir, st.session_state['video'].name))
                     else:
+                        g = io.BytesIO(st.session_state['video'].read())  # BytesIO Object
+                        temporary_location = str(os.path.join(videos_dir, st.session_state['video'].name))
+                        with open(temporary_location, 'wb') as out:  # Open temporary file as bytes
+                            out.write(g.read())  # Read bytes into file
+                        out.close()
+                    if os.path.exists(frame_dir):
+                        framedir_ = os.listdir(frame_dir)
+                        if len(framedir_) < 2:
+                            frame_extraction(video_file=temporary_location, frame_dir=frame_dir)
+                        else:
 
-                        if os.path.exists(shortvid_dir):
-                            viddir_ = os.listdir(shortvid_dir)
-                            if len(viddir_) < 2:
-                                frames2integ = round(float(framerate) * (duration_min / 0.1))
-                                [iterX_model, _, _, _, _, _] = load_iterX(project_dir, iter_folder)
+                            if os.path.exists(shortvid_dir):
+                                viddir_ = os.listdir(shortvid_dir)
+                                if len(viddir_) < 2:
+                                    frames2integ = round(float(framerate) * (duration_min / 0.1))
+                                    [iterX_model, _, _, _, _, _] = load_iterX(project_dir, iter_folder)
 
-                                st.session_state['features'], st.session_state['predict'], \
-                                    st.session_state['examples_idx'] = create_videos(st.session_state['uploaded_pose'],
-                                                                                     iterX_model,
-                                                                                     framerate,
-                                                                                     frames2integ,
-                                                                                     num_outliers, output_fps,
-                                                                                     annotation_classes,
-                                                                                     frame_dir=frame_dir,
-                                                                                     shortvid_dir=shortvid_dir)
-                            else:
-                                st.session_state['disabled'] = True
-
-                                behav_choice = st.selectbox("Select the behavior: ", annotation_classes,
-                                                            index=int(0),
-                                                            key="behavior_choice")
-
-                                checkbox_autofill = st.checkbox('autofill')
-                                alltabs = st.tabs([f'{i}' for i in range(num_outliers)])
-                                st.write('')
-                                st.write('')
-
-                                col_option, col_option2, col_msg = st.columns([1, 1, 1])
-                                save_button = col_option.button('save/update refinement file'.upper())
-                                clear_vid_button = col_option2.button('clear video and choice?'.upper(), key='vr')
-
-                                if clear_vid_button:
-                                    try:
-                                        for file_name in glob.glob(shortvid_dir + "/*"):
-                                            os.remove(file_name)
-                                        st.session_state['examples_idx'] = None
-                                        st.session_state['refinements'] = {key:
-                                                                               {k: {'choice': None, 'submitted': False}
-                                                                                for k in range(num_outliers)}
-                                                                           for key in annotation_classes}
-                                        col_msg.info('Cleared. Type "R" to refresh.')
-                                        st.session_state['disabled'] = False
-                                    except:
-                                        pass
-
+                                    st.session_state['features'], st.session_state['predict'], \
+                                        st.session_state['examples_idx'] = create_videos(st.session_state['uploaded_pose'],
+                                                                                         iterX_model,
+                                                                                         framerate,
+                                                                                         frames2integ,
+                                                                                         num_outliers, output_fps,
+                                                                                         annotation_classes,
+                                                                                         frame_dir=frame_dir,
+                                                                                         shortvid_dir=shortvid_dir)
                                 else:
-                                    for i, tab_ in enumerate(alltabs):
-                                        with tab_:
-                                            try:
-                                                colL, colR = st.columns([3, 1])
-                                                file_ = open(
-                                                    os.path.join(shortvid_dir,
-                                                                 f'behavior_{behav_choice}_example_{i}.gif'),
-                                                    "rb")
-                                                contents = file_.read()
-                                                data_url = base64.b64encode(contents).decode("utf-8")
-                                                file_.close()
-                                                colL.markdown(
-                                                    f'<img src="data:image/gif;base64,{data_url}" alt="gif">',
-                                                    unsafe_allow_html=True,
-                                                )
+                                    st.session_state['disabled'] = True
 
-                                                with colR.form(key=f'form_{i}'):
-                                                    returned_choice = st.radio("Select the correct class: ",
-                                                                               annotation_classes,
-                                                                               index=annotation_classes.index(
-                                                                                   behav_choice),
-                                                                               key="radio_{}".format(i))
-                                                    if st.form_submit_button("Submit",
-                                                                             "Press to confirm your choice"):
-                                                        st.session_state['refinements'][behav_choice][i][
-                                                            "submitted"] = True
-                                                        st.session_state['refinements'][behav_choice][i][
-                                                            "choice"] = returned_choice
-                                                    if checkbox_autofill:
-                                                        if st.session_state['refinements'][behav_choice][i][
-                                                            "submitted"] == False:
-                                                            st.session_state['refinements'][behav_choice][i][
-                                                                "choice"] = behav_choice
+                                    behav_choice = st.selectbox("Select the behavior: ", annotation_classes,
+                                                                index=int(0),
+                                                                key="behavior_choice")
+
+                                    checkbox_autofill = st.checkbox('autofill')
+                                    alltabs = st.tabs([f'{i}' for i in range(num_outliers)])
+                                    st.write('')
+                                    st.write('')
+
+                                    col_option, col_option2, col_msg = st.columns([1, 1, 1])
+                                    # save_button = col_option.button('save/update refinement file'.upper())
+                                    clear_vid_button = col_option.button('clear video and choice?'.upper(), key='vr')
+
+                                    if clear_vid_button:
+                                        try:
+                                            for file_name in glob.glob(shortvid_dir + "/*"):
+                                                os.remove(file_name)
+                                            st.session_state['examples_idx'] = None
+                                            st.session_state['refinements'] = {key:
+                                                                                   {k: {'choice': None, 'submitted': False}
+                                                                                    for k in range(num_outliers)}
+                                                                               for key in annotation_classes}
+                                            col_msg.info('Cleared. Type "R" to refresh.')
+                                            st.session_state['disabled'] = False
+                                        except:
+                                            pass
+
+                                    else:
+                                        for i, tab_ in enumerate(alltabs):
+                                            with tab_:
+                                                try:
+                                                    colL, colR = st.columns([3, 1])
+                                                    file_ = open(
+                                                        os.path.join(shortvid_dir,
+                                                                     f'behavior_{behav_choice}_example_{i}.gif'),
+                                                        "rb")
+                                                    contents = file_.read()
+                                                    data_url = base64.b64encode(contents).decode("utf-8")
+                                                    file_.close()
+                                                    colL.markdown(
+                                                        f'<img src="data:image/gif;base64,{data_url}" alt="gif">',
+                                                        unsafe_allow_html=True,
+                                                    )
+
+                                                    with colR.form(key=f'form_{i}'):
+                                                        returned_choice = st.radio("Select the correct class: ",
+                                                                                   annotation_classes,
+                                                                                   index=annotation_classes.index(
+                                                                                       behav_choice),
+                                                                                   key="radio_{}".format(i))
+                                                        if st.form_submit_button("Submit",
+                                                                                 "Press to confirm your choice"):
                                                             st.session_state['refinements'][behav_choice][i][
                                                                 "submitted"] = True
-                                                    else:
-                                                        if st.session_state['refinements'][behav_choice][i][
-                                                            "submitted"] == False:
                                                             st.session_state['refinements'][behav_choice][i][
-                                                                "choice"] = None
-                                            except:
-                                                st.warning('no video'.upper())
-                                    # st.write(st.session_state['refinements'])
-                                    if save_button:
+                                                                "choice"] = returned_choice
+                                                        if checkbox_autofill:
+                                                            if st.session_state['refinements'][behav_choice][i][
+                                                                "submitted"] == False:
+                                                                st.session_state['refinements'][behav_choice][i][
+                                                                    "choice"] = behav_choice
+                                                                st.session_state['refinements'][behav_choice][i][
+                                                                    "submitted"] = True
+                                                        else:
+                                                            if st.session_state['refinements'][behav_choice][i][
+                                                                "submitted"] == False:
+                                                                st.session_state['refinements'][behav_choice][i][
+                                                                    "choice"] = None
+                                                except:
+                                                    st.warning('no video'.upper())
+                                        st.write(st.session_state['refinements'])
+                                        # if save_button:
                                         save_data(project_dir, iter_folder, 'refinements.sav',
                                                   [temporary_location,
                                                    st.session_state['features'],
@@ -460,6 +532,94 @@ def main(ri=None, config=None):
                                                    st.session_state['examples_idx'],
                                                    st.session_state['refinements']
                                                    ])
+            else:
+                [p_cutoff, num_outliers, output_fps, frame_dir, shortvid_dir] = \
+                    prompt_setup_existing(threshold, framerate,
+                                          videos_dir, project_dir, iter_folder,
+                                          selected_refine_dir)
+                temporary_location = videos_dir
+                st.write(temporary_location)
+                st.session_state['disabled'] = True
+
+                behav_choice = st.selectbox("Select the behavior: ", annotation_classes,
+                                            index=int(0),
+                                            key="behavior_choice")
+
+                checkbox_autofill = st.checkbox('autofill')
+                alltabs = st.tabs([f'{i}' for i in range(num_outliers)])
+                st.write('')
+                st.write('')
+
+                col_option, col_option2, col_msg = st.columns([1, 1, 1])
+                # save_button = col_option.button('save/update refinement file'.upper())
+                clear_vid_button = col_option.button('clear video and choice?'.upper(), key='vr')
+
+                if clear_vid_button:
+                    try:
+                        for file_name in glob.glob(shortvid_dir + "/*"):
+                            os.remove(file_name)
+                        st.session_state['examples_idx'] = None
+                        st.session_state['refinements'] = {key:
+                                                               {k: {'choice': None, 'submitted': False}
+                                                                for k in range(num_outliers)}
+                                                           for key in annotation_classes}
+                        col_msg.info('Cleared. Type "R" to refresh.')
+                        st.session_state['disabled'] = False
+                    except:
+                        pass
+
+                else:
+                    for i, tab_ in enumerate(alltabs):
+                        with tab_:
+                            try:
+                                colL, colR = st.columns([3, 1])
+                                file_ = open(
+                                    os.path.join(shortvid_dir,
+                                                 f'behavior_{behav_choice}_example_{i}.gif'),
+                                    "rb")
+                                contents = file_.read()
+                                data_url = base64.b64encode(contents).decode("utf-8")
+                                file_.close()
+                                colL.markdown(
+                                    f'<img src="data:image/gif;base64,{data_url}" alt="gif">',
+                                    unsafe_allow_html=True,
+                                )
+
+                                with colR.form(key=f'form_{i}'):
+                                    returned_choice = st.radio("Select the correct class: ",
+                                                               annotation_classes,
+                                                               index=annotation_classes.index(
+                                                                   behav_choice),
+                                                               key="radio_{}".format(i))
+                                    if st.form_submit_button("Submit",
+                                                             "Press to confirm your choice"):
+                                        st.session_state['refinements'][behav_choice][i][
+                                            "submitted"] = True
+                                        st.session_state['refinements'][behav_choice][i][
+                                            "choice"] = returned_choice
+                                    if checkbox_autofill:
+                                        if st.session_state['refinements'][behav_choice][i][
+                                            "submitted"] == False:
+                                            st.session_state['refinements'][behav_choice][i][
+                                                "choice"] = behav_choice
+                                            st.session_state['refinements'][behav_choice][i][
+                                                "submitted"] = True
+                                    else:
+                                        if st.session_state['refinements'][behav_choice][i][
+                                            "submitted"] == False:
+                                            st.session_state['refinements'][behav_choice][i][
+                                                "choice"] = None
+                            except:
+                                st.warning('no video'.upper())
+                    st.write(st.session_state['refinements'])
+                    # if save_button:
+                    save_data(project_dir, iter_folder, 'refinements.sav',
+                              [temporary_location,
+                               st.session_state['features'],
+                               st.session_state['predict'],
+                               st.session_state['examples_idx'],
+                               st.session_state['refinements']
+                               ])
 
     else:
         st.error(NO_CONFIG_HELP)
