@@ -107,71 +107,73 @@ def create_labeled_vid(labels, proba, counts, frames2integ,
     for b in range(len(list(all_ex_idx.keys()))):
         with st.spinner(f'generating videos for behavior {annotation_classes[int(b)]}'):
             idx_b = np.where(labels == b)[0]
+            # if there is such label
+            if idx_b is not None:
+                idx_b_poor = np.where(np.max(proba[idx_b, :], axis=1) < 0.5)[0]
+                behav_ex_idx = []
+                # if there are poor predictions
+                if idx_b_poor is not None:
+                    try:
+                        examples_b = np.random.choice(idx_b[idx_b_poor], counts, replace=False)
+                    except:
+                        examples_b = np.random.choice(idx_b[idx_b_poor], len(idx_b[idx_b_poor]), replace=False)
+                    count = 0
+                    for ex, example_b in enumerate(stqdm(examples_b, desc="creating videos")):
+                        # just in case if future frames are not present
+                        if (example_b - 1) * number_of_frames + int(3 * number_of_frames)-1 < len(images):
+                            video_name = 'behavior_{}_example_{}.mp4'.format(annotation_classes[int(b)], int(count))
+                            grp_images = []
+                            for f in range(number_of_frames):
+                                rgb_im = cv2.imread(os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
+                                # bgr = cv2.cvtColor(rgb_im, cv2.COLOR_BGR2RGB)
+                                cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
+                                            bottomLeftCornerOfText,
+                                            font,
+                                            fontScale,
+                                            fontColor,
+                                            thickness_text,
+                                            lineType)
+                                grp_images.append(rgb_im)
 
-            idx_b_poor = np.where(np.max(proba[idx_b, :], axis=1) < 0.5)[0]
-            # st.write(idx_b_poor)
-            behav_ex_idx = []
-            # if there are poor predictions
-            if len(idx_b_poor) is not None:
-                try:
-                    examples_b = np.random.choice(idx_b[idx_b_poor], counts, replace=False)
-                except:
-                    examples_b = np.random.choice(idx_b[idx_b_poor], len(idx_b[idx_b_poor]), replace=False)
+                            for f in range(number_of_frames, int(2 * number_of_frames)):
+                                rgb_im = cv2.imread(os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
 
-                for ex, example_b in enumerate(stqdm(examples_b, desc="creating videos")):
-                    video_name = 'behavior_{}_example_{}.mp4'.format(annotation_classes[int(b)], int(ex))
-                    grp_images = []
+                                # Draw a circle with blue line borders of thickness of 2 px
+                                rgb_im = cv2.circle(rgb_im, center_coordinates, radius, color, thickness_circle)
 
-                    for f in range(number_of_frames):
-                        rgb_im = cv2.imread(os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
-                        # bgr = cv2.cvtColor(rgb_im, cv2.COLOR_BGR2RGB)
-                        cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
-                                    bottomLeftCornerOfText,
-                                    font,
-                                    fontScale,
-                                    fontColor,
-                                    thickness_text,
-                                    lineType)
-                        grp_images.append(rgb_im)
+                                cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
+                                            bottomLeftCornerOfText,
+                                            font,
+                                            fontScale,
+                                            fontColor,
+                                            thickness_text,
+                                            lineType)
 
-                    for f in range(number_of_frames, int(2 * number_of_frames)):
-                        rgb_im = cv2.imread(os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
+                                grp_images.append(rgb_im)
 
-                        # Draw a circle with blue line borders of thickness of 2 px
-                        rgb_im = cv2.circle(rgb_im, center_coordinates, radius, color, thickness_circle)
+                            for f in range(int(2 * number_of_frames), int(3 * number_of_frames)):
+                                rgb_im = cv2.imread(os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
+                                # bgr = cv2.cvtColor(rgb_im, cv2.COLOR_BGR2RGB)
+                                cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
+                                            bottomLeftCornerOfText,
+                                            font,
+                                            fontScale,
+                                            fontColor,
+                                            thickness_text,
+                                            lineType)
+                                grp_images.append(rgb_im)
 
-                        cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
-                                    bottomLeftCornerOfText,
-                                    font,
-                                    fontScale,
-                                    fontColor,
-                                    thickness_text,
-                                    lineType)
-
-                        grp_images.append(rgb_im)
-
-                    for f in range(int(2 * number_of_frames), int(3 * number_of_frames)):
-                        rgb_im = cv2.imread(os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
-                        # bgr = cv2.cvtColor(rgb_im, cv2.COLOR_BGR2RGB)
-                        cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
-                                    bottomLeftCornerOfText,
-                                    font,
-                                    fontScale,
-                                    fontColor,
-                                    thickness_text,
-                                    lineType)
-                        grp_images.append(rgb_im)
-
-                    video = cv2.VideoWriter(os.path.join(output_path, video_name), fourcc, output_fps, (width, height))
-                    for j, image in enumerate(grp_images):
-                        video.write(image)
-                    cv2.destroyAllWindows()
-                    video.release()
-                    videoClip = VideoFileClip(os.path.join(output_path, video_name))
-                    vid_prefix = video_name.rpartition('.mp4')[0]
-                    gif_name = f"{vid_prefix}.gif"
-                    videoClip.write_gif(os.path.join(output_path, gif_name))
-                    behav_ex_idx.append(example_b)
+                            video = cv2.VideoWriter(os.path.join(output_path, video_name), fourcc, output_fps, (width, height))
+                            for j, image in enumerate(grp_images):
+                                video.write(image)
+                            cv2.destroyAllWindows()
+                            video.release()
+                            videoClip = VideoFileClip(os.path.join(output_path, video_name))
+                            vid_prefix = video_name.rpartition('.mp4')[0]
+                            gif_name = f"{vid_prefix}.gif"
+                            videoClip.write_gif(os.path.join(output_path, gif_name))
+                            behav_ex_idx.append(example_b)
+                            count += 1
         all_ex_idx[annotation_classes[int(b)]] = behav_ex_idx
 
     return all_ex_idx

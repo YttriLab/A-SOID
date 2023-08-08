@@ -56,9 +56,9 @@ class Predictor:
         self.framerate = config["Project"].getint("FRAMERATE")
         self.duration_min = config["Processing"].getfloat("MIN_DURATION")
 
-
         [self.iterX_model,_,_,_,_,_] = load_iterX(self.working_dir,self.prefix)
         [_, _, self.scalar, _] = load_features(self.working_dir,self.prefix)
+
 
         self.pose_files = None
         self.pose_file_names = []

@@ -378,9 +378,9 @@ def main():
             E_create_new_training.main(ri=ri, config=None)
     elif 'Predict' in nav_options:
         try:
-            E_predict.main(config=st.session_state['config'])
+            E_predict.main(ri=ri, config=st.session_state['config'])
         except:
-            E_predict.main(config=None)
+            E_predict.main(ri=ri, config=None)
     elif 'View' in nav_options:
         try:
             F_view.main(config=st.session_state['config'])
