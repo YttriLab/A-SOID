@@ -250,6 +250,20 @@ def bsoid_predict_numba_noscale(scaled_feats, clf):
     return labels_fslow
 
 
+def bsoid_predict_proba_numba_noscale(scaled_feats, clf):
+    """
+    :param scaler:
+    :param feats: list, multiple feats (original feature space)
+    :param clf: Obj, MLP classifier
+    :return nonfs_labels: list, label/100ms
+    """
+    labels_proba = []
+    for i in range(0, len(scaled_feats)):
+        predict_proba = clf.predict_proba(np.nan_to_num(scaled_feats[i]))
+        labels_proba.append(predict_proba)
+    return labels_proba
+
+
 def frameshift_predict(data_test, num_test, scaler, rf_model, framerate=30):
     labels_fs = []
     new_predictions = []

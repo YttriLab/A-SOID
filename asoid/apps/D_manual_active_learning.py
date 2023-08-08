@@ -17,7 +17,7 @@ from utils.load_workspace import load_new_pose
 from utils.load_workspace import load_iterX, load_features, save_data, load_refinement, load_refine_params
 
 from utils.extract_features import feature_extraction, \
-    bsoid_predict_numba, bsoid_predict_numba_noscale
+    bsoid_predict_numba, bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
 from config.help_messages import *
 
 from config.help_messages import NO_CONFIG_HELP, IMPRESS_TEXT
@@ -69,7 +69,7 @@ def sort_nicely(l):
     l.sort(key=alphanum_key)
 
 
-def create_labeled_vid(labels, counts, frames2integ,
+def create_labeled_vid(labels, proba, counts, frames2integ,
                        framerate, output_fps, annotation_classes,
                        frame_dir, output_path):
     """
@@ -104,68 +104,74 @@ def create_labeled_vid(labels, counts, frames2integ,
     thickness_text = 1
     lineType = 2
     all_ex_idx = {key: [] for key in annotation_classes}
-    for b in np.unique(labels):
+    for b in range(len(list(all_ex_idx.keys()))):
         with st.spinner(f'generating videos for behavior {annotation_classes[int(b)]}'):
             idx_b = np.where(labels == b)[0]
-            try:
-                examples_b = np.random.choice(idx_b, counts, replace=False)
-            except:
-                examples_b = np.random.choice(idx_b, len(idx_b), replace=False)
+
+            idx_b_poor = np.where(np.max(proba[idx_b, :], axis=1) < 0.5)[0]
+            # st.write(idx_b_poor)
             behav_ex_idx = []
-            for ex, example_b in enumerate(stqdm(examples_b, desc="creating videos")):
-                video_name = 'behavior_{}_example_{}.mp4'.format(annotation_classes[int(b)], int(ex))
-                grp_images = []
+            # if there are poor predictions
+            if len(idx_b_poor) is not None:
+                try:
+                    examples_b = np.random.choice(idx_b[idx_b_poor], counts, replace=False)
+                except:
+                    examples_b = np.random.choice(idx_b[idx_b_poor], len(idx_b[idx_b_poor]), replace=False)
 
-                for f in range(number_of_frames):
-                    rgb_im = cv2.imread(os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
-                    # bgr = cv2.cvtColor(rgb_im, cv2.COLOR_BGR2RGB)
-                    cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
-                                bottomLeftCornerOfText,
-                                font,
-                                fontScale,
-                                fontColor,
-                                thickness_text,
-                                lineType)
-                    grp_images.append(rgb_im)
+                for ex, example_b in enumerate(stqdm(examples_b, desc="creating videos")):
+                    video_name = 'behavior_{}_example_{}.mp4'.format(annotation_classes[int(b)], int(ex))
+                    grp_images = []
 
-                for f in range(number_of_frames, int(2 * number_of_frames)):
-                    rgb_im = cv2.imread(os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
+                    for f in range(number_of_frames):
+                        rgb_im = cv2.imread(os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
+                        # bgr = cv2.cvtColor(rgb_im, cv2.COLOR_BGR2RGB)
+                        cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
+                                    bottomLeftCornerOfText,
+                                    font,
+                                    fontScale,
+                                    fontColor,
+                                    thickness_text,
+                                    lineType)
+                        grp_images.append(rgb_im)
 
-                    # Draw a circle with blue line borders of thickness of 2 px
-                    rgb_im = cv2.circle(rgb_im, center_coordinates, radius, color, thickness_circle)
+                    for f in range(number_of_frames, int(2 * number_of_frames)):
+                        rgb_im = cv2.imread(os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
 
-                    cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
-                                bottomLeftCornerOfText,
-                                font,
-                                fontScale,
-                                fontColor,
-                                thickness_text,
-                                lineType)
+                        # Draw a circle with blue line borders of thickness of 2 px
+                        rgb_im = cv2.circle(rgb_im, center_coordinates, radius, color, thickness_circle)
 
-                    grp_images.append(rgb_im)
+                        cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
+                                    bottomLeftCornerOfText,
+                                    font,
+                                    fontScale,
+                                    fontColor,
+                                    thickness_text,
+                                    lineType)
 
-                for f in range(int(2 * number_of_frames), int(3 * number_of_frames)):
-                    rgb_im = cv2.imread(os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
-                    # bgr = cv2.cvtColor(rgb_im, cv2.COLOR_BGR2RGB)
-                    cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
-                                bottomLeftCornerOfText,
-                                font,
-                                fontScale,
-                                fontColor,
-                                thickness_text,
-                                lineType)
-                    grp_images.append(rgb_im)
+                        grp_images.append(rgb_im)
 
-                video = cv2.VideoWriter(os.path.join(output_path, video_name), fourcc, output_fps, (width, height))
-                for j, image in enumerate(grp_images):
-                    video.write(image)
-                cv2.destroyAllWindows()
-                video.release()
-                videoClip = VideoFileClip(os.path.join(output_path, video_name))
-                vid_prefix = video_name.rpartition('.mp4')[0]
-                gif_name = f"{vid_prefix}.gif"
-                videoClip.write_gif(os.path.join(output_path, gif_name))
-                behav_ex_idx.append(example_b)
+                    for f in range(int(2 * number_of_frames), int(3 * number_of_frames)):
+                        rgb_im = cv2.imread(os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
+                        # bgr = cv2.cvtColor(rgb_im, cv2.COLOR_BGR2RGB)
+                        cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
+                                    bottomLeftCornerOfText,
+                                    font,
+                                    fontScale,
+                                    fontColor,
+                                    thickness_text,
+                                    lineType)
+                        grp_images.append(rgb_im)
+
+                    video = cv2.VideoWriter(os.path.join(output_path, video_name), fourcc, output_fps, (width, height))
+                    for j, image in enumerate(grp_images):
+                        video.write(image)
+                    cv2.destroyAllWindows()
+                    video.release()
+                    videoClip = VideoFileClip(os.path.join(output_path, video_name))
+                    vid_prefix = video_name.rpartition('.mp4')[0]
+                    gif_name = f"{vid_prefix}.gif"
+                    videoClip.write_gif(os.path.join(output_path, gif_name))
+                    behav_ex_idx.append(example_b)
         all_ex_idx[annotation_classes[int(b)]] = behav_ex_idx
 
     return all_ex_idx
@@ -193,9 +199,13 @@ def create_videos(processed_input_data, iterX_model, framerate, frames2integ,
         for i in stqdm(range(len(features)), desc="Behavior prediction from spatiotemporal features"):
             with st.spinner('Predicting behavior from features...'):
                 predict = bsoid_predict_numba_noscale([features[i]], iterX_model)
+                pred_proba = bsoid_predict_proba_numba_noscale([features[i]], iterX_model)
+                # st.write(pred_proba[0].shape) # 1800, 6
+
                 predict_arr = np.array(predict).flatten()
+                # st.write(predict_arr.shape)
         try:
-            examples_idx = create_labeled_vid(predict_arr, num_outliers, frames2integ,
+            examples_idx = create_labeled_vid(predict_arr, pred_proba[0], num_outliers, frames2integ,
                                               framerate, output_fps, annotation_classes,
                                               frame_dir, shortvid_dir)
             st.balloons()

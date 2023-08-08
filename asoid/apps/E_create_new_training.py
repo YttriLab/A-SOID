@@ -61,13 +61,14 @@ def main(ri=None, config=None):
                  examples_idx,
                  refinements] = load_refinement(
                     os.path.join(project_dir, iter_folder), selected_refine_dir)
-                # st.write(refinements)
+                # st.write(refinements, examples_idx)
                 new_feats_byclass = []
                 new_targets_byclass = []
                 for i, annotation_cls in enumerate(list(examples_idx.keys())):
+                    # st.write(i, annotation_cls)
                     submitted_feats = []
                     submitted_targets = []
-                    # st.write('annotation')
+
                     for j, submitted in enumerate([refinements[annotation_cls][i]['submitted']
                                       for i in range(len(refinements[annotation_cls]))]):
                         if submitted == True:
