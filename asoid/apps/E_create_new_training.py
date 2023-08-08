@@ -50,6 +50,7 @@ def main(ri=None, config=None):
         refined_vid_dirs = [d for d in os.listdir(os.path.join(project_dir, iter_folder))
                             if os.path.isdir(os.path.join(project_dir, iter_folder, d))]
         selected_refine_dirs = ri.multiselect('Select Refinement', refined_vid_dirs, refined_vid_dirs)
+        # st.write(selected_refine_dirs)
         try:
             new_features_dir = []
             new_targets_dir = []
@@ -60,11 +61,13 @@ def main(ri=None, config=None):
                  examples_idx,
                  refinements] = load_refinement(
                     os.path.join(project_dir, iter_folder), selected_refine_dir)
+                # st.write(refinements)
                 new_feats_byclass = []
                 new_targets_byclass = []
                 for i, annotation_cls in enumerate(list(examples_idx.keys())):
                     submitted_feats = []
                     submitted_targets = []
+                    # st.write('annotation')
                     for j, submitted in enumerate([refinements[annotation_cls][i]['submitted']
                                       for i in range(len(refinements[annotation_cls]))]):
                         if submitted == True:
@@ -72,6 +75,7 @@ def main(ri=None, config=None):
                             submitted_targets.append(i*np.ones(1, ))
 
                     try:
+                        # st.write('hi')
                         new_feats_byclass.append(np.vstack(submitted_feats))
                         new_targets_byclass.append(np.hstack(submitted_targets))
                     except:

@@ -17,7 +17,7 @@ def save_data(path, name, filename, data):
         joblib.dump(data, f)
 
 
-@st.cache_data
+# @st.cache_data
 def load_data(path, name):
     # working dir is already the prefix (if user directly put in the project folder as working dir)
     data = _load_sav(path, name, "data.sav")
@@ -26,21 +26,21 @@ def load_data(path, name):
     return [i for i in data], config
 
 
-@st.cache_data
+# @st.cache_data
 def load_test(path, name):
     # working dir is already the prefix (if user directly put in the project folder as working dir)
     data = _load_sav(path, name, "test.sav")
     return [i for i in data]
 
 
-@st.cache_data
+# @st.cache_data
 def load_test_targets(path, name):
     # working dir is already the prefix (if user directly put in the project folder as working dir)
     data = _load_sav(path, name, "test_targets.sav")
     return [i for i in data]
 
 
-@st.cache_data
+# @st.cache_data
 def load_new_pose(filename):
     # working dir is already the prefix (if user directly put in the project folder as working dir)
     with open(filename, 'rb') as fr:
@@ -48,7 +48,7 @@ def load_new_pose(filename):
     return data
 
 
-@st.cache_data
+# @st.cache_data
 def load_features(path, name):
     # working dir is already the prefix (if user directly put in the project folder as working dir)
     data = _load_sav(path, name, 'feats_targets.sav')
@@ -57,28 +57,28 @@ def load_features(path, name):
     return [i for i in data]
 
 
-@st.cache_data
+# @st.cache_data
 def load_predict_proba(path, name):
     # working dir is already the prefix (if user directly put in the project folder as working dir)
     data = _load_sav(path, name, 'predict_proba.sav')
     return [i for i in data]
 
 
-@st.cache_data
+# @st.cache_data
 def load_newest_model(path, name):
     # working dir is already the prefix (if user directly put in the project folder as working dir)
     data = _load_sav(path, name, 'newest_model.sav')
     return [i for i in data]
 
 
-@st.cache_data
+# @st.cache_data
 def load_test_performance(path, name):
     # working dir is already the prefix (if user directly put in the project folder as working dir)
     data = _load_sav(path, name, 'test_performance.sav')
     return [i for i in data]
 
 
-@st.cache_data
+# @st.cache_data
 def load_all_train(path, name):
     # working dir is already the prefix (if user directly put in the project folder as working dir)
     data = _load_sav(path, name, 'all_train.sav')
@@ -86,21 +86,21 @@ def load_all_train(path, name):
 
 
 
-@st.cache_data
+# @st.cache_data
 def load_iter0(path, name):
     # working dir is already the prefix (if user directly put in the project folder as working dir)
     data = _load_sav(path, name, 'iter0.sav')
     return [i for i in data]
 
 
-@st.cache_data
+# @st.cache_data
 def load_iterX(path, name):
     # working dir is already the prefix (if user directly put in the project folder as working dir)
     data = _load_sav(path, name, 'iterX.sav')
     return [i for i in data]
 
 
-@st.cache_data
+# @st.cache_data
 def load_refinement(path, name):
     # working dir is already the prefix (if user directly put in the project folder as working dir)
     data = _load_sav(path, name, 'refinements.sav')
@@ -108,7 +108,7 @@ def load_refinement(path, name):
     return [i for i in data]
 
 
-@st.cache_data
+# @st.cache_data
 def load_refine_params(path, name):
     # working dir is already the prefix (if user directly put in the project folder as working dir)
     data = _load_sav(path, name, 'refine_params.sav')

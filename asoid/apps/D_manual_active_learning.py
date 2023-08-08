@@ -194,14 +194,14 @@ def create_videos(processed_input_data, iterX_model, framerate, frames2integ,
             with st.spinner('Predicting behavior from features...'):
                 predict = bsoid_predict_numba_noscale([features[i]], iterX_model)
                 predict_arr = np.array(predict).flatten()
-        # try:
-        examples_idx = create_labeled_vid(predict_arr, num_outliers, frames2integ,
-                                          framerate, output_fps, annotation_classes,
-                                          frame_dir, shortvid_dir)
-        st.balloons()
-            # message_box.success('Done. Type "R" to refresh.')
-        # except:
-        #     st.info('Terminated early. Type "R" to refresh.')
+        try:
+            examples_idx = create_labeled_vid(predict_arr, num_outliers, frames2integ,
+                                              framerate, output_fps, annotation_classes,
+                                              frame_dir, shortvid_dir)
+            st.balloons()
+            message_box.success('Done. Type "R" to refresh.')
+        except:
+            st.info('Terminated early. Type "R" to refresh.')
 
     return features[0], predict_arr, examples_idx
 
@@ -308,7 +308,6 @@ def prompt_setup_existing(framerate, videos_dir, project_dir, iter_dir, selected
     col1, col3 = st.columns(2)
     col1_exp = col1.expander('Parameters'.upper(), expanded=True)
     col3_exp = col3.expander('Output folders'.upper(), expanded=True)
-
     p_cutoff = col1_exp.number_input('Threshold value to sample outliers from',
                                      min_value=0.0, max_value=1.0, value=st.session_state['p_cutoff'],
                                      disabled=st.session_state.disabled)
@@ -485,9 +484,10 @@ def main(ri=None, config=None):
                                             annotation_classes,
                                             frame_dir=frame_dir,
                                             shortvid_dir=shortvid_dir)
-                                    st.session_state['video_path'] = os.path.join(videos_dir,
-                                                                                  selected_refine_dir.rpartition(
-                                                                                      '_refine_vids')[0])
+                                    st.session_state['video_path'] = \
+                                        os.path.join(videos_dir,
+                                                     str.join('', (selected_refine_dir.rpartition('_refine_vids')[0],
+                                                              '.mp4')))
                                     save_data(os.path.join(project_dir, iter_folder), shortvid_dir,
                                               'refinements.sav',
                                               [st.session_state['video_path'],
@@ -595,6 +595,7 @@ def main(ri=None, config=None):
                 #      st.session_state['examples_idx'],
                 #      st.session_state['refinements']] = load_refinement(os.path.join(project_dir, iter_folder),
                 #                                                         selected_refine_dir)
+                #     st.write('loaded')
                 # except:
                 #     st.session_state['refinements'] = {key:
                 #                                            {k: {'choice': None, 'submitted': False}
@@ -606,10 +607,10 @@ def main(ri=None, config=None):
                 #                           selected_refine_dir)
 
                 # st.session_state['curr_vid'] = selected_refine_dir
+
                 if 'curr_vid' not in st.session_state:
                     st.session_state['curr_vid'] = None
                 if selected_refine_dir != st.session_state['curr_vid']:
-                    # st.write('if')
                     [st.session_state['p_cutoff'],
                      st.session_state['num_outliers'],
                      st.session_state['output_fps']] = load_refine_params(os.path.join(project_dir, iter_folder),
@@ -633,14 +634,16 @@ def main(ri=None, config=None):
                                               selected_refine_dir)
                     st.session_state['curr_vid'] = selected_refine_dir
                 else:
-                    # st.write('else')
+                    [st.session_state['p_cutoff'],
+                     st.session_state['num_outliers'],
+                     st.session_state['output_fps']] = load_refine_params(os.path.join(project_dir, iter_folder),
+                                                                          selected_refine_dir)
                     [frame_dir, shortvid_dir] = \
                         prompt_setup_existing(framerate,
                                               videos_dir, project_dir, iter_folder,
                                               st.session_state['curr_vid'])
-                # st.write(st.session_state['refinements'])
-                st.session_state['video_path'] = os.path.join(videos_dir,
-                                                              selected_refine_dir.rpartition('_refine_vids')[0])
+                st.session_state['video_path'] = \
+                    os.path.join(videos_dir,  str.join('', (selected_refine_dir.rpartition('_refine_vids')[0], '.mp4')))
                 st.session_state['disabled'] = True
                 behav_choice = st.selectbox("Select the behavior: ", annotation_classes,
                                             index=int(0),
