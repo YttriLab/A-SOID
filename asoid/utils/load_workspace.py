@@ -104,6 +104,14 @@ def load_iterX(path, name):
 def load_refinement(path, name):
     # working dir is already the prefix (if user directly put in the project folder as working dir)
     data = _load_sav(path, name, 'refinements.sav')
+    # st.write(data)
+    return [i for i in data]
+
+
+@st.cache_data
+def load_refine_params(path, name):
+    # working dir is already the prefix (if user directly put in the project folder as working dir)
+    data = _load_sav(path, name, 'refine_params.sav')
     return [i for i in data]
 
 

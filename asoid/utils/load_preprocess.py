@@ -427,7 +427,7 @@ class Preprocess:
         return label_vector
 
     def compile_data(self):
-        if st.button("PREPROCESS", help = PREPROCESS_HELP):
+        if st.button("Create Project/Preprocess", help = PREPROCESS_HELP):
             self.input_datafiles = []
             self.input_labelfiles = []
             self.processed_input_data = []

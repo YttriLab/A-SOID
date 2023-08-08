@@ -200,25 +200,21 @@ def main():
     with st.sidebar:
         le, ri = header_container.columns([1, 1])
 
-        with le.form("upload config file".upper(), clear_on_submit=True):
-            uploaded_config = st.file_uploader("FILE UPLOADER", type='ini', help=UPLOAD_CONFIG_HELP)
+        with le.form("config".upper(), clear_on_submit=True):
+            uploaded_config = st.file_uploader('Upload Config File', type='ini', help=UPLOAD_CONFIG_HELP)
             if st.session_state['config'] is None:
-                submitted = st.form_submit_button("UPLOAD!")
-
+                submitted = st.form_submit_button("Upload")
                 if submitted and uploaded_config is not None:
                     # To convert to a string based IO:
                     stringio = StringIO(uploaded_config.getvalue().decode("utf-8"))
-
                     # read stringio
                     project_config = cfg.ConfigParser()
                     project_config.optionxform = str
                     project_config.read_file(stringio)
                     st.session_state['config'] = project_config
-                    # le.success("UPLOADED!")
                     st.experimental_rerun()
-
             elif st.session_state['config'] is not None:
-                cleared = st.form_submit_button("CLEAR!")
+                cleared = st.form_submit_button(":red[Delete]")
                 if cleared:
                     st.session_state['config'] = None
                     st.session_state['page'] = None
@@ -323,8 +319,8 @@ def main():
                         'bar-chart-line',
                         'diagram-2',
                         'images',
-                        'images',
                         'file-earmark-plus',
+                        'robot',
                         'binoculars',
                         "signpost-split",
                         ]

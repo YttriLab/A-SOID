@@ -86,7 +86,7 @@ def main(config=None):
                 frames2integ, num_splits = \
                     prompt_setup(prompt_container, software, framerate, annotation_classes,
                                  working_dir, prefix)
-                if st.button('EXTRACT FEATURES'.upper(), help = EXTRACT_FEATURES_HELP):
+                if st.button('Extract Features', help = EXTRACT_FEATURES_HELP):
                     extractor = Extract(working_dir, prefix, frames2integ, num_splits)
                     extractor.main()
         except FileNotFoundError:
@@ -94,7 +94,7 @@ def main(config=None):
             frames2integ, num_splits = \
                 prompt_setup(prompt_container, software, framerate,
                              annotation_classes, working_dir, prefix)
-            if st.button('EXTRACT FEATURES'.upper()):
+            if st.button('Extract Features'):
                 extractor = Extract(working_dir, prefix, frames2integ, num_splits)
                 extractor.main()
         st.session_state['page'] = 'Step 3'

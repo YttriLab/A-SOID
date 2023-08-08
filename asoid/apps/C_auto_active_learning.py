@@ -85,7 +85,7 @@ def main(ri=None, config=None):
         train_fx = config["Processing"].getfloat("TRAIN_FRACTION")
         conf_threshold = config["Processing"].getfloat("CONF_THRESHOLD")
         iteration = config["Processing"].getint("ITERATION")
-        selected_iter = ri.selectbox('select iteration number', np.arange(iteration + 1), iteration)
+        selected_iter = ri.selectbox('Select Iteration #', np.arange(iteration + 1), iteration)
         project_dir = os.path.join(working_dir, prefix)
         iter_folder = str.join('', ('iteration-', str(selected_iter)))
         os.makedirs(os.path.join(project_dir, iter_folder), exist_ok=True)
@@ -113,7 +113,7 @@ def main(ri=None, config=None):
                 init_ratio, max_iter, max_samples_iter = \
                     prompt_setup(software, train_fx, working_dir, prefix, iter_folder, exclude_other,
                                  annotation_classes)
-                if st.button('re-classify'.upper()):
+                if st.button('Train Classifier'):
                     rf_classifier = RF_Classify(working_dir, prefix, iter_folder, software,
                                                 init_ratio, max_iter, max_samples_iter,
                                                 annotation_classes, exclude_other, conf_threshold)
@@ -124,7 +124,7 @@ def main(ri=None, config=None):
                 init_ratio, max_iter, max_samples_iter = \
                     prompt_setup(software, train_fx, working_dir, prefix, iter_folder, exclude_other,
                                  annotation_classes)
-                if st.button('classify'.upper()):
+                if st.button('Train Classifier'):
                     rf_classifier = RF_Classify(working_dir, prefix, iter_folder, software,
                                                 init_ratio, max_iter, max_samples_iter,
                                                 annotation_classes, exclude_other, conf_threshold)
