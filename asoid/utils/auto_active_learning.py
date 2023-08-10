@@ -120,7 +120,7 @@ class RF_Classify:
 
     def __init__(self, working_dir, prefix, iteration_dir, software,
                  init_ratio, max_iter, max_samples_iter,
-                 annotation_classes, exclude_other, conf_threshold: float = 0.8):
+                 annotation_classes, exclude_other, conf_threshold: float = 0.5):
         self.container = st.container()
         self.placeholder = self.container.empty()
         self.working_dir = working_dir
@@ -176,8 +176,18 @@ class RF_Classify:
             load_features(self.project_dir, self.iter_dir)
         # partitioning into N randomly selected train/test splits
         seeds = np.arange(shuffled_splits)
-        for seed in stqdm(seeds, desc="Randomly partitioning into 70/30..."):
-            X_train, X_test, y_train, y_test = train_test_split(features, targets,
+        # st.write(seeds)
+        if features.shape[0] > targets.shape[0]:
+            X = features[:targets.shape[0]].copy()
+            y = targets.copy()
+        elif features.shape[0] < targets.shape[0]:
+            X = features.copy()
+            y = targets[:features.shape[0]].copy()
+        else:
+            X = features.copy()
+            y = targets.copy()
+        for seed in stqdm(seeds, desc="Randomly partitioning into 80/20..."):
+            X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                                 test_size=0.20, random_state=seed)
             self.features_train.append(X_train)
             self.targets_train.append(y_train)
@@ -186,7 +196,7 @@ class RF_Classify:
 
     def subsampled_classify(self):
         self.split_data()
-
+        # st.write('hi')
         for i in range(len(self.features_train)):
             X_all = []
             Y_all = []
@@ -450,7 +460,7 @@ class RF_Classify:
                         self.features_train[i][self.targets_train[i] != self.label_code_other]
                         )
                     iterX_predict_prob_it.append(iterX_predict_prob[it])
-                len_low_conf = [len(np.where(iterX_predict_prob_it[ii].max(1) < 0.5)[0])
+                len_low_conf = [len(np.where(iterX_predict_prob_it[ii].max(1) < self.conf_threshold)[0])
                                 for ii in range(len(iterX_predict_prob_it))]
                 if len(iterX_f1_scores_it) != 0 and np.min(len_low_conf) > 0:
                     self.iterX_X_train_list.append(X_train_it)

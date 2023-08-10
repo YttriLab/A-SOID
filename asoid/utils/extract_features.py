@@ -487,21 +487,32 @@ class Extract:
                                                                  self.frames2integ)
 
     def downsample_labels(self):
-        num2skip = int(self.frames2integ / 10)
-        # standardize, and keep the scalar for future data
-        self.scalar = StandardScaler()
-        self.scalar.fit(self.features)
-        # downsample labels to match binned features
-        for i in range(len(self.processed_input_data)):
-            targets_mode_temp = np.hstack(
-                [stats.mode(self.targets[i][num2skip * n:num2skip * n + num2skip])[
-                     0] for n in range(len(self.targets[i]))])
-            targets_fitted = self.targets[i][:int(self.targets[i].shape[0] / num2skip) * num2skip:num2skip]
-            if i == 0:
-                self.targets_mode = targets_mode_temp[:targets_fitted.shape[0]].copy()
-            else:
-                self.targets_mode = np.hstack((self.targets_mode,
-                                               targets_mode_temp[:targets_fitted.shape[0]]))
+        # num2skip = int(self.frames2integ / 10)
+        # # standardize, and keep the scalar for future data
+        # self.scalar = StandardScaler()
+        # self.scalar.fit(self.features)
+        # # downsample labels to match binned features
+        # for i in range(len(self.processed_input_data)):
+        #     targets_mode_temp = np.hstack(
+        #         [stats.mode(self.targets[i][num2skip * n:num2skip * n + num2skip])[
+        #              0] for n in range(len(self.targets[i]))])
+        #     targets_fitted = self.targets[i][:int(self.targets[i].shape[0] / num2skip) * num2skip:num2skip]
+        #     if i == 0:
+        #         self.targets_mode = targets_mode_temp[:targets_fitted.shape[0]].copy()
+        #     else:
+        #         self.targets_mode = np.hstack((self.targets_mode,
+        #                                        targets_mode_temp[:targets_fitted.shape[0]]))
+
+        num2skip = int(self.frames2integ / 10)  # 12
+        targets_ls = []
+        for i in range(len(self.targets)):
+            targets_not_matching = np.hstack(
+                [stats.mode(self.targets[i][(num2skip - 1) + num2skip * n:(num2skip - 1) + num2skip * n + num2skip])[0]
+                 for n in range(len(self.targets[i]))])
+            # features are skipped so if it's not multiple of 12, we discard the final few targets
+            targets_matching_features = self.targets[i][(num2skip - 1):-1:num2skip]
+            targets_ls.append(targets_not_matching[:targets_matching_features.shape[0]])
+        self.targets_mode = np.hstack(targets_ls)
 
     def shuffle_data(self):
         # partitioning into 20 randomly selected train/test splits

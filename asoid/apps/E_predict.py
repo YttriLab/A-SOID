@@ -112,7 +112,8 @@ def frame_extraction(video_file, frame_dir):
         st.info('Done extracting {} frames from {}'.format(num_frames, video_file))
 
 
-def prompt_setup(software, ftype, annotation_classes, framerate, videos_dir, project_dir, iter_dir):
+def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
+                 framerate, videos_dir, project_dir, iter_dir):
     left_col, right_col = st.columns(2)
     le_exapnder = left_col.expander('video'.upper(), expanded=True)
     ri_exapnder = right_col.expander('pose'.upper(), expanded=True)
@@ -135,10 +136,23 @@ def prompt_setup(software, ftype, annotation_classes, framerate, videos_dir, pro
             new_pose_list = []
             for i, f in enumerate(new_pose_csvs):
                 current_pose = pd.read_csv(f,
-                                           header=[0, 1, 2], sep=",", index_col=0
-                                           )
-                idx_selected = np.array([0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16])
+                                           header=[0, 1, 2], sep=",", index_col=0)
+                bp_level = 1
+                bp_index_list = []
+                for bp in selected_bodyparts:
+                    bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
+                    bp_index_list.append(bp_index)
+
+                selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
+
+                # get rid of likelihood columns for deeplabcut
+                idx_llh = selected_pose_idx[2::3]
+                # the loaded sleap file has them too, so exclude for both
+                idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
+                #
+                # idx_selected = np.array([0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16])
                 new_pose_list.append(np.array(current_pose.iloc[:, idx_selected]))
+
             st.session_state['uploaded_pose'] = new_pose_list
             # col1, col3 = st.columns(2)
 
@@ -218,9 +232,9 @@ def create_annotated_videos(prediction, prob,
     video_prefix = st.session_state['video'].name.rpartition(video_type)[0]
     annotated_vid_str = str.join('', ('_annotated_', iter_folder))
     annotated_vid_name = str.join('', (video_prefix, annotated_vid_str, video_type))
-    st.session_state['annotated_vid_path'][iter_folder] = os.path.join(videos_dir, annotated_vid_name)
+    st.session_state['new_annotated_vid_path'][iter_folder] = os.path.join(videos_dir, annotated_vid_name)
 
-    video = cv2.VideoWriter(st.session_state['annotated_vid_path'][iter_folder],
+    video = cv2.VideoWriter(st.session_state['new_annotated_vid_path'][iter_folder],
                             fourcc, framerate, (width, height))
     for j, image in enumerate(new_images):
         video.write(image)
@@ -277,6 +291,7 @@ def main(ri=None, config=None):
         annotation_classes = [x.strip() for x in config["Project"].get("CLASSES").split(",")]
         software = config["Project"].get("PROJECT_TYPE")
         ftype = config["Project"].get("FILE_TYPE")
+        selected_bodyparts = [x.strip() for x in config["Project"].get("KEYPOINTS_CHOSEN").split(",")]
         # threshold = config["Processing"].getfloat("SCORE_THRESHOLD")
         threshold = 0.1
         iteration = config["Processing"].getint("ITERATION")
@@ -289,7 +304,7 @@ def main(ri=None, config=None):
         videos_dir = os.path.join(project_dir, 'videos')
         os.makedirs(videos_dir, exist_ok=True)
         frames2integ = round(float(framerate) * (duration_min / 0.1))
-
+        # st.write(st.session_state)
         if software == 'CALMS21 (PAPER)':
             ROOT = Path(__file__).parent.parent.parent.resolve()
             targets_test_csv = os.path.join(ROOT.joinpath("test"), './test_labels.csv')
@@ -303,34 +318,35 @@ def main(ri=None, config=None):
             #
             if 'video_path' not in st.session_state:
                 st.session_state['video_path'] = None
-            if 'features' not in st.session_state:
-                st.session_state['features'] = None
-            if 'predict' not in st.session_state:
-                st.session_state['predict'] = None
-            if 'predict_match' not in st.session_state:
-                st.session_state['predict_match'] = None
-            if 'annotated_vid_path' not in st.session_state:
-                st.session_state['annotated_vid_path'] = None
+            if 'new_features' not in st.session_state:
+                st.session_state['new_features'] = None
+            if 'new_predict' not in st.session_state:
+                st.session_state['new_predict'] = None
+            if 'new_predict_match' not in st.session_state:
+                st.session_state['new_predict_match'] = None
+            if 'new_annotated_vid_path' not in st.session_state:
+                st.session_state['new_annotated_vid_path'] = None
 
-            if st.session_state['features'] is None:
-                st.session_state['features'] = {str.join('', ('iteration-', str(i))): None
-                                                for i in np.arange(iteration + 1)}
-                st.session_state['predict'] = {str.join('', ('iteration-', str(i))): None
-                                               for i in np.arange(iteration + 1)}
-                st.session_state['predict_match'] = {str.join('', ('iteration-', str(i))): None
-                                                     for i in np.arange(iteration + 1)}
-                st.session_state['annotated_vid_path'] = {str.join('', ('iteration-', str(i))): None
-                                                          for i in np.arange(iteration + 1)}
-            if iter_folder not in st.session_state['annotated_vid_path']:
-                st.session_state['features'][iter_folder] = None
-                st.session_state['predict'][iter_folder] = None
-                st.session_state['predict_match'][iter_folder] = None
-                st.session_state['annotated_vid_path'][iter_folder] = None
+            if st.session_state['new_features'] is None:
+                st.session_state['new_features'] = {str.join('', ('iteration-', str(i))): None
+                                                    for i in np.arange(iteration + 1)}
+                st.session_state['new_predict'] = {str.join('', ('iteration-', str(i))): None
+                                                   for i in np.arange(iteration + 1)}
+                st.session_state['new_predict_match'] = {str.join('', ('iteration-', str(i))): None
+                                                         for i in np.arange(iteration + 1)}
+                st.session_state['new_annotated_vid_path'] = {str.join('', ('iteration-', str(i))): None
+                                                              for i in np.arange(iteration + 1)}
+            if iter_folder not in st.session_state['new_annotated_vid_path']:
+                st.session_state['new_features'][iter_folder] = None
+                st.session_state['new_predict'][iter_folder] = None
+                st.session_state['new_predict_match'][iter_folder] = None
+                st.session_state['new_annotated_vid_path'][iter_folder] = None
             st.session_state['disabled'] = False
+            # st.session_state
 
-            frame_dir = prompt_setup(software, ftype, annotation_classes, framerate,
-                                     videos_dir, project_dir, iter_folder)
-            # st.write(st.session_state)
+            frame_dir = prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
+                                     framerate, videos_dir, project_dir, iter_folder)
+
             if st.session_state['video'] is not None and len(st.session_state['uploaded_pose']) > 0:
                 if os.path.exists(os.path.join(videos_dir, st.session_state['video'].name)):
                     temporary_location = str(os.path.join(videos_dir, st.session_state['video'].name))
@@ -346,29 +362,30 @@ def main(ri=None, config=None):
                     if len(framedir_) < 2:
                         frame_extraction(video_file=temporary_location, frame_dir=frame_dir)
                     else:
-                        if st.session_state['annotated_vid_path'][iter_folder] is None:
+                        if st.session_state['new_annotated_vid_path'][iter_folder] is None:
 
                             [iterX_model, _, _, _, _, _] = load_iterX(project_dir, iter_folder)
                             st.info(f'loaded {iter_folder} model')
 
-                            st.session_state['features'][iter_folder], \
-                                st.session_state['predict'][iter_folder], \
-                                st.session_state['predict_match'][iter_folder] = \
+                            st.session_state['new_features'][iter_folder], \
+                                st.session_state['new_predict'][iter_folder], \
+                                st.session_state['new_predict_match'][iter_folder] = \
                                 predict_annotate_video(iterX_model, framerate, frames2integ,
                                                        annotation_classes,
                                                        frame_dir, videos_dir, iter_folder)
                         else:
+                            # st.write('hi')
                             # st.write(st.session_state['predict'][80:100],
                             #          st.session_state['predict_match'][240:300])
                             # st.write(np.repeat(st.session_state['predict'][80:100], 6))
                             placeholder = st.empty()
                             video_col, summary_col = st.columns([2, 1.5])
-                            pie_predict(st.session_state['predict'][iter_folder],
+                            pie_predict(st.session_state['new_predict_match'][iter_folder],
                                         iter_folder,
                                         annotation_classes,
                                         summary_col)
                             # st.write(np.unique(st.session_state['predict'][iter_folder], return_counts=True))
-                            video_col.video(st.session_state['annotated_vid_path'][iter_folder])
+                            video_col.video(st.session_state['new_annotated_vid_path'][iter_folder])
 
 
 

@@ -69,7 +69,9 @@ def sort_nicely(l):
     l.sort(key=alphanum_key)
 
 
-def create_labeled_vid(labels, proba, counts, frames2integ,
+def create_labeled_vid(labels, proba,
+                       outlier_method, p_cutoff,
+                       counts, frames2integ,
                        framerate, output_fps, annotation_classes,
                        frame_dir, output_path):
     """
@@ -108,79 +110,95 @@ def create_labeled_vid(labels, proba, counts, frames2integ,
         with st.spinner(f'generating videos for behavior {annotation_classes[int(b)]}'):
             idx_b = np.where(labels == b)[0]
             # if there is such label
+
             if idx_b is not None:
-                idx_b_poor = np.where(np.max(proba[idx_b, :], axis=1) < 0.5)[0]
-                behav_ex_idx = []
-                # if there are poor predictions
-                if idx_b_poor is not None:
+                # st.write(outlier_method)
+                if outlier_method == 'Low Confidence':
+                    idx_b_poor = np.where(np.max(proba[idx_b, :], axis=1) < p_cutoff)[0]
+                    behav_ex_idx = []
+                    # if there are poor predictions
+                    if idx_b_poor is not None:
+                        try:
+                            examples_b = np.random.choice(idx_b[idx_b_poor], counts, replace=False)
+                        except:
+                            examples_b = np.random.choice(idx_b[idx_b_poor], len(idx_b[idx_b_poor]), replace=False)
+                        count = 0
+                elif outlier_method == 'Random':
+                    behav_ex_idx = []
                     try:
-                        examples_b = np.random.choice(idx_b[idx_b_poor], counts, replace=False)
+                        examples_b = np.random.choice(idx_b, counts, replace=False)
                     except:
-                        examples_b = np.random.choice(idx_b[idx_b_poor], len(idx_b[idx_b_poor]), replace=False)
+                        examples_b = np.random.choice(idx_b, len(idx_b), replace=False)
                     count = 0
-                    for ex, example_b in enumerate(stqdm(examples_b, desc="creating videos")):
-                        # just in case if future frames are not present
-                        if (example_b - 1) * number_of_frames + int(3 * number_of_frames)-1 < len(images):
-                            video_name = 'behavior_{}_example_{}.mp4'.format(annotation_classes[int(b)], int(count))
-                            grp_images = []
-                            for f in range(number_of_frames):
-                                rgb_im = cv2.imread(os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
-                                # bgr = cv2.cvtColor(rgb_im, cv2.COLOR_BGR2RGB)
-                                cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
-                                            bottomLeftCornerOfText,
-                                            font,
-                                            fontScale,
-                                            fontColor,
-                                            thickness_text,
-                                            lineType)
-                                grp_images.append(rgb_im)
+                # st.write(examples_b)
 
-                            for f in range(number_of_frames, int(2 * number_of_frames)):
-                                rgb_im = cv2.imread(os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
+                for ex, example_b in enumerate(stqdm(examples_b, desc="creating videos")):
+                    # just in case if future frames are not present
+                    if (example_b - 1) * number_of_frames + int(3 * number_of_frames) - 1 < len(images):
+                        video_name = 'behavior_{}_example_{}.mp4'.format(annotation_classes[int(b)], int(count))
+                        grp_images = []
+                        for f in range(number_of_frames):
+                            rgb_im = cv2.imread(
+                                os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
+                            # bgr = cv2.cvtColor(rgb_im, cv2.COLOR_BGR2RGB)
+                            cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
+                                        bottomLeftCornerOfText,
+                                        font,
+                                        fontScale,
+                                        fontColor,
+                                        thickness_text,
+                                        lineType)
+                            grp_images.append(rgb_im)
 
-                                # Draw a circle with blue line borders of thickness of 2 px
-                                rgb_im = cv2.circle(rgb_im, center_coordinates, radius, color, thickness_circle)
+                        for f in range(number_of_frames, int(2 * number_of_frames)):
+                            rgb_im = cv2.imread(
+                                os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
 
-                                cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
-                                            bottomLeftCornerOfText,
-                                            font,
-                                            fontScale,
-                                            fontColor,
-                                            thickness_text,
-                                            lineType)
+                            # Draw a circle with blue line borders of thickness of 2 px
+                            rgb_im = cv2.circle(rgb_im, center_coordinates, radius, color, thickness_circle)
 
-                                grp_images.append(rgb_im)
+                            cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
+                                        bottomLeftCornerOfText,
+                                        font,
+                                        fontScale,
+                                        fontColor,
+                                        thickness_text,
+                                        lineType)
 
-                            for f in range(int(2 * number_of_frames), int(3 * number_of_frames)):
-                                rgb_im = cv2.imread(os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
-                                # bgr = cv2.cvtColor(rgb_im, cv2.COLOR_BGR2RGB)
-                                cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
-                                            bottomLeftCornerOfText,
-                                            font,
-                                            fontScale,
-                                            fontColor,
-                                            thickness_text,
-                                            lineType)
-                                grp_images.append(rgb_im)
+                            grp_images.append(rgb_im)
 
-                            video = cv2.VideoWriter(os.path.join(output_path, video_name), fourcc, output_fps, (width, height))
-                            for j, image in enumerate(grp_images):
-                                video.write(image)
-                            cv2.destroyAllWindows()
-                            video.release()
-                            videoClip = VideoFileClip(os.path.join(output_path, video_name))
-                            vid_prefix = video_name.rpartition('.mp4')[0]
-                            gif_name = f"{vid_prefix}.gif"
-                            videoClip.write_gif(os.path.join(output_path, gif_name))
-                            behav_ex_idx.append(example_b)
-                            count += 1
+                        for f in range(int(2 * number_of_frames), int(3 * number_of_frames)):
+                            rgb_im = cv2.imread(
+                                os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
+                            # bgr = cv2.cvtColor(rgb_im, cv2.COLOR_BGR2RGB)
+                            cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
+                                        bottomLeftCornerOfText,
+                                        font,
+                                        fontScale,
+                                        fontColor,
+                                        thickness_text,
+                                        lineType)
+                            grp_images.append(rgb_im)
+
+                        video = cv2.VideoWriter(os.path.join(output_path, video_name), fourcc, output_fps,
+                                                (width, height))
+                        for j, image in enumerate(grp_images):
+                            video.write(image)
+                        cv2.destroyAllWindows()
+                        video.release()
+                        videoClip = VideoFileClip(os.path.join(output_path, video_name))
+                        vid_prefix = video_name.rpartition('.mp4')[0]
+                        gif_name = f"{vid_prefix}.gif"
+                        videoClip.write_gif(os.path.join(output_path, gif_name))
+                        behav_ex_idx.append(example_b)
+                        count += 1
         all_ex_idx[annotation_classes[int(b)]] = behav_ex_idx
 
     return all_ex_idx
 
 
 def create_videos(processed_input_data, iterX_model, framerate, frames2integ,
-                  num_outliers, output_fps, annotation_classes,
+                  outlier_method, p_cutoff, num_outliers, output_fps, annotation_classes,
                   frame_dir, shortvid_dir):
     examples_idx = None
     features = [None]
@@ -207,7 +225,9 @@ def create_videos(processed_input_data, iterX_model, framerate, frames2integ,
                 predict_arr = np.array(predict).flatten()
                 # st.write(predict_arr.shape)
         try:
-            examples_idx = create_labeled_vid(predict_arr, pred_proba[0], num_outliers, frames2integ,
+            examples_idx = create_labeled_vid(predict_arr, pred_proba[0],
+                                              outlier_method, p_cutoff,
+                                              num_outliers, frames2integ,
                                               framerate, output_fps, annotation_classes,
                                               frame_dir, shortvid_dir)
             st.balloons()
@@ -218,10 +238,12 @@ def create_videos(processed_input_data, iterX_model, framerate, frames2integ,
     return features[0], predict_arr, examples_idx
 
 
-def prompt_setup(software, ftype, annotation_classes, threshold, framerate, videos_dir, project_dir, iter_dir):
+def prompt_setup(software, ftype, selected_bodyparts, annotation_classes, outlier_methods, threshold,
+                 framerate, videos_dir, project_dir, iter_dir):
     left_col, right_col = st.columns(2)
     le_exapnder = left_col.expander('video'.upper(), expanded=True)
     ri_exapnder = right_col.expander('pose'.upper(), expanded=True)
+    outlier_method = None
     p_cutoff = None
     num_outliers = 0
     output_fps = None
@@ -246,8 +268,23 @@ def prompt_setup(software, ftype, annotation_classes, threshold, framerate, vide
                 current_pose = pd.read_csv(f,
                                            header=[0, 1, 2], sep=",", index_col=0
                                            )
-                idx_selected = np.array([0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16])
+
+                bp_level = 1
+                bp_index_list = []
+                for bp in selected_bodyparts:
+                    bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
+                    bp_index_list.append(bp_index)
+
+                selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
+
+                # get rid of likelihood columns for deeplabcut
+                idx_llh = selected_pose_idx[2::3]
+                # the loaded sleap file has them too, so exclude for both
+                idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
+                #
+                # idx_selected = np.array([0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16])
                 new_pose_list.append(np.array(current_pose.iloc[:, idx_selected]))
+
             st.session_state['uploaded_pose'] = new_pose_list
             col1, col3 = st.columns(2)
             col1_exp = col1.expander('Parameters'.upper(), expanded=True)
@@ -268,6 +305,10 @@ def prompt_setup(software, ftype, annotation_classes, threshold, framerate, vide
             output_fps = col1_exp.number_input('Video playback fps',
                                                min_value=1, max_value=None, value=5,
                                                disabled=st.session_state.disabled)
+
+            outlier_method = col1_exp.selectbox('Outlier method',
+                                                outlier_methods, index=0,
+                                                disabled=st.session_state.disabled)
 
             col1_exp.write(f'equivalent to {round(output_fps / framerate, 2)} X speed')
             frame_dir = col3_exp.text_input('Enter a directory for frames',
@@ -310,7 +351,7 @@ def prompt_setup(software, ftype, annotation_classes, threshold, framerate, vide
 
         # except:
         #     pass
-    return p_cutoff, num_outliers, output_fps, frame_dir, shortvid_dir
+    return outlier_method, p_cutoff, num_outliers, output_fps, frame_dir, shortvid_dir
 
 
 def prompt_setup_existing(framerate, videos_dir, project_dir, iter_dir, selected_refine_dir):
@@ -373,6 +414,7 @@ def main(ri=None, config=None):
         software = config["Project"].get("PROJECT_TYPE")
         ftype = config["Project"].get("FILE_TYPE")
         # threshold = config["Processing"].getfloat("SCORE_THRESHOLD")
+        selected_bodyparts = [x.strip() for x in config["Project"].get("KEYPOINTS_CHOSEN").split(",")]
         threshold = 0.1
         iteration = config["Processing"].getint("ITERATION")
         framerate = config["Project"].getint("FRAMERATE")
@@ -386,6 +428,7 @@ def main(ri=None, config=None):
         refined_vid_dirs = [d for d in os.listdir(os.path.join(project_dir, iter_folder))
                             if os.path.isdir(os.path.join(project_dir, iter_folder, d))]
         refined_vid_dirs.extend(['Add New Video'])
+        outlier_methods = ['Random', 'Low Confidence']
         try:
             new_vid_name = str.join('', (st.session_state['uploaded_vid'].name.rpartition('.mp4')[0], '_refine_vids'))
             selected_refine_dir = ri.radio('Select Refinement', refined_vid_dirs,
@@ -435,6 +478,8 @@ def main(ri=None, config=None):
                 st.session_state['features'] = None
             if 'predict' not in st.session_state:
                 st.session_state['predict'] = None
+            if 'outlier_method' not in st.session_state:
+                st.session_state['outlier_method'] = None
             if 'p_cutoff' not in st.session_state:
                 st.session_state['p_cutoff'] = None
             if 'num_outliers' not in st.session_state:
@@ -447,11 +492,12 @@ def main(ri=None, config=None):
             if st.session_state['selected_refine'] == 'Add New Video' or \
                     len(os.listdir(os.path.join(project_dir, iter_folder, st.session_state['selected_refine']))) < 3:
                 st.session_state['disabled'] = False
-                [st.session_state['p_cutoff'], st.session_state['num_outliers'], st.session_state['output_fps'],
-                 frame_dir, shortvid_dir] = prompt_setup(software, ftype, annotation_classes,
-                                                         threshold, framerate,
+                [st.session_state['outlier_method'],
+                 st.session_state['p_cutoff'], st.session_state['num_outliers'], st.session_state['output_fps'],
+                 frame_dir, shortvid_dir] = prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
+                                                         outlier_methods, threshold, framerate,
                                                          videos_dir, project_dir, iter_folder)
-
+                st.write(st.session_state['uploaded_pose'][0].shape)
                 try:
                     save_data(os.path.join(project_dir, iter_folder), shortvid_dir,
                               'refine_params.sav',
@@ -491,6 +537,8 @@ def main(ri=None, config=None):
                                             iterX_model,
                                             framerate,
                                             frames2integ,
+                                            st.session_state['outlier_method'],
+                                            st.session_state['p_cutoff'],
                                             st.session_state['num_outliers'],
                                             st.session_state['output_fps'],
                                             annotation_classes,
@@ -499,7 +547,7 @@ def main(ri=None, config=None):
                                     st.session_state['video_path'] = \
                                         os.path.join(videos_dir,
                                                      str.join('', (selected_refine_dir.rpartition('_refine_vids')[0],
-                                                              '.mp4')))
+                                                                   '.mp4')))
                                     save_data(os.path.join(project_dir, iter_folder), shortvid_dir,
                                               'refinements.sav',
                                               [st.session_state['video_path'],
@@ -655,7 +703,7 @@ def main(ri=None, config=None):
                                               videos_dir, project_dir, iter_folder,
                                               st.session_state['curr_vid'])
                 st.session_state['video_path'] = \
-                    os.path.join(videos_dir,  str.join('', (selected_refine_dir.rpartition('_refine_vids')[0], '.mp4')))
+                    os.path.join(videos_dir, str.join('', (selected_refine_dir.rpartition('_refine_vids')[0], '.mp4')))
                 st.session_state['disabled'] = True
                 behav_choice = st.selectbox("Select the behavior: ", annotation_classes,
                                             index=int(0),

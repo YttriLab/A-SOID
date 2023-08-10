@@ -480,7 +480,7 @@ class Preprocess:
 
                     # convert dummie encoding to numbers but keep also identify of classes not represented in this file
                     label_vector = self._convert_labels(i)
-
+                    # st.write(self.label_df, label_vector.shape, current_pose.shape)
                     # continue with partioning
                     targets = label_vector[-current_pose.shape[0]:].copy()
                     #train_portion_labels = int(targets.shape[0] * 0.7)
