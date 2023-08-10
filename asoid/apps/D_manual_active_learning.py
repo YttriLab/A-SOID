@@ -497,7 +497,7 @@ def main(ri=None, config=None):
                  frame_dir, shortvid_dir] = prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                                                          outlier_methods, threshold, framerate,
                                                          videos_dir, project_dir, iter_folder)
-                st.write(st.session_state['uploaded_pose'][0].shape)
+                # st.write(st.session_state['uploaded_pose'][0].shape)
                 try:
                     save_data(os.path.join(project_dir, iter_folder), shortvid_dir,
                               'refine_params.sav',
