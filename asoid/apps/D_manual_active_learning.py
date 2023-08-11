@@ -1085,7 +1085,7 @@ def main(ri=None, config=None):
                                     st.session_state['refined'][behav_choice][i] = edited_df
                             except:
                                 st.warning('no video'.upper())
-                    # st.write(st.session_state['refined'][behav_choice])
+                    st.write(st.session_state['refined'])
                     # df = pd.DataFrame(st.session_state['refinements'][behav_choice])
                     # selection_output.dataframe(df)
                     # st.write(st.session_state['refinements'][behav_choice][0]["choice"])
