@@ -445,7 +445,8 @@ class RF_Classify:
                     predict = bsoid_predict_numba_noscale([self.features_heldout[i]], self.iterX_model)
                     predict = np.hstack(predict)
 
-
+                    # TODO: iterX_f1_scores dictionary is not being used properly
+                    # TODO: iterX_f1_scores should be a dictionary of seeds
                     iterX_f1_scores[it] = f1_score(
                         self.targets_heldout[i][self.targets_heldout[i] != self.label_code_other],
                         predict[self.targets_heldout[i] != self.label_code_other],

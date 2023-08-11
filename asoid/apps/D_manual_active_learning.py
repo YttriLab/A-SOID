@@ -11,6 +11,7 @@ import cv2
 from stqdm import stqdm
 import re
 # import time
+import tkinter as tk
 import base64
 from moviepy.editor import VideoFileClip
 from utils.load_workspace import load_new_pose
@@ -69,11 +70,11 @@ def sort_nicely(l):
     l.sort(key=alphanum_key)
 
 
-def create_labeled_vid(labels, proba,
-                       outlier_method, p_cutoff,
-                       counts, frames2integ,
-                       framerate, output_fps, annotation_classes,
-                       frame_dir, output_path):
+def create_labeled_vid_old(labels, proba,
+                           outlier_method, p_cutoff,
+                           counts, frames2integ,
+                           framerate, output_fps, annotation_classes,
+                           frame_dir, output_path):
     """
     :param labels: 1D array, labels from training or testing
     :param crit: scalar, minimum duration for random selection of behaviors, default 300ms
@@ -130,7 +131,6 @@ def create_labeled_vid(labels, proba,
                     except:
                         examples_b = np.random.choice(idx_b, len(idx_b), replace=False)
                     count = 0
-                # st.write(examples_b)
 
                 for ex, example_b in enumerate(stqdm(examples_b, desc="creating videos")):
                     # just in case if future frames are not present
@@ -148,6 +148,9 @@ def create_labeled_vid(labels, proba,
                                         fontColor,
                                         thickness_text,
                                         lineType)
+
+                            # TODO: put timestamp text on image
+
                             grp_images.append(rgb_im)
 
                         for f in range(number_of_frames, int(2 * number_of_frames)):
@@ -164,6 +167,7 @@ def create_labeled_vid(labels, proba,
                                         fontColor,
                                         thickness_text,
                                         lineType)
+                            # TODO: put timestamp text on image
 
                             grp_images.append(rgb_im)
 
@@ -178,6 +182,8 @@ def create_labeled_vid(labels, proba,
                                         fontColor,
                                         thickness_text,
                                         lineType)
+                            # TODO: put timestamp text on image
+
                             grp_images.append(rgb_im)
 
                         video = cv2.VideoWriter(os.path.join(output_path, video_name), fourcc, output_fps,
@@ -197,8 +203,197 @@ def create_labeled_vid(labels, proba,
     return all_ex_idx
 
 
+def create_labeled_vid(labels, proba,
+                       outlier_method, p_cutoff,
+                       counts, frames2integ,
+                       framerate, output_fps, min_n_seconds, annotation_classes,
+                       frame_dir, output_path):
+    """
+    :param labels: 1D array, labels from training or testing
+    :param crit: scalar, minimum duration for random selection of behaviors, default 300ms
+    :param counts: scalar, number of randomly generated examples, default 5
+    :param frame_dir: string, directory to where you extracted vid images in LOCAL_CONFIG
+    :param output_path: string, directory to where you want to store short video examples in LOCAL_CONFIG
+    """
+    images = [img for img in os.listdir(frame_dir) if img.endswith(".png")]
+    sort_nicely(images)
+    # fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    # fourcc = cv2.VideoWriter_fourcc('H', '2', '6', '4')
+    fourcc = cv2.VideoWriter_fourcc(*'avc1')
+    frame = cv2.imread(os.path.join(frame_dir, images[0]))
+    height, width, layers = frame.shape
+    number_of_frames = int(frames2integ / 10)
+    min_ex_bins = int(min_n_seconds * (framerate / number_of_frames))
+
+    # Center coordinates
+    center_coordinates = (50, 50)
+    # Radius of circle
+    radius = 20
+    # Blue color in BGR
+    color = (0, 0, 255)
+    # Line thickness of 2 px
+    thickness_circle = -1
+
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    bottomLeftCornerOfText = (width - 50, height - 50)
+    fontScale = 0.5
+    fontColor = (0, 0, 255)
+    thickness_text = 1
+    lineType = 2
+
+    # compute bout start/end and lengths
+    bout_end_idx = np.where(np.diff(labels) != 0)[0]
+    bout_start_idx = np.hstack((0, bout_end_idx + 1))
+    bout_len = np.hstack((np.diff(bout_start_idx), len(labels) - bout_start_idx[-1]))
+
+    all_ex_idx = {key: [] for key in annotation_classes}
+    for b in range(len(list(all_ex_idx.keys()))):
+        with st.spinner(f'generating videos for behavior {annotation_classes[int(b)]}'):
+
+            # get bout starts and their lengths for label b
+            idx_b = np.where(labels[bout_start_idx] == b)[0]
+            examples_b = []
+            if idx_b is not None:
+                len_b = bout_len[labels[bout_start_idx] == b]
+                # for each example, get the actual label index start to end
+
+                indices_start = [int(bout_start_idx[idx_b[b]]) for b in range(len(idx_b))]
+                indices_end = [int(bout_start_idx[idx_b[b]] + len_b[b]) for b in range(len(idx_b))]
+
+                if outlier_method == 'Low Confidence':
+                    idx_b_poor = np.where(np.max(proba[idx_b, :], axis=1) < p_cutoff)[0]
+                    behav_ex_idx = []
+                    # if there are poor predictions
+                    if idx_b_poor is not None:
+                        try:
+                            examples_b = np.random.choice(idx_b[idx_b_poor], counts, replace=False)
+                        except:
+                            examples_b = np.random.choice(idx_b[idx_b_poor], len(idx_b[idx_b_poor]), replace=False)
+                        count = 0
+                elif outlier_method == 'Random':
+                    behav_ex_idx = []
+                    try:
+                        # indices_start
+                        example_indices = np.random.choice(len(indices_start),
+                                                           counts, replace=False)
+
+                        for example_idx in example_indices:
+                            # st.write(indices_start[example_idx])
+                            # st.write(indices_end[example_idx])
+                            if indices_end[example_idx] - indices_start[example_idx] >= min_ex_bins:
+                                examples_b.append([indices_start[example_idx], indices_end[example_idx]])
+
+                        # examples_b = np.random.choice(idx_b, counts, replace=False)
+                    except:
+                        example_indices = np.random.choice(len(indices_start),
+                                                           len(indices_start), replace=False)
+                        for example_idx in example_indices:
+                            if indices_end[example_idx] - indices_start[example_idx] >= min_ex_bins:
+                                examples_b.append([indices_start[example_idx], indices_end[example_idx]])
+
+                        # examples_b = np.random.choice(idx_b, len(idx_b), replace=False)
+                    count = 0
+                for ex, example_b in enumerate(stqdm(examples_b, desc="creating videos")):
+                    # just in case if future frames are not present
+                    video_name = 'behavior_{}_example_{}.mp4'.format(annotation_classes[int(b)], int(count))
+                    grp_images = []
+                    # for example in 0.1s as binning size, this will iterate through frame index of 0.1s
+                    # so will need to upsample to match framerate
+                    for f in range(int(number_of_frames * (example_b[1] - example_b[0]))):
+                        rgb_im = cv2.imread(
+                            os.path.join(frame_dir, images[example_b[0] * number_of_frames + f]))
+
+                        # bgr = cv2.cvtColor(rgb_im, cv2.COLOR_BGR2RGB)
+                        # cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
+                        #             bottomLeftCornerOfText,
+                        #             font,
+                        #             fontScale,
+                        #             fontColor,
+                        #             thickness_text,
+                        #             lineType)
+
+                        # TODO: put timestamp text on image
+                        cv2.putText(rgb_im, f'{np.round(f * 1 / framerate, 1)}s',
+                                    bottomLeftCornerOfText,
+                                    font,
+                                    fontScale,
+                                    fontColor,
+                                    thickness_text,
+                                    lineType)
+
+                        grp_images.append(rgb_im)
+
+                        # if (example_b - 1) * number_of_frames + int(3 * number_of_frames) - 1 < len(images):
+                        #     video_name = 'behavior_{}_example_{}.mp4'.format(annotation_classes[int(b)], int(count))
+                        #     grp_images = []
+                        #     for f in range(number_of_frames):
+                        #         rgb_im = cv2.imread(
+                        #             os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
+                        #         # bgr = cv2.cvtColor(rgb_im, cv2.COLOR_BGR2RGB)
+                        #         cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
+                        #                     bottomLeftCornerOfText,
+                        #                     font,
+                        #                     fontScale,
+                        #                     fontColor,
+                        #                     thickness_text,
+                        #                     lineType)
+                        #
+                        #         # TODO: put timestamp text on image
+                        #
+                        #         grp_images.append(rgb_im)
+                        #
+                        #     for f in range(number_of_frames, int(2 * number_of_frames)):
+                        #         rgb_im = cv2.imread(
+                        #             os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
+                        #
+                        #         # Draw a circle with blue line borders of thickness of 2 px
+                        #         rgb_im = cv2.circle(rgb_im, center_coordinates, radius, color, thickness_circle)
+                        #
+                        #         cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
+                        #                     bottomLeftCornerOfText,
+                        #                     font,
+                        #                     fontScale,
+                        #                     fontColor,
+                        #                     thickness_text,
+                        #                     lineType)
+                        #         # TODO: put timestamp text on image
+                        #
+                        #         grp_images.append(rgb_im)
+                        #
+                        #     for f in range(int(2 * number_of_frames), int(3 * number_of_frames)):
+                        #         rgb_im = cv2.imread(
+                        #             os.path.join(frame_dir, images[(example_b - 1) * number_of_frames + f]))
+                        #         # bgr = cv2.cvtColor(rgb_im, cv2.COLOR_BGR2RGB)
+                        #         cv2.putText(rgb_im, f'{round(output_fps / framerate, 2)}X',
+                        #                     bottomLeftCornerOfText,
+                        #                     font,
+                        #                     fontScale,
+                        #                     fontColor,
+                        #                     thickness_text,
+                        #                     lineType)
+                        #         # TODO: put timestamp text on image
+                        #
+                        #         grp_images.append(rgb_im)
+
+                    video = cv2.VideoWriter(os.path.join(output_path, video_name), fourcc, output_fps,
+                                            (width, height))
+                    for j, image in enumerate(grp_images):
+                        video.write(image)
+                    cv2.destroyAllWindows()
+                    video.release()
+                    videoClip = VideoFileClip(os.path.join(output_path, video_name))
+                    vid_prefix = video_name.rpartition('.mp4')[0]
+                    # gif_name = f"{vid_prefix}.gif"
+                    # videoClip.write_gif(os.path.join(output_path, gif_name))
+                    behav_ex_idx.append(example_b)
+                    count += 1
+        all_ex_idx[annotation_classes[int(b)]] = behav_ex_idx
+
+    return all_ex_idx
+
+
 def create_videos(processed_input_data, iterX_model, framerate, frames2integ,
-                  outlier_method, p_cutoff, num_outliers, output_fps, annotation_classes,
+                  outlier_method, p_cutoff, num_outliers, output_fps, min_n_seconds, annotation_classes,
                   frame_dir, shortvid_dir):
     examples_idx = None
     features = [None]
@@ -228,7 +423,7 @@ def create_videos(processed_input_data, iterX_model, framerate, frames2integ,
             examples_idx = create_labeled_vid(predict_arr, pred_proba[0],
                                               outlier_method, p_cutoff,
                                               num_outliers, frames2integ,
-                                              framerate, output_fps, annotation_classes,
+                                              framerate, output_fps, min_n_seconds, annotation_classes,
                                               frame_dir, shortvid_dir)
             st.balloons()
             message_box.success('Done. Type "R" to refresh.')
@@ -238,7 +433,8 @@ def create_videos(processed_input_data, iterX_model, framerate, frames2integ,
     return features[0], predict_arr, examples_idx
 
 
-def prompt_setup(software, ftype, selected_bodyparts, annotation_classes, outlier_methods, threshold,
+def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
+                 outlier_methods, threshold, min_duration,
                  framerate, videos_dir, project_dir, iter_dir):
     left_col, right_col = st.columns(2)
     le_exapnder = left_col.expander('video'.upper(), expanded=True)
@@ -290,11 +486,18 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes, outlie
             col1_exp = col1.expander('Parameters'.upper(), expanded=True)
             col3_exp = col3.expander('Output folders'.upper(), expanded=True)
 
-            p_cutoff = col1_exp.number_input('Threshold value to sample outliers from',
-                                             min_value=0.0, max_value=1.0, value=threshold,
-                                             disabled=st.session_state.disabled)
+            outlier_method = col1_exp.selectbox('Outlier method',
+                                                outlier_methods, index=0,
+                                                disabled=st.session_state.disabled)
+            if outlier_method == 'Low Confidence':
+                p_cutoff = col1_exp.number_input('Threshold value to sample outliers from',
+                                                 min_value=0.0, max_value=1.0, value=threshold,
+                                                 disabled=st.session_state.disabled)
+            min_n_seconds = col1_exp.number_input('Minimum number of seconds for example',
+                                                  min_value=min_duration, max_value=10.0, value=min_duration * 5,
+                                                  disabled=st.session_state.disabled)
 
-            num_outliers = col1_exp.number_input('Number of potential outliers to refine',
+            num_outliers = col1_exp.number_input('Number of examples to refine',
                                                  min_value=10, max_value=None, value=20,
                                                  disabled=st.session_state.disabled)
             st.session_state['refinements'] = {key:
@@ -303,12 +506,8 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes, outlie
                                                for key in annotation_classes}
 
             output_fps = col1_exp.number_input('Video playback fps',
-                                               min_value=1, max_value=None, value=5,
+                                               min_value=1, max_value=None, value=framerate,
                                                disabled=st.session_state.disabled)
-
-            outlier_method = col1_exp.selectbox('Outlier method',
-                                                outlier_methods, index=0,
-                                                disabled=st.session_state.disabled)
 
             col1_exp.write(f'equivalent to {round(output_fps / framerate, 2)} X speed')
             frame_dir = col3_exp.text_input('Enter a directory for frames',
@@ -351,21 +550,31 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes, outlie
 
         # except:
         #     pass
-    return outlier_method, p_cutoff, num_outliers, output_fps, frame_dir, shortvid_dir
+    return outlier_method, p_cutoff, num_outliers, output_fps, min_n_seconds, frame_dir, shortvid_dir
 
 
-def prompt_setup_existing(framerate, videos_dir, project_dir, iter_dir, selected_refine_dir):
+def prompt_setup_existing(outlier_methods, framerate, videos_dir, project_dir, iter_dir, selected_refine_dir):
     video_name = selected_refine_dir.rpartition('_refine_vids')[0]
     shortvid_dir = os.path.join(project_dir, iter_dir, selected_refine_dir)
     st.session_state['disabled'] = True
     col1, col3 = st.columns(2)
     col1_exp = col1.expander('Parameters'.upper(), expanded=True)
     col3_exp = col3.expander('Output folders'.upper(), expanded=True)
-    p_cutoff = col1_exp.number_input('Threshold value to sample outliers from',
-                                     min_value=0.0, max_value=1.0, value=st.session_state['p_cutoff'],
-                                     disabled=st.session_state.disabled)
 
-    num_outliers = col1_exp.number_input('Number of potential outliers to refine',
+    outlier_method = col1_exp.selectbox('Outlier method',
+                                        outlier_methods,
+                                        index=outlier_methods.index(st.session_state['outlier_method']),
+                                        disabled=st.session_state.disabled)
+    if outlier_method == 'Low Confidence':
+        p_cutoff = col1_exp.number_input('Threshold value to sample outliers from',
+                                         min_value=0.0, max_value=1.0, value=st.session_state['p_cutoff'],
+                                         disabled=st.session_state.disabled)
+    min_n_seconds = col1_exp.number_input('Minimum number of seconds for example',
+                                          min_value=0.1, max_value=10.0,
+                                          value=st.session_state['min_n_seconds'],
+                                          disabled=st.session_state.disabled)
+
+    num_outliers = col1_exp.number_input('Number of examples to refine',
                                          min_value=10, max_value=None, value=st.session_state['num_outliers'],
                                          disabled=st.session_state.disabled)
 
@@ -407,6 +616,7 @@ def disable():
 
 def main(ri=None, config=None):
     st.markdown("""---""")
+
     if config is not None:
         working_dir = config["Project"].get("PROJECT_PATH")
         prefix = config["Project"].get("PROJECT_NAME")
@@ -449,29 +659,39 @@ def main(ri=None, config=None):
             if 'uploaded_pose' not in st.session_state:
                 st.session_state['uploaded_pose'] = []
 
-            if 'refinements' not in st.session_state:
+            # if 'refinements' not in st.session_state or 'refined' not in st.session_state:
+            if 'refined' not in st.session_state:
                 try:
-                    [st.session_state['p_cutoff'],
+                    [st.session_state['outlier_method'],
+                     st.session_state['p_cutoff'],
+                     st.session_state['min_n_seconds'],
                      st.session_state['num_outliers'],
-                     st.session_state['output_fps']] = load_refine_params(os.path.join(project_dir, iter_folder),
-                                                                          selected_refine_dir)
+                     st.session_state['output_fps'],
+                     ] = load_refine_params(os.path.join(project_dir, iter_folder),
+                                            selected_refine_dir)
                     try:
                         [st.session_state['video_path'],
                          st.session_state['features'],
                          st.session_state['predict'],
                          st.session_state['examples_idx'],
-                         st.session_state['refinements']] = load_refinement(os.path.join(project_dir, iter_folder),
-                                                                            selected_refine_dir)
+                         st.session_state['refined']] = load_refinement(os.path.join(project_dir, iter_folder),
+                                                                        selected_refine_dir)
+                        # st.session_state['refined'] = {key: {k: None for k in range(st.session_state['num_outliers'])}
+                        #                                for key in annotation_classes}
                     except:
-                        st.session_state['refinements'] = {key:
-                                                               {k: {'choice': None, 'submitted': False}
-                                                                for k in range(st.session_state['num_outliers'])}
-                                                           for key in annotation_classes}
-                except:
-                    st.session_state['refinements'] = {key:
-                                                           {k: {'choice': None, 'submitted': False}
-                                                            for k in range(20)}
+                        # st.session_state['refinements'] = {key:
+                        #                                        {k: {'choice': None, 'submitted': False}
+                        #                                         for k in range(st.session_state['num_outliers'])}
+                        #                                    for key in annotation_classes}
+                        st.session_state['refined'] = {key: {k: None for k in range(st.session_state['num_outliers'])}
                                                        for key in annotation_classes}
+                except:
+                    # st.session_state['refinements'] = {key:
+                    #                                        {k: {'choice': None, 'submitted': False}
+                    #                                         for k in range(20)}
+                    #                                    for key in annotation_classes}
+                    st.session_state['refined'] = {key: {k: None for k in range(20)}
+                                                   for key in annotation_classes}
             if 'video_path' not in st.session_state:
                 st.session_state['video_path'] = None
             if 'features' not in st.session_state:
@@ -482,26 +702,30 @@ def main(ri=None, config=None):
                 st.session_state['outlier_method'] = None
             if 'p_cutoff' not in st.session_state:
                 st.session_state['p_cutoff'] = None
+            if 'min_n_seconds' not in st.session_state:
+                st.session_state['min_n_seconds'] = None
             if 'num_outliers' not in st.session_state:
                 st.session_state['num_outliers'] = None
             if 'output_fps' not in st.session_state:
                 st.session_state['output_fps'] = None
             if 'examples_idx' not in st.session_state:
                 st.session_state['examples_idx'] = None
-
+            st.write(st.session_state)
             if st.session_state['selected_refine'] == 'Add New Video' or \
                     len(os.listdir(os.path.join(project_dir, iter_folder, st.session_state['selected_refine']))) < 3:
                 st.session_state['disabled'] = False
                 [st.session_state['outlier_method'],
                  st.session_state['p_cutoff'], st.session_state['num_outliers'], st.session_state['output_fps'],
+                 st.session_state['min_n_seconds'],
                  frame_dir, shortvid_dir] = prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
-                                                         outlier_methods, threshold, framerate,
+                                                         outlier_methods, threshold, duration_min, framerate,
                                                          videos_dir, project_dir, iter_folder)
-                # st.write(st.session_state['uploaded_pose'][0].shape)
                 try:
                     save_data(os.path.join(project_dir, iter_folder), shortvid_dir,
                               'refine_params.sav',
-                              [st.session_state['p_cutoff'],
+                              [st.session_state['outlier_method'],
+                               st.session_state['p_cutoff'],
+                               st.session_state['min_n_seconds'],
                                st.session_state['num_outliers'],
                                st.session_state['output_fps'],
                                ])
@@ -541,6 +765,7 @@ def main(ri=None, config=None):
                                             st.session_state['p_cutoff'],
                                             st.session_state['num_outliers'],
                                             st.session_state['output_fps'],
+                                            st.session_state['min_n_seconds'],
                                             annotation_classes,
                                             frame_dir=frame_dir,
                                             shortvid_dir=shortvid_dir)
@@ -554,17 +779,15 @@ def main(ri=None, config=None):
                                                st.session_state['features'],
                                                st.session_state['predict'],
                                                st.session_state['examples_idx'],
-                                               st.session_state['refinements']
+                                               st.session_state['refined']
                                                ])
 
                                 else:
-
+                                    st.write('hi')
                                     behav_choice = st.selectbox("Select the behavior: ", annotation_classes,
                                                                 index=int(0),
                                                                 key="behavior_choice")
-
-                                    checkbox_autofill = st.checkbox('autofill')
-
+                                    # checkbox_autofill = st.checkbox('autofill')
                                     alltabs = st.tabs([f'{i}' for i in range(st.session_state['num_outliers'])])
                                     st.write('')
                                     st.write('')
@@ -579,11 +802,16 @@ def main(ri=None, config=None):
                                             for file_name in glob.glob(shortvid_dir + "/*"):
                                                 os.remove(file_name)
                                             st.session_state['examples_idx'] = None
-                                            st.session_state['refinements'] = \
-                                                {key: {k: {'choice': None,
-                                                           'submitted': False}
-                                                       for k in range(st.session_state['num_outliers'])}
-                                                 for key in annotation_classes}
+                                            # st.session_state['refinements'] = \
+                                            #     {key: {k: {'choice': None,
+                                            #                'submitted': False}
+                                            #            for k in range(st.session_state['num_outliers'])}
+                                            #      for key in annotation_classes}
+                                            st.session_state['refined'] = {key:
+                                                                               {k: None
+                                                                                for k in
+                                                                                range(st.session_state['num_outliers'])}
+                                                                           for key in annotation_classes}
                                             col_msg.info('Cleared. Type "R" to refresh.')
                                             st.session_state['disabled'] = False
                                         except:
@@ -593,57 +821,91 @@ def main(ri=None, config=None):
                                         for i, tab_ in enumerate(alltabs):
                                             with tab_:
                                                 try:
-                                                    colL, colR = st.columns([3, 1])
-                                                    file_ = open(
-                                                        os.path.join(shortvid_dir,
-                                                                     f'behavior_{behav_choice}_example_{i}.gif'),
-                                                        "rb")
-                                                    contents = file_.read()
-                                                    data_url = base64.b64encode(contents).decode("utf-8")
-                                                    file_.close()
-                                                    colL.markdown(
-                                                        f'<img src="data:image/gif;base64,{data_url}" alt="gif">',
-                                                        unsafe_allow_html=True,
-                                                    )
+                                                    colL, colR = st.columns([2, 1.5])
+                                                    # file_ = open(
+                                                    #     os.path.join(shortvid_dir,
+                                                    #                  f'behavior_{behav_choice}_example_{i}.gif'),
+                                                    #     "rb")
+                                                    # contents = file_.read()
+                                                    # data_url = base64.b64encode(contents).decode("utf-8")
+                                                    # file_.close()
+                                                    # colL.markdown(
+                                                    #     f'<img src="data:image/gif;base64,{data_url}" alt="gif">',
+                                                    #     unsafe_allow_html=True,
+                                                    # )
+                                                    colL.video(os.path.join(shortvid_dir,
+                                                                            f'behavior_{behav_choice}_example_{i}.mp4'))
 
-                                                    with colR.form(key=f'form_{i}'):
-                                                        returned_choice = st.radio("Select the correct class: ",
-                                                                                   annotation_classes,
-                                                                                   index=annotation_classes.index(
-                                                                                       behav_choice),
-                                                                                   key="radio_{}".format(i))
-                                                        if st.form_submit_button("Submit",
-                                                                                 "Press to confirm your choice"):
-                                                            st.session_state['refinements'][behav_choice][i][
-                                                                "submitted"] = True
-                                                            st.session_state['refinements'][behav_choice][i][
-                                                                "choice"] = returned_choice
-                                                        if checkbox_autofill:
-                                                            if st.session_state['refinements'][behav_choice][i][
-                                                                "submitted"] == False:
-                                                                st.session_state['refinements'][behav_choice][i][
-                                                                    "choice"] = behav_choice
-                                                                st.session_state['refinements'][behav_choice][i][
-                                                                    "submitted"] = True
-                                                        else:
-                                                            if st.session_state['refinements'][behav_choice][i][
-                                                                "submitted"] == False:
-                                                                st.session_state['refinements'][behav_choice][i][
-                                                                    "choice"] = None
+                                                    # with colR.form(key=f'form_{i}'):
+                                                    # returned_choice = st.radio("Select the correct class: ",
+                                                    #                            annotation_classes,
+                                                    #                            index=annotation_classes.index(
+                                                    #                                behav_choice),
+                                                    #                            key="radio_{}".format(i))
+                                                    # if st.form_submit_button("Submit",
+                                                    #                          "Press to confirm your choice"):
+                                                    #     st.session_state['refinements'][behav_choice][i][
+                                                    #         "submitted"] = True
+                                                    #     st.session_state['refinements'][behav_choice][i][
+                                                    #         "choice"] = returned_choice
+                                                    # if checkbox_autofill:
+                                                    #     if st.session_state['refinements'][behav_choice][i][
+                                                    #         "submitted"] == False:
+                                                    #         st.session_state['refinements'][behav_choice][i][
+                                                    #             "choice"] = behav_choice
+                                                    #         st.session_state['refinements'][behav_choice][i][
+                                                    #             "submitted"] = True
+                                                    # else:
+                                                    #     if st.session_state['refinements'][behav_choice][i][
+                                                    #         "submitted"] == False:
+                                                    #         st.session_state['refinements'][behav_choice][i][
+                                                    #             "choice"] = None
+                                                    with colR:
+                                                        time_ = np.arange(0,
+                                                                          np.round(
+                                                                              (st.session_state['examples_idx'][
+                                                                                   behav_choice][i][1] -
+                                                                               st.session_state['examples_idx'][
+                                                                                   behav_choice][i][0]) / 10),
+                                                                          duration_min)
+                                                        # st.write(time_)
+                                                        data_df = pd.DataFrame(
+                                                            {
+                                                                "Time (s)": [t for t in time_],
+                                                                "Behavior": [behav_choice
+                                                                             for _ in range(len(time_))]
+                                                                ,
+                                                            }
+                                                        )
+                                                        # st.write(data_df)
+                                                        edited_df = st.data_editor(
+                                                            data_df,
+                                                            column_config={
+                                                                "Behavior": st.column_config.SelectboxColumn(
+                                                                    "Behavior Category",
+                                                                    # help="The category of the app",
+                                                                    width="medium",
+                                                                    options=annotation_classes,
+                                                                )
+                                                            },
+                                                            key=f'{i}',
+                                                            hide_index=True,
+                                                        )
+                                                        st.session_state['refined'][behav_choice][i] = edited_df
                                                 except:
                                                     st.warning('no video'.upper())
-                                        df = pd.DataFrame(st.session_state['refinements'][behav_choice])
-                                        selection_output.dataframe(df)
+
                                         if save_button:
-                                            save_data(os.path.join(project_dir, iter_folder), shortvid_dir,
+                                            save_data(os.path.join(project_dir, iter_folder), selected_refine_dir,
                                                       'refinements.sav',
                                                       [st.session_state['video_path'],
                                                        st.session_state['features'],
                                                        st.session_state['predict'],
                                                        st.session_state['examples_idx'],
-                                                       st.session_state['refinements']
+                                                       st.session_state['refined']
                                                        ])
             else:
+                # st.write(st.session_state['examples_idx'])
                 # [st.session_state['p_cutoff'],
                 #  st.session_state['num_outliers'],
                 #  st.session_state['output_fps']] = load_refine_params(os.path.join(project_dir, iter_folder),
@@ -671,35 +933,43 @@ def main(ri=None, config=None):
                 if 'curr_vid' not in st.session_state:
                     st.session_state['curr_vid'] = None
                 if selected_refine_dir != st.session_state['curr_vid']:
-                    [st.session_state['p_cutoff'],
+                    [st.session_state['outlier_method'],
+                     st.session_state['p_cutoff'],
+                     st.session_state['min_n_seconds'],
                      st.session_state['num_outliers'],
-                     st.session_state['output_fps']] = load_refine_params(os.path.join(project_dir, iter_folder),
-                                                                          selected_refine_dir)
+                     st.session_state['output_fps'],
+                     ] = load_refine_params(os.path.join(project_dir, iter_folder),
+                                            selected_refine_dir)
                     try:
                         [st.session_state['video_path'],
                          st.session_state['features'],
                          st.session_state['predict'],
                          st.session_state['examples_idx'],
-                         st.session_state['refinements']] = load_refinement(os.path.join(project_dir, iter_folder),
-                                                                            selected_refine_dir)
+                         st.session_state['refined']] = load_refinement(os.path.join(project_dir, iter_folder),
+                                                                        selected_refine_dir)
                         # st.write('loaded')
                     except:
-                        st.session_state['refinements'] = {key:
-                                                               {k: {'choice': None, 'submitted': False}
-                                                                for k in range(st.session_state['num_outliers'])}
-                                                           for key in annotation_classes}
+                        # st.session_state['refinements'] = {key:
+                        #                                        {k: {'choice': None, 'submitted': False}
+                        #                                         for k in range(st.session_state['num_outliers'])}
+                        #                                    for key in annotation_classes}
+                        st.session_state['refined'] = {key: {k: None for k in range(st.session_state['num_outliers'])}
+                                                       for key in annotation_classes}
                     [frame_dir, shortvid_dir] = \
-                        prompt_setup_existing(framerate,
+                        prompt_setup_existing(outlier_methods, framerate,
                                               videos_dir, project_dir, iter_folder,
                                               selected_refine_dir)
                     st.session_state['curr_vid'] = selected_refine_dir
                 else:
-                    [st.session_state['p_cutoff'],
+                    [st.session_state['outlier_method'],
+                     st.session_state['p_cutoff'],
+                     st.session_state['min_n_seconds'],
                      st.session_state['num_outliers'],
-                     st.session_state['output_fps']] = load_refine_params(os.path.join(project_dir, iter_folder),
-                                                                          selected_refine_dir)
+                     st.session_state['output_fps'],
+                     ] = load_refine_params(os.path.join(project_dir, iter_folder),
+                                            selected_refine_dir)
                     [frame_dir, shortvid_dir] = \
-                        prompt_setup_existing(framerate,
+                        prompt_setup_existing(outlier_methods, framerate,
                                               videos_dir, project_dir, iter_folder,
                                               st.session_state['curr_vid'])
                 st.session_state['video_path'] = \
@@ -722,69 +992,130 @@ def main(ri=None, config=None):
                         for file_name in glob.glob(shortvid_dir + "/*"):
                             os.remove(file_name)
                         st.session_state['examples_idx'] = None
-                        st.session_state['refinements'] = {key:
-                                                               {k: {'choice': None, 'submitted': False}
-                                                                for k in range(st.session_state['num_outliers'])}
-                                                           for key in annotation_classes}
+                        # st.session_state['refinements'] = {key:
+                        #                                        {k: {'choice': None, 'submitted': False}
+                        #                                         for k in range(st.session_state['num_outliers'])}
+                        #                                    for key in annotation_classes}
+                        st.session_state['refined'] = {key: {k: None for k in range(st.session_state['num_outliers'])}
+                                                       for key in annotation_classes}
                         col_msg.info('Cleared. Type "R" to refresh.')
                         st.session_state['disabled'] = False
                     except:
                         pass
 
                 else:
+                    # st.write(st.session_state['refined'])
                     for i, tab_ in enumerate(alltabs):
                         with tab_:
                             try:
-                                colL, colR = st.columns([3, 1])
-                                file_ = open(
-                                    os.path.join(shortvid_dir,
-                                                 f'behavior_{behav_choice}_example_{i}.gif'),
-                                    "rb")
-                                contents = file_.read()
-                                data_url = base64.b64encode(contents).decode("utf-8")
-                                file_.close()
-                                colL.markdown(
-                                    f'<img src="data:image/gif;base64,{data_url}" alt="gif">',
-                                    unsafe_allow_html=True,
-                                )
+                                colL, colR = st.columns([2, 1.5])
+                                # file_ = open(
+                                #     os.path.join(shortvid_dir,
+                                #                  f'behavior_{behav_choice}_example_{i}.gif'),
+                                #     "rb")
+                                # contents = file_.read()
+                                # data_url = base64.b64encode(contents).decode("utf-8")
+                                # file_.close()
+                                # colL.markdown(
+                                #     f'<img src="data:image/gif;base64,{data_url}" alt="gif">',
+                                #     unsafe_allow_html=True,
+                                # )
+                                colL.video(os.path.join(shortvid_dir,
+                                                        f'behavior_{behav_choice}_example_{i}.mp4'))
+                                # colL.write(os.path.join(shortvid_dir,
+                                #                         f'behavior_{behav_choice}_example_{i}.mp4'))
 
-                                with colR.form(key=f'form_{i}'):
-                                    returned_choice = st.radio("Select the correct class: ",
-                                                               annotation_classes,
-                                                               index=annotation_classes.index(
-                                                                   behav_choice),
-                                                               key="radio_{}".format(i))
-                                    if st.form_submit_button("Submit",
-                                                             "Press to confirm your choice"):
-                                        st.session_state['refinements'][behav_choice][i][
-                                            "submitted"] = True
-                                        st.session_state['refinements'][behav_choice][i][
-                                            "choice"] = returned_choice
-                                    if st.session_state['refinements'][behav_choice][i]["submitted"] == False:
-                                        if checkbox_autofill:
-                                            if st.session_state['refinements'][behav_choice][i][
-                                                "submitted"] == False:
-                                                st.session_state['refinements'][behav_choice][i][
-                                                    "choice"] = behav_choice
-                                                st.session_state['refinements'][behav_choice][i][
-                                                    "submitted"] = True
-                                        else:
-                                            if st.session_state['refinements'][behav_choice][i][
-                                                "submitted"] == False:
-                                                st.session_state['refinements'][behav_choice][i][
-                                                    "choice"] = None
+                                # with colR.form(key=f'form_{i}'):
+                                #     returned_choice = st.radio("Select the correct class: ",
+                                #                                annotation_classes,
+                                #                                index=annotation_classes.index(
+                                #                                    behav_choice),
+                                #                                key="radio_{}".format(i))
+                                #     if st.form_submit_button("Submit",
+                                #                              "Press to confirm your choice"):
+                                #         st.session_state['refinements'][behav_choice][i][
+                                #             "submitted"] = True
+                                #         st.session_state['refinements'][behav_choice][i][
+                                #             "choice"] = returned_choice
+                                #     if st.session_state['refinements'][behav_choice][i]["submitted"] == False:
+                                #         if checkbox_autofill:
+                                #             if st.session_state['refinements'][behav_choice][i][
+                                #                 "submitted"] == False:
+                                #                 st.session_state['refinements'][behav_choice][i][
+                                #                     "choice"] = behav_choice
+                                #                 st.session_state['refinements'][behav_choice][i][
+                                #                     "submitted"] = True
+                                #         else:
+                                #             if st.session_state['refinements'][behav_choice][i][
+                                #                 "submitted"] == False:
+                                #                 st.session_state['refinements'][behav_choice][i][
+                                #                     "choice"] = None
+                                # st.write(st.session_state['examples_idx'][behav_choice][i][1] -
+                                #                       st.session_state['examples_idx'][behav_choice][i][0])
+
+                                with colR:
+                                    time_ = np.arange(0,
+
+                                                          (st.session_state['examples_idx'][behav_choice][i][1] -
+                                                           st.session_state['examples_idx'][behav_choice][i][0]) / 10,
+                                                      duration_min)
+
+                                    data_df = pd.DataFrame(
+                                        {
+                                            "Time (s)": [t for t in time_],
+                                            "Behavior": [behav_choice
+                                                         for _ in range(len(time_))]
+                                            ,
+                                        }
+                                    )
+                                    # st.write(data_df)
+                                    edited_df = st.data_editor(
+                                        data_df,
+                                        column_config={
+                                            "Behavior": st.column_config.SelectboxColumn(
+                                                "Behavior Category",
+                                                # help="The category of the app",
+                                                width="medium",
+                                                options=annotation_classes,
+                                            )
+                                        },
+                                        key=f'{i}',
+                                        hide_index=True,
+                                    )
+                                    st.session_state['refined'][behav_choice][i] = edited_df
                             except:
                                 st.warning('no video'.upper())
+                    # st.write(st.session_state['refined'][behav_choice])
+                    # df = pd.DataFrame(st.session_state['refinements'][behav_choice])
+                    # selection_output.dataframe(df)
+                    # st.write(st.session_state['refinements'][behav_choice][0]["choice"])
+                    # data_df = pd.DataFrame(
+                    #     {
+                    #         "Behavior": [st.session_state['refinements'][behav_choice][i]["choice"]
+                    #                      for i in range(len(st.session_state['refinements'][behav_choice]))],
+                    #     }
+                    # )
+                    # # st.dataframe(data_df)
+                    # st.data_editor(
+                    #     data_df,
+                    #     column_config={
+                    #         "Behavior": st.column_config.SelectboxColumn(
+                    #             "Behavior Category",
+                    #             # help="The category of the app",
+                    #             width="medium",
+                    #             options=annotation_classes,
+                    #         )
+                    #     },
+                    #     hide_index=True,
+                    # )
 
-                    df = pd.DataFrame(st.session_state['refinements'][behav_choice])
-                    selection_output.dataframe(df)
                     if save_button:
                         save_data(os.path.join(project_dir, iter_folder), selected_refine_dir, 'refinements.sav',
                                   [st.session_state['video_path'],
                                    st.session_state['features'],
                                    st.session_state['predict'],
                                    st.session_state['examples_idx'],
-                                   st.session_state['refinements']
+                                   st.session_state['refined']
                                    ])
     else:
         st.error(NO_CONFIG_HELP)

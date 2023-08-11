@@ -61,19 +61,25 @@ def main(ri=None, config=None):
                  examples_idx,
                  refinements] = load_refinement(
                     os.path.join(project_dir, iter_folder), selected_refine_dir)
-                # st.write(refinements, examples_idx)
+                st.write(refinements, examples_idx)
                 new_feats_byclass = []
                 new_targets_byclass = []
                 for i, annotation_cls in enumerate(list(examples_idx.keys())):
-                    # st.write(i, annotation_cls)
                     submitted_feats = []
                     submitted_targets = []
+                    for j in range(len(examples_idx[annotation_cls])):
+                        start_idx = examples_idx[annotation_cls][j][0]
+                        stop_idx = examples_idx[annotation_cls][j][1]
 
-                    for j, submitted in enumerate([refinements[annotation_cls][i]['submitted']
-                                      for i in range(len(refinements[annotation_cls]))]):
-                        if submitted == True:
-                            submitted_feats.append(features[examples_idx[annotation_cls]][j, :])
-                            submitted_targets.append(i*np.ones(1, ))
+
+                        submitted_feats.append(features[start_idx:stop_idx, :])
+                        submitted_targets.append(i*np.ones(stop_idx-start_idx, ))
+
+                    # for j, submitted in enumerate([refinements[annotation_cls][i]['submitted']
+                    #                   for i in range(len(refinements[annotation_cls]))]):
+                    #     if submitted == True:
+                    #         submitted_feats.append(features[examples_idx[annotation_cls]][j, :])
+                    #         submitted_targets.append(i*np.ones(1, ))
 
                     try:
                         # st.write('hi')
@@ -85,7 +91,7 @@ def main(ri=None, config=None):
                 new_targets_dir.append(np.hstack(new_targets_byclass))
             new_features = np.vstack(new_features_dir)
             new_targets = np.hstack(new_targets_dir)
-            # st.write(new_features.shape, new_targets.shape)
+            st.write(new_features.shape, new_targets.shape)
         except:
             pass
 
