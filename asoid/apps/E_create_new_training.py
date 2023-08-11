@@ -51,7 +51,7 @@ def main(ri=None, config=None):
         refined_vid_dirs = [d for d in os.listdir(os.path.join(project_dir, iter_folder))
                             if os.path.isdir(os.path.join(project_dir, iter_folder, d))]
         selected_refine_dirs = ri.multiselect('Select Refinement', refined_vid_dirs, refined_vid_dirs)
-        # st.write(selected_refine_dirs)
+
         try:
             new_features_dir = []
             new_targets_dir = []
@@ -62,46 +62,25 @@ def main(ri=None, config=None):
                  examples_idx,
                  refinements] = load_refinement(
                     os.path.join(project_dir, iter_folder), selected_refine_dir)
-                # st.write(refinements, examples_idx)
+                st.write(refinements, examples_idx)
                 new_feats_byclass = []
                 new_targets_byclass = []
                 for i, annotation_cls in enumerate(annotation_classes):
-                    # st.write(i, annotation_cls)
                     submitted_feats = []
                     submitted_targets = []
-                    # st.write(examples_idx[annotation_cls])
-
                     for j in range(len(examples_idx[annotation_cls])):
                         refined_behaviors = [refinements[annotation_cls][j]['Behavior'][k]
                                                   for k in range(
                             len(refinements[annotation_cls][j]['Behavior']))]
-                        # [annotation_classes.index(refined_behaviors[k])
-                        #           for k in range(len(refined_behaviors))]
-                        # st.write(refinements[annotation_cls][j]['Behavior'][0])
-                        # st.write([annotation_classes.index(refinements[annotation_cls][j]['Behavior'][k]
-                        #                                    for k in range(
-                        #     len(refinements[annotation_cls][j]['Behavior'])))])
                         start_idx = examples_idx[annotation_cls][j][0]
                         stop_idx = examples_idx[annotation_cls][j][1]
-                        # st.write(predict[start_idx:stop_idx])
-
 
                         submitted_feats.append(features[start_idx:stop_idx, :])
                         submitted_targets.append([annotation_classes.index(refined_behaviors[k])
                                                   for k in range(len(refined_behaviors))])
-                        # st.write(submitted_targets[-1])
-
-                    # for j, submitted in enumerate([refinements[annotation_cls][i]['submitted']
-                    #                   for i in range(len(refinements[annotation_cls]))]):
-                    #     if submitted == True:
-                    #         submitted_feats.append(features[examples_idx[annotation_cls]][j, :])
-                    #         submitted_targets.append(i*np.ones(1, ))
-
                     try:
-                        # st.write('hi')
                         new_feats_byclass.append(np.vstack(submitted_feats))
                         new_targets_byclass.append(np.hstack(submitted_targets))
-                        # st.write(np.hstack(submitted_targets))
                     except:
                         pass
                 new_features_dir.append(np.vstack(new_feats_byclass))
@@ -109,7 +88,6 @@ def main(ri=None, config=None):
             new_features = np.vstack(new_features_dir)
             new_targets = np.hstack(new_targets_dir)
             # st.write(new_features.shape, new_targets.shape)
-            # st.write(new_targets)
         except:
             pass
 
