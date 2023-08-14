@@ -32,7 +32,9 @@ def create_new_training_features_targets(project_dir, selected_iter, new_feature
         )
     }
     st.session_state['config'] = update_config(project_dir, updated_params=parameters_dict)
-    st.success(f'Included new training data into :orange[ITERATION {selected_iter+1}]. Updated config.')
+    st.success(f'Included new training data ({new_targets.shape[0]} samples) into '
+               f':orange[ITERATION {selected_iter+1}]. '
+               f'Updated config.')
     st.balloons()
 
 
@@ -62,7 +64,7 @@ def main(ri=None, config=None):
                  examples_idx,
                  refinements] = load_refinement(
                     os.path.join(project_dir, iter_folder), selected_refine_dir)
-                st.write(refinements, examples_idx)
+                # st.write(refinements, examples_idx)
                 new_feats_byclass = []
                 new_targets_byclass = []
                 for i, annotation_cls in enumerate(annotation_classes):
@@ -87,7 +89,6 @@ def main(ri=None, config=None):
                 new_targets_dir.append(np.hstack(new_targets_byclass))
             new_features = np.vstack(new_features_dir)
             new_targets = np.hstack(new_targets_dir)
-            # st.write(new_features.shape, new_targets.shape)
         except:
             pass
 

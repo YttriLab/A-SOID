@@ -20,15 +20,8 @@ from utils.load_workspace import load_new_pose, load_iterX
 TITLE = "Predict behaviors"
 
 
-def pie_predict(predict, iter_folder, annotation_classes, placeholder):
+def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder):
     behavior_classes = np.arange(len(annotation_classes))
-    # plot_col = placeholder.columns([, 1])
-    # option_col.write('')
-    # option_col.write('')
-    # option_col.write('')
-    # option_col.write('')
-    # option_col.write('')
-    # option_col.write('')
     plot_col_top = placeholder.empty()
     option_expander = placeholder.expander("Configure Plot")
     behavior_colors = {k: [] for k in behavior_classes}
@@ -46,10 +39,7 @@ def pie_predict(predict, iter_folder, annotation_classes, placeholder):
                                                               all_c_options,
                                                               index=all_c_options.index(default_colors[i]),
                                                               key=f'color_option{i}')
-
-    # behavior_classes = st.session_state['classifier'].classes_
-
-    # predict = []
+    predict = np.load(predict_npy, allow_pickle=True)
     # TODO: find a color workaround if a class is missing
     # for f in range(len(st.session_state['features'][condition])):
     #     predict.append(st.session_state['classifier'].predict(st.session_state['features'][condition][f]))
@@ -261,23 +251,21 @@ def predict_annotate_video(iterX_model, framerate, frames2integ,
             # using feature scaling from training set
             feats, _ = feature_extraction([data], 1, frames2integ)
             features.append(feats)
-            # st.write(features)
 
         for i in stqdm(range(len(features)), desc="Behavior prediction from spatiotemporal features"):
             with st.spinner('Predicting behavior from features...'):
                 predict = bsoid_predict_numba_noscale([features[i]], iterX_model)
                 pred_proba = bsoid_predict_proba_numba_noscale([features[i]], iterX_model)
                 predict_arr = np.array(predict).flatten()
-        # try:
+
         with st.spinner('Creating annotated video'):
             predictions_match = create_annotated_videos(predict_arr, pred_proba[0],
                                                         framerate, frames2integ, annotation_classes,
                                                         frame_dir, videos_dir, iter_folder)
             st.balloons()
             message_box.success('Done. Type "R" to refresh.')
-        # except:
-        #     st.info('Terminated early. Type "R" to refresh.')
-
+        np.save(st.session_state['new_annotated_vid_path'][iter_folder].replace('mp4', 'npy'),
+                predictions_match)
     return features[0], predict_arr, predictions_match
 
 
@@ -304,7 +292,16 @@ def main(ri=None, config=None):
         videos_dir = os.path.join(project_dir, 'videos')
         os.makedirs(videos_dir, exist_ok=True)
         frames2integ = round(float(framerate) * (duration_min / 0.1))
-        # st.write(st.session_state)
+        annotated_vids = [d for d in os.listdir(videos_dir)
+                          if d.endswith(str.join('', (iter_folder, '.mp4')))]
+        annotated_vids.extend(['Add New Video'])
+
+        selected_annot_video = ri.radio('Select Annotated Video', annotated_vids, horizontal=True)
+        if selected_annot_video != 'Add New Video':
+            annot_vid_path = os.path.join(videos_dir, selected_annot_video)
+        else:
+            annot_vid_path = 'Add New Video'
+
         if software == 'CALMS21 (PAPER)':
             ROOT = Path(__file__).parent.parent.parent.resolve()
             targets_test_csv = os.path.join(ROOT.joinpath("test"), './test_labels.csv')
@@ -342,55 +339,43 @@ def main(ri=None, config=None):
                 st.session_state['new_predict_match'][iter_folder] = None
                 st.session_state['new_annotated_vid_path'][iter_folder] = None
             st.session_state['disabled'] = False
-            # st.session_state
 
-            frame_dir = prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
-                                     framerate, videos_dir, project_dir, iter_folder)
+            if annot_vid_path == 'Add New Video':
+                frame_dir = prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
+                                         framerate, videos_dir, project_dir, iter_folder)
 
-            if st.session_state['video'] is not None and len(st.session_state['uploaded_pose']) > 0:
-                if os.path.exists(os.path.join(videos_dir, st.session_state['video'].name)):
-                    temporary_location = str(os.path.join(videos_dir, st.session_state['video'].name))
-                else:
-                    g = io.BytesIO(st.session_state['video'].read())  # BytesIO Object
-                    temporary_location = str(os.path.join(videos_dir, st.session_state['video'].name))
-                    with open(temporary_location, 'wb') as out:  # Open temporary file as bytes
-                        out.write(g.read())  # Read bytes into file
-                    out.close()
-
-                if os.path.exists(frame_dir):
-                    framedir_ = os.listdir(frame_dir)
-                    if len(framedir_) < 2:
-                        frame_extraction(video_file=temporary_location, frame_dir=frame_dir)
+                if st.session_state['video'] is not None and len(st.session_state['uploaded_pose']) > 0:
+                    if os.path.exists(os.path.join(videos_dir, st.session_state['video'].name)):
+                        temporary_location = str(os.path.join(videos_dir, st.session_state['video'].name))
                     else:
-                        if st.session_state['new_annotated_vid_path'][iter_folder] is None:
+                        g = io.BytesIO(st.session_state['video'].read())  # BytesIO Object
+                        temporary_location = str(os.path.join(videos_dir, st.session_state['video'].name))
+                        with open(temporary_location, 'wb') as out:  # Open temporary file as bytes
+                            out.write(g.read())  # Read bytes into file
+                        out.close()
 
+                    if os.path.exists(frame_dir):
+                        framedir_ = os.listdir(frame_dir)
+                        if len(framedir_) < 2:
+                            frame_extraction(video_file=temporary_location, frame_dir=frame_dir)
+                        else:
                             [iterX_model, _, _, _, _, _] = load_iterX(project_dir, iter_folder)
                             st.info(f'loaded {iter_folder} model')
-
                             st.session_state['new_features'][iter_folder], \
                                 st.session_state['new_predict'][iter_folder], \
                                 st.session_state['new_predict_match'][iter_folder] = \
                                 predict_annotate_video(iterX_model, framerate, frames2integ,
                                                        annotation_classes,
                                                        frame_dir, videos_dir, iter_folder)
-                        else:
-                            # st.write('hi')
-                            # st.write(st.session_state['predict'][80:100],
-                            #          st.session_state['predict_match'][240:300])
-                            # st.write(np.repeat(st.session_state['predict'][80:100], 6))
-                            placeholder = st.empty()
-                            video_col, summary_col = st.columns([2, 1.5])
-                            pie_predict(st.session_state['new_predict_match'][iter_folder],
-                                        iter_folder,
-                                        annotation_classes,
-                                        summary_col)
-                            # st.write(np.unique(st.session_state['predict'][iter_folder], return_counts=True))
-                            video_col.video(st.session_state['new_annotated_vid_path'][iter_folder])
-
-
-
-
-
+            else:
+                video_col, summary_col = st.columns([2, 1.5])
+                # display behavioral pie chart
+                pie_predict(annot_vid_path.replace('mp4', 'npy'),
+                            iter_folder,
+                            annotation_classes,
+                            summary_col)
+                # display video from video path
+                video_col.video(annot_vid_path)
 
 
     else:

@@ -710,7 +710,7 @@ def main(ri=None, config=None):
                 st.session_state['output_fps'] = None
             if 'examples_idx' not in st.session_state:
                 st.session_state['examples_idx'] = None
-            st.write(st.session_state)
+            # st.write(st.session_state)
             if st.session_state['selected_refine'] == 'Add New Video' or \
                     len(os.listdir(os.path.join(project_dir, iter_folder, st.session_state['selected_refine']))) < 3:
                 st.session_state['disabled'] = False
@@ -783,7 +783,7 @@ def main(ri=None, config=None):
                                                ])
 
                                 else:
-                                    st.write('hi')
+                                    # st.write('hi')
                                     behav_choice = st.selectbox("Select the behavior: ", annotation_classes,
                                                                 index=int(0),
                                                                 key="behavior_choice")
@@ -1085,7 +1085,7 @@ def main(ri=None, config=None):
                                     st.session_state['refined'][behav_choice][i] = edited_df
                             except:
                                 st.warning('no video'.upper())
-                    st.write(st.session_state['refined'])
+                    # st.write(st.session_state['refined'])
                     # df = pd.DataFrame(st.session_state['refinements'][behav_choice])
                     # selection_output.dataframe(df)
                     # st.write(st.session_state['refinements'][behav_choice][0]["choice"])
