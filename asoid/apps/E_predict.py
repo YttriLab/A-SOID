@@ -21,7 +21,6 @@ from sklearn.preprocessing import LabelEncoder
 from utils.import_data import load_labels_auto
 import datetime
 
-
 TITLE = "Predict behaviors"
 
 
@@ -133,10 +132,12 @@ def ethogram_plot(predict_npy, iter_folder, annotation_classes, exclude_other,
             xaxis=dict(
                 title='Time (s)',
                 tickmode='array',
-                tickvals=np.arange(0, length_ + 1, (length_ + 1)/5),
+                tickvals=np.arange(0, length_ + 1, (length_ + 1) / 5),
                 ticktext=np.round(np.arange(np.round(rand_start / framerate, 1),
-                                   np.round((rand_start + length_ + 1) / framerate, 1),
-                                   np.round(((rand_start + length_ + 1) / framerate - rand_start / framerate)/5, 1)), 1)
+                                            np.round((rand_start + length_ + 1) / framerate, 1),
+                                            np.round(
+                                                ((rand_start + length_ + 1) / framerate - rand_start / framerate) / 5,
+                                                1)), 1)
             )
         )
         fig['layout']['yaxis']['autorange'] = "reversed"
@@ -157,10 +158,10 @@ def ethogram_plot(predict_npy, iter_folder, annotation_classes, exclude_other,
             xaxis=dict(
                 title='Time (s)',
                 tickmode='array',
-                tickvals=np.arange(0, length_ + 1, (length_ + 1)/5),
+                tickvals=np.arange(0, length_ + 1, (length_ + 1) / 5),
                 ticktext=np.round(np.arange(0,
-                           np.round(length_ + 1 / framerate, 1),
-                           np.round(((length_ + 1) / framerate) / 5, 1)), 1)
+                                            np.round(length_ + 1 / framerate, 1),
+                                            np.round(((length_ + 1) / framerate) / 5, 1)), 1)
             )
         )
         fig['layout']['yaxis']['autorange'] = "reversed"
@@ -310,7 +311,7 @@ def create_annotated_videos(prediction, prob,
     video_prefix = st.session_state['video'].name.rpartition(video_type)[0]
     annotated_vid_str = str.join('', ('_annotated_', iter_folder))
     annotated_vid_name = str.join('', (video_prefix, annotated_vid_str, video_type))
-    st.session_state['new_annotated_vid_path'][iter_folder] = os.path.join(videos_dir, annotated_vid_name)
+    vidpath_out = os.path.join(videos_dir, annotated_vid_name)
     if video_checkbox:
         for j in stqdm(range(len(images)), desc=f'Annotating {st.session_state["video"].name}'):
             image = images[j]
@@ -324,14 +325,13 @@ def create_annotated_videos(prediction, prob,
                         lineType)
             new_images.append(rgb_im)
 
-
-        video = cv2.VideoWriter(st.session_state['new_annotated_vid_path'][iter_folder],
+        video = cv2.VideoWriter(vidpath_out,
                                 fourcc, framerate, (width, height))
         for j, image in enumerate(new_images):
             video.write(image)
         cv2.destroyAllWindows()
         video.release()
-    return predictions_match
+    return predictions_match, vidpath_out
 
 
 def predict_annotate_video(iterX_model, framerate, frames2integ,
@@ -362,14 +362,14 @@ def predict_annotate_video(iterX_model, framerate, frames2integ,
                 predict_arr = np.array(predict).flatten()
 
         with st.spinner('Matching video frames'):
-            predictions_match = create_annotated_videos(predict_arr, pred_proba[0],
-                                                        framerate, frames2integ, annotation_classes,
-                                                        frame_dir, videos_dir, iter_folder, video_checkbox)
+            predictions_match, vidpath_out = create_annotated_videos(predict_arr, pred_proba[0],
+                                                                     framerate, frames2integ, annotation_classes,
+                                                                     frame_dir, videos_dir, iter_folder, video_checkbox)
             st.balloons()
             message_box.success('Done. Type "R" to refresh.')
-        np.save(st.session_state['new_annotated_vid_path'][iter_folder].replace('mp4', 'npy'),
+        np.save(vidpath_out.replace('mp4', 'npy'),
                 predictions_match)
-    return features[0], predict_arr, predictions_match
+    return
 
 
 def save_predictions(predict_npy, source_file_name, annotation_classes, framerate):
@@ -407,7 +407,7 @@ def convert_dummies_to_labels(labels, annotation_classes):
     conv_labels = pd.from_dummies(labels)
     cat_df = pd.DataFrame(conv_labels.values, columns=["labels"])
     if annotation_classes is not None:
-        cat_df["labels"] = pd.Categorical(cat_df["labels"] , ordered=True, categories=annotation_classes)
+        cat_df["labels"] = pd.Categorical(cat_df["labels"], ordered=True, categories=annotation_classes)
     else:
         cat_df["labels"] = pd.Categorical(cat_df["labels"], ordered=True, categories=cat_df["labels"].unique())
     cat_df["codes"] = cat_df["labels"].cat.codes
@@ -456,7 +456,7 @@ def describe_labels_single(df_label, framerate, placeholder):
 
     count_df = df_label.value_counts().to_frame().reset_index().rename(columns={0: "frame count"})
     # heatmap already shows this information
-    #count_df["percentage"] = count_df["frame count"] / count_df["frame count"].sum() *100
+    # count_df["percentage"] = count_df["frame count"] / count_df["frame count"].sum() *100
 
     if framerate is not None:
         count_df["total duration"] = count_df["frame count"] / framerate
@@ -466,7 +466,7 @@ def describe_labels_single(df_label, framerate, placeholder):
 
     count_df.set_index("codes", inplace=True)
     count_df.sort_index(inplace=True)
-    #rename all columns to include their units
+    # rename all columns to include their units
     count_df.rename(columns={"bouts": "bouts [-]",
                              "frame count": "frame count [-]",
                              "total duration": "total duration [hh:mm:ss]",
@@ -474,7 +474,7 @@ def describe_labels_single(df_label, framerate, placeholder):
 
                              },
                     inplace=True)
-    #TODO: autosize columns with newer streamlit versions (e.g., using use_container_width=True)
+    # TODO: autosize columns with newer streamlit versions (e.g., using use_container_width=True)
     placeholder.dataframe(count_df, hide_index=True)
 
 
@@ -547,12 +547,9 @@ def main(ri=None, config=None):
                         else:
                             [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
                             st.info(f'loaded {iter_folder} model')
-                            st.session_state['new_features'][iter_folder], \
-                                st.session_state['new_predict'][iter_folder], \
-                                st.session_state['new_predict_match'][iter_folder] = \
-                                predict_annotate_video(iterX_model, framerate, frames2integ,
-                                                       annotation_classes,
-                                                       frame_dir, videos_dir, iter_folder)
+                            predict_annotate_video(iterX_model, framerate, frames2integ,
+                                                   annotation_classes,
+                                                   frame_dir, videos_dir, iter_folder)
             else:
                 video_col, summary_col = st.columns([2, 1.5])
                 # display behavioral pie chart
