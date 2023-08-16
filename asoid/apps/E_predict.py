@@ -129,14 +129,17 @@ def ethogram_plot(predict_npy, iter_folder, annotation_classes, exclude_other,
                                         colorscale=[css_cmap[int(i)] for i in unique_id],
                                         showscale=False
                                         ))
+        # st.write(np.round(rand_start / framerate, 1))
+        # st.write(np.round((rand_start + length_ + 1) / framerate, 1))
+        # st.write(np.round(((rand_start + length_ + 1) / framerate - rand_start / framerate)/5, 1))
         fig.update_layout(
             xaxis=dict(
                 title='Time (s)',
                 tickmode='array',
-                tickvals=np.arange(0, length_ + 1, framerate),
-                ticktext=np.arange(np.round(rand_start / framerate, 1),
+                tickvals=np.arange(0, length_ + 1, (length_ + 1)/5),
+                ticktext=np.round(np.arange(np.round(rand_start / framerate, 1),
                                    np.round((rand_start + length_ + 1) / framerate, 1),
-                                   1)
+                                   np.round(((rand_start + length_ + 1) / framerate - rand_start / framerate)/5, 1)), 1)
             )
         )
         fig['layout']['yaxis']['autorange'] = "reversed"
@@ -156,8 +159,10 @@ def ethogram_plot(predict_npy, iter_folder, annotation_classes, exclude_other,
             xaxis=dict(
                 title='Time (s)',
                 tickmode='array',
-                tickvals=np.arange(0, length_ + 1, framerate),
-                ticktext=np.arange(0, np.round(length_ + 1 / framerate, 1), 1)
+                tickvals=np.arange(0, length_ + 1, (length_ + 1)/5),
+                ticktext=np.round(np.arange(0,
+                           np.round(length_ + 1 / framerate, 1),
+                           np.round(((length_ + 1) / framerate) / 5, 1)), 1)
             )
         )
         fig['layout']['yaxis']['autorange'] = "reversed"
