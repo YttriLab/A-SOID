@@ -762,26 +762,29 @@ class RF_Classify:
                    self.iter0_X_train,
                    self.iter0_Y_train,
                    self.iter0_f1_scores,
-                   self.iter0_macro_scores,
-                   self.iter0_predict_prob])
+                   # self.iter0_macro_scores,
+                   self.iter0_predict_prob
+                   ])
 
     def save_all_train_info(self):
         save_data(self.project_dir, self.iter_dir, 'all_train.sav',
                   [self.all_model,
-                   self.all_X_train,
+                   # self.all_X_train,
                    self.all_Y_train,
                    self.all_f1_scores,
-                   self.all_macro_scores,
-                   self.all_predict_prob])
+                   # self.all_macro_scores,
+                   # self.all_predict_prob
+                   ])
 
     def save_final_model_info(self):
         save_data(self.project_dir, self.iter_dir, 'iterX.sav',
                   [self.iterX_model,
-                   self.iterX_X_train_list,
+                   # self.iterX_X_train_list,
                    self.iterX_Y_train_list,
                    self.iterX_f1_scores_list,
-                   self.iterX_macro_scores_list,
-                   self.iterX_predict_prob_list])
+                   # self.iterX_macro_scores_list,
+                   # self.iterX_predict_prob_list
+                   ])
 
     def main(self):
         self.base_classification()

@@ -96,11 +96,11 @@ def main(ri=None, config=None):
             conf_threshold = 0.5
 
         try:
-            [_, _, _, all_f1_scores, _, _] = \
+            [_, _, all_f1_scores] = \
                 load_all_train(project_dir, iter_folder)
-            [_, _, iter0_Y_train, iter0_f1_scores, _, _] = \
+            [_, _, iter0_Y_train, iter0_f1_scores, _] = \
                 load_iter0(project_dir, iter_folder)
-            [_, _, iterX_Y_train_list, iterX_f1_scores, _, _] = \
+            [_, iterX_Y_train_list, iterX_f1_scores] = \
                 load_iterX(project_dir, iter_folder)
             if st.checkbox('Show final results', key='sr', value=True, help=SHOW_FINAL_RESULTS_HELP):
                 show_classifier_results(annotation_classes, all_f1_scores,

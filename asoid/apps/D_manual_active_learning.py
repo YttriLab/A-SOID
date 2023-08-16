@@ -752,7 +752,7 @@ def main(ri=None, config=None):
                                 viddir_ = os.listdir(shortvid_dir)
                                 if len(viddir_) < 3:
                                     frames2integ = round(float(framerate) * (duration_min / 0.1))
-                                    [iterX_model, _, _, _, _, _] = load_iterX(project_dir, iter_folder)
+                                    [iterX_model, _, _,] = load_iterX(project_dir, iter_folder)
 
                                     st.session_state['features'], st.session_state['predict'], \
                                         st.session_state['examples_idx'] = \

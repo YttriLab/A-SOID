@@ -16,29 +16,33 @@ from stqdm import stqdm
 from utils.extract_features import feature_extraction, \
     bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
 from utils.load_workspace import load_new_pose, load_iterX
+from utils.view_results import Viewer
+from sklearn.preprocessing import LabelEncoder
+from utils.import_data import load_labels_auto
+import datetime
+
 
 TITLE = "Predict behaviors"
 
 
 def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder):
-    behavior_classes = np.arange(len(annotation_classes))
     plot_col_top = placeholder.empty()
     option_expander = placeholder.expander("Configure Plot")
-    behavior_colors = {k: [] for k in behavior_classes}
+    behavior_colors = {k: [] for k in annotation_classes}
     all_c_options = list(mcolors.CSS4_COLORS.keys())
 
     if len(annotation_classes) == 4:
         default_colors = ["red", "darkorange", "dodgerblue", "gray"]
     else:
         np.random.seed(42)
-        selected_idx = np.random.choice(np.arange(len(all_c_options)), len(behavior_classes), replace=False)
+        selected_idx = np.random.choice(np.arange(len(all_c_options)), len(annotation_classes), replace=False)
         default_colors = [all_c_options[s] for s in selected_idx]
 
-    for i, class_id in enumerate(behavior_classes):
-        behavior_colors[class_id] = option_expander.selectbox(f'Color for {annotation_classes[i]}',
-                                                              all_c_options,
-                                                              index=all_c_options.index(default_colors[i]),
-                                                              key=f'color_option{i}')
+    for i, class_name in enumerate(annotation_classes):
+        behavior_colors[class_name] = option_expander.selectbox(f'Color for {class_name}',
+                                                                all_c_options,
+                                                                index=all_c_options.index(default_colors[i]),
+                                                                key=f'color_option{i}')
     predict = np.load(predict_npy, allow_pickle=True)
     # TODO: find a color workaround if a class is missing
     # for f in range(len(st.session_state['features'][condition])):
@@ -48,25 +52,117 @@ def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder):
     df_raw = pd.DataFrame(data=predict_dict)
     labels = df_raw['behavior'].value_counts(sort=False).index
     values = df_raw['behavior'].value_counts(sort=False).values
+
     # summary dataframe
     df = pd.DataFrame()
-    # do i need this?
+    # I need this just in case there is a missing behavior
     behavior_labels = []
     for l in labels:
-        behavior_labels.append(behavior_classes[int(l)])
+        behavior_labels.append(annotation_classes[int(l)])
+
     df["values"] = values
     df['labels'] = behavior_labels
     df["colors"] = df["labels"].apply(lambda x:
                                       behavior_colors.get(x))  # to connect Column value to Color in Dict
+
     with plot_col_top:
         fig = go.Figure(
-            data=[go.Pie(labels=[annotation_classes[int(i)] for i in df["labels"]], values=df["values"], hole=.4)])
+            data=[go.Pie(labels=df["labels"], values=df["values"], hole=.4)])
         fig.update_traces(hoverinfo='label+percent',
                           textinfo='value',
                           textfont_size=16,
                           marker=dict(colors=df["colors"],
                                       line=dict(color='#000000', width=1)))
         st.plotly_chart(fig, use_container_width=True)
+
+    return behavior_colors
+
+
+def ethogram_plot(predict_npy, iter_folder, annotation_classes, exclude_other,
+                  behavior_colors, framerate, placeholder2):
+    plot_col_top = placeholder2.empty()
+    predict = np.load(predict_npy, allow_pickle=True)
+    annotation_classes_ex = annotation_classes.copy()
+    colors_classes = list(behavior_colors.values()).copy()
+
+    if exclude_other:
+        annotation_classes_ex.pop(annotation_classes_ex.index('other'))
+        colors_classes.pop(annotation_classes.index('other'))
+    # st.write(colors_classes)
+    prefill_array = np.zeros((len(predict),
+                              len(annotation_classes_ex)))
+    default_colors_wht = ['black']
+    # st.write(colors_classes)
+    default_colors_wht.extend(colors_classes)
+    # st.write(default_colors_wht)
+    # default_colors_wht.extend(['black'])
+
+    css_cmap = [mcolors.CSS4_COLORS[default_colors_wht[j]] for j in range(len(default_colors_wht))]
+    # st.write(css_cmap)
+    count = 0
+    for b in range(len(annotation_classes_ex)):
+        # print(b)
+        idx_b = np.where(predict == b)[0]
+        prefill_array[idx_b, count] = b + 1
+        count += 1
+
+    seed_num = placeholder2.number_input('seed for segment',
+                                         min_value=0, max_value=None, value=42,
+                                         key=f'rand_seed')
+    # np.random.seed(seed_num)
+    length_ = placeholder2.slider('number of frames',
+                                  min_value=25, max_value=len(predict),
+                                  value=int(len(predict) / 20),
+                                  key=f'length_slider')
+
+    if placeholder2.checkbox('use randomized time',
+                             value=True,
+                             key=f'randtime_ckbx'):
+        np.random.seed(seed_num)
+        rand_start = np.random.choice(prefill_array.shape[0] - length_, 1, replace=False)
+        unique_id = np.unique(prefill_array[int(rand_start):int(rand_start + length_), :])
+        le = LabelEncoder()
+        relabeled_1d = le.fit_transform(prefill_array[int(rand_start):int(rand_start + length_), :].ravel())
+        relabeled_2d = relabeled_1d.reshape(int(rand_start + length_) - int(rand_start), -1)
+        fig = go.Figure(data=go.Heatmap(z=relabeled_2d.T,
+                                        y=annotation_classes_ex,
+                                        colorscale=[css_cmap[int(i)] for i in unique_id],
+                                        showscale=False
+                                        ))
+        fig.update_layout(
+            xaxis=dict(
+                title='Time (s)',
+                tickmode='array',
+                tickvals=np.arange(0, length_ + 1, framerate),
+                ticktext=np.arange(np.round(rand_start / framerate, 1),
+                                   np.round((rand_start + length_ + 1) / framerate, 1),
+                                   1)
+            )
+        )
+        fig['layout']['yaxis']['autorange'] = "reversed"
+    else:
+        rand_start = 0
+        unique_id = np.unique(prefill_array[int(rand_start):int(rand_start + length_), :])
+        le = LabelEncoder()
+        relabeled_1d = le.fit_transform(prefill_array[int(rand_start):int(rand_start + length_), :].ravel())
+        relabeled_2d = relabeled_1d.reshape(int(rand_start + length_) - int(rand_start), -1)
+        fig = go.Figure(data=go.Heatmap(z=relabeled_2d.T,
+                                        y=annotation_classes_ex,
+                                        colorscale=[css_cmap[int(i)] for i in unique_id],
+                                        showscale=False
+                                        ))
+
+        fig.update_layout(
+            xaxis=dict(
+                title='Time (s)',
+                tickmode='array',
+                tickvals=np.arange(0, length_ + 1, framerate),
+                ticktext=np.arange(0, np.round(length_ + 1 / framerate, 1), 1)
+            )
+        )
+        fig['layout']['yaxis']['autorange'] = "reversed"
+
+    plot_col_top.plotly_chart(fig, use_container_width=True)
 
 
 def disable():
@@ -269,6 +365,112 @@ def predict_annotate_video(iterX_model, framerate, frames2integ,
     return features[0], predict_arr, predictions_match
 
 
+def save_predictions(predict_npy, source_file_name, annotation_classes, framerate):
+    """takes numerical labels and transforms back into one-hot encoded file (BORIS style). Saves as csv"""
+    predict = np.load(predict_npy, allow_pickle=True)
+
+    df = pd.DataFrame(predict, columns=["labels"])
+    time_clm = np.round(np.arange(0, df.shape[0]) / framerate, 2)
+    # convert numbers into behavior names
+    class_dict = {i: x for i, x in enumerate(annotation_classes)}
+    df["classes"] = df["labels"].copy()
+    for cl_idx, cl_name in class_dict.items():
+        df["classes"].iloc[df["labels"] == cl_idx] = cl_name
+
+    # for simplicity let's convert this back into BORIS type file
+    dummy_df = pd.get_dummies(df["classes"])
+    # add 0 columns for each class that wasn't predicted in the file
+    not_predicted_classes = [x for x in annotation_classes if x not in np.unique(df["classes"].values)]
+    for not_predicted_class in not_predicted_classes:
+        dummy_df[not_predicted_class] = 0
+
+    dummy_df["time"] = time_clm
+    dummy_df = dummy_df.set_index("time")
+
+    # save to csv
+    dummy_df.to_csv(source_file_name)
+
+
+def convert_dummies_to_labels(labels, annotation_classes):
+    """
+    This function converts dummy variables to labels
+    :param labels: pandas dataframe with dummy variables
+    :return: pandas dataframe with labels and codes
+    """
+    conv_labels = pd.from_dummies(labels)
+    cat_df = pd.DataFrame(conv_labels.values, columns=["labels"])
+    if annotation_classes is not None:
+        cat_df["labels"] = pd.Categorical(cat_df["labels"] , ordered=True, categories=annotation_classes)
+    else:
+        cat_df["labels"] = pd.Categorical(cat_df["labels"], ordered=True, categories=cat_df["labels"].unique())
+    cat_df["codes"] = cat_df["labels"].cat.codes
+
+    return cat_df
+
+
+def prep_labels_single(labels, annotation_classes):
+    """
+    This function loads the labels from a single file and prepares them for plotting
+    :param labels: pandas dataframe with labels
+    :return: pandas dataframe with labels
+    """
+    labels = labels.drop(columns=["time"], errors="ignore")
+    labels = convert_dummies_to_labels(labels, annotation_classes)
+
+    return labels
+
+
+def count_events(df_label):
+    """ This function counts the number of events for each label in a dataframe"""
+    df_label_cp = df_label.copy()
+    # prepare event counter
+    event_counter = pd.DataFrame(df_label_cp["labels"].unique(), columns=["labels"])
+    event_counter["events"] = 0
+
+    # Count the number of isolated blocks of labels for each unique label
+    # go through each unique label and create a binary column
+    for label in df_label_cp["labels"].unique():
+        df_label_cp[label] = (df_label_cp["labels"] == label)
+        df_label_cp[label].iloc[df_label_cp[label] == False] = np.NaN
+        # go through each unique label and count the number of isolated blocks
+        df_label_cp[f"{label}_block"] = np.where(df_label_cp[label].notnull(),
+                                                 (df_label_cp[label].notnull() & (df_label_cp[label] != df_label_cp[
+                                                     label].shift())).cumsum(),
+                                                 np.nan)
+        event_counter["events"].iloc[event_counter["labels"] == label] = df_label_cp[f"{label}_block"].max()
+
+    return event_counter
+
+
+def describe_labels_single(df_label, framerate, placeholder):
+    """ This function describes the labels in a table"""
+
+    event_counter = count_events(df_label)
+
+    count_df = df_label.value_counts().to_frame().reset_index().rename(columns={0: "frame count"})
+    # heatmap already shows this information
+    #count_df["percentage"] = count_df["frame count"] / count_df["frame count"].sum() *100
+
+    if framerate is not None:
+        count_df["total duration"] = count_df["frame count"] / framerate
+        count_df["total duration"] = count_df["total duration"].apply(lambda x: str(datetime.timedelta(seconds=x)))
+
+    count_df["bouts"] = event_counter["events"]
+
+    count_df.set_index("codes", inplace=True)
+    count_df.sort_index(inplace=True)
+    #rename all columns to include their units
+    count_df.rename(columns={"bouts": "bouts [-]",
+                             "frame count": "frame count [-]",
+                             "total duration": "total duration [hh:mm:ss]",
+                             "percentage": "percentage [%]",
+
+                             },
+                    inplace=True)
+    #TODO: autosize columns with newer streamlit versions (e.g., using use_container_width=True)
+    placeholder.dataframe(count_df, hide_index=True)
+
+
 def main(ri=None, config=None):
     st.markdown("""---""")
 
@@ -280,6 +482,7 @@ def main(ri=None, config=None):
         software = config["Project"].get("PROJECT_TYPE")
         ftype = config["Project"].get("FILE_TYPE")
         selected_bodyparts = [x.strip() for x in config["Project"].get("KEYPOINTS_CHOSEN").split(",")]
+        exclude_other = config["Project"].getboolean("EXCLUDE_OTHER")
         # threshold = config["Processing"].getfloat("SCORE_THRESHOLD")
         threshold = 0.1
         iteration = config["Processing"].getint("ITERATION")
@@ -359,7 +562,7 @@ def main(ri=None, config=None):
                         if len(framedir_) < 2:
                             frame_extraction(video_file=temporary_location, frame_dir=frame_dir)
                         else:
-                            [iterX_model, _, _, _, _, _] = load_iterX(project_dir, iter_folder)
+                            [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
                             st.info(f'loaded {iter_folder} model')
                             st.session_state['new_features'][iter_folder], \
                                 st.session_state['new_predict'][iter_folder], \
@@ -370,13 +573,39 @@ def main(ri=None, config=None):
             else:
                 video_col, summary_col = st.columns([2, 1.5])
                 # display behavioral pie chart
-                pie_predict(annot_vid_path.replace('mp4', 'npy'),
-                            iter_folder,
-                            annotation_classes,
-                            summary_col)
-                # display video from video path
-                video_col.video(annot_vid_path)
+                behavior_colors = pie_predict(annot_vid_path.replace('mp4', 'npy'),
+                                              iter_folder,
+                                              annotation_classes,
+                                              summary_col)
+                ethogram_plot(annot_vid_path.replace('mp4', 'npy'),
+                              iter_folder,
+                              annotation_classes,
+                              exclude_other,
+                              behavior_colors,
+                              framerate,
+                              video_col,
 
+                              )
+                if not os.path.isfile(annot_vid_path.replace('mp4', 'csv')):
+                    save_predictions(annot_vid_path.replace('mp4', 'npy'),
+                                     annot_vid_path.replace('mp4', 'csv'),
+                                     annotation_classes,
+                                     framerate)
+                    st.info(f'Saved ethogram csv as {annot_vid_path.replace("mp4", "csv")}. Type "R" to view in app.')
+
+                else:
+                    labels = load_labels_auto(annot_vid_path.replace('mp4', 'csv'),
+                                              origin="BORIS", fps=framerate)
+                    single_label = prep_labels_single(labels, annotation_classes)
+                    describe_labels_single(single_label, framerate, summary_col)
+                # st.pyplot(fig2)
+                # st.write(prefill_array)
+                # summary_col.pyplot(fig)
+                # display video from video path
+                if annot_vid_path is not None:
+                    video_col.video(annot_vid_path)
+        # viewer = Viewer(config)
+        # viewer.main()
 
     else:
         st.error(NO_CONFIG_HELP)

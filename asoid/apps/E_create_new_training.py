@@ -98,7 +98,7 @@ def main(ri=None, config=None):
                 create_new_training_features_targets(project_dir, selected_iter, new_features, new_targets)
         else:
             try:
-                [_, _, _, _, _, _] = load_iterX(project_dir, iter_folder)
+                [_, _, _] = load_iterX(project_dir, iter_folder)
                 if 'refinements' not in st.session_state:
                     st.markdown(f'Refine some behaviors in :orange[Refine Behaviors]')
                 else:
