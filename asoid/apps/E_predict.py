@@ -116,7 +116,7 @@ def ethogram_plot(predict_npy, iter_folder, annotation_classes, exclude_other,
                                   key=f'length_slider')
 
     if placeholder2.checkbox('use randomized time',
-                             value=True,
+                             value=False,
                              key=f'randtime_ckbx'):
         np.random.seed(seed_num)
         rand_start = np.random.choice(prefill_array.shape[0] - length_, 1, replace=False)
@@ -129,9 +129,6 @@ def ethogram_plot(predict_npy, iter_folder, annotation_classes, exclude_other,
                                         colorscale=[css_cmap[int(i)] for i in unique_id],
                                         showscale=False
                                         ))
-        # st.write(np.round(rand_start / framerate, 1))
-        # st.write(np.round((rand_start + length_ + 1) / framerate, 1))
-        # st.write(np.round(((rand_start + length_ + 1) / framerate - rand_start / framerate)/5, 1))
         fig.update_layout(
             xaxis=dict(
                 title='Time (s)',
@@ -152,7 +149,8 @@ def ethogram_plot(predict_npy, iter_folder, annotation_classes, exclude_other,
         fig = go.Figure(data=go.Heatmap(z=relabeled_2d.T,
                                         y=annotation_classes_ex,
                                         colorscale=[css_cmap[int(i)] for i in unique_id],
-                                        showscale=False
+                                        showscale=False,
+
                                         ))
 
         fig.update_layout(
@@ -292,7 +290,7 @@ def sort_nicely(l):
 
 def create_annotated_videos(prediction, prob,
                             framerate, frames2integ, annotation_classes,
-                            frame_dir, videos_dir, iter_folder):
+                            frame_dir, videos_dir, iter_folder, video_checkbox):
     font = cv2.FONT_HERSHEY_SIMPLEX
     fontScale = 1.25
     fontColor = (0, 0, 255)
@@ -308,29 +306,31 @@ def create_annotated_videos(prediction, prob,
     predictions_match = np.pad(prediction.repeat(repeat_n), (repeat_n, 0), 'edge')[:len(images)]
 
     new_images = []
-    for j in stqdm(range(len(images)), desc=f'Annotating {st.session_state["video"].name}'):
-        image = images[j]
-        rgb_im = cv2.imread(os.path.join(frame_dir, image))
-        cv2.putText(rgb_im, f'{annotation_classes[int(predictions_match[j])]}',
-                    bottomLeftCornerOfText,
-                    font,
-                    fontScale,
-                    fontColor,
-                    thickness_text,
-                    lineType)
-        new_images.append(rgb_im)
     video_type = str.join('', ('.', st.session_state['video'].type.rpartition('video/')[2]))
     video_prefix = st.session_state['video'].name.rpartition(video_type)[0]
     annotated_vid_str = str.join('', ('_annotated_', iter_folder))
     annotated_vid_name = str.join('', (video_prefix, annotated_vid_str, video_type))
     st.session_state['new_annotated_vid_path'][iter_folder] = os.path.join(videos_dir, annotated_vid_name)
+    if video_checkbox:
+        for j in stqdm(range(len(images)), desc=f'Annotating {st.session_state["video"].name}'):
+            image = images[j]
+            rgb_im = cv2.imread(os.path.join(frame_dir, image))
+            cv2.putText(rgb_im, f'{annotation_classes[int(predictions_match[j])]}',
+                        bottomLeftCornerOfText,
+                        font,
+                        fontScale,
+                        fontColor,
+                        thickness_text,
+                        lineType)
+            new_images.append(rgb_im)
 
-    video = cv2.VideoWriter(st.session_state['new_annotated_vid_path'][iter_folder],
-                            fourcc, framerate, (width, height))
-    for j, image in enumerate(new_images):
-        video.write(image)
-    cv2.destroyAllWindows()
-    video.release()
+
+        video = cv2.VideoWriter(st.session_state['new_annotated_vid_path'][iter_folder],
+                                fourcc, framerate, (width, height))
+        for j, image in enumerate(new_images):
+            video.write(image)
+        cv2.destroyAllWindows()
+        video.release()
     return predictions_match
 
 
@@ -340,7 +340,9 @@ def predict_annotate_video(iterX_model, framerate, frames2integ,
     features = [None]
     predict_arr = None
     predictions_match = None
-    action_button = st.button("Create Labeled Video")
+    colL, colR = st.columns(2)
+    video_checkbox = colR.checkbox("Create Labeled Video?")
+    action_button = colL.button('Predict and Generate Summary Statistics')
     message_box = st.empty()
     processed_input_data = st.session_state['uploaded_pose']
     if action_button:
@@ -359,10 +361,10 @@ def predict_annotate_video(iterX_model, framerate, frames2integ,
                 pred_proba = bsoid_predict_proba_numba_noscale([features[i]], iterX_model)
                 predict_arr = np.array(predict).flatten()
 
-        with st.spinner('Creating annotated video'):
+        with st.spinner('Matching video frames'):
             predictions_match = create_annotated_videos(predict_arr, pred_proba[0],
                                                         framerate, frames2integ, annotation_classes,
-                                                        frame_dir, videos_dir, iter_folder)
+                                                        frame_dir, videos_dir, iter_folder, video_checkbox)
             st.balloons()
             message_box.success('Done. Type "R" to refresh.')
         np.save(st.session_state['new_annotated_vid_path'][iter_folder].replace('mp4', 'npy'),
@@ -501,12 +503,13 @@ def main(ri=None, config=None):
         os.makedirs(videos_dir, exist_ok=True)
         frames2integ = round(float(framerate) * (duration_min / 0.1))
         annotated_vids = [d for d in os.listdir(videos_dir)
-                          if d.endswith(str.join('', (iter_folder, '.mp4')))]
+                          if d.endswith(str.join('', (iter_folder, '.npy')))]
         annotated_vids.extend(['Add New Video'])
 
-        selected_annot_video = ri.radio('Select Annotated Video', annotated_vids, horizontal=True)
+        selected_annot_video = ri.radio('Select Video Prediction',
+                                        annotated_vids, horizontal=True)
         if selected_annot_video != 'Add New Video':
-            annot_vid_path = os.path.join(videos_dir, selected_annot_video)
+            annot_vid_path = os.path.join(videos_dir, selected_annot_video.replace('npy', 'mp4'))
         else:
             annot_vid_path = 'Add New Video'
 
@@ -520,32 +523,7 @@ def main(ri=None, config=None):
                 st.session_state['disabled'] = False
             if 'uploaded_pose' not in st.session_state:
                 st.session_state['uploaded_pose'] = []
-            #
-            if 'video_path' not in st.session_state:
-                st.session_state['video_path'] = None
-            if 'new_features' not in st.session_state:
-                st.session_state['new_features'] = None
-            if 'new_predict' not in st.session_state:
-                st.session_state['new_predict'] = None
-            if 'new_predict_match' not in st.session_state:
-                st.session_state['new_predict_match'] = None
-            if 'new_annotated_vid_path' not in st.session_state:
-                st.session_state['new_annotated_vid_path'] = None
 
-            if st.session_state['new_features'] is None:
-                st.session_state['new_features'] = {str.join('', ('iteration-', str(i))): None
-                                                    for i in np.arange(iteration + 1)}
-                st.session_state['new_predict'] = {str.join('', ('iteration-', str(i))): None
-                                                   for i in np.arange(iteration + 1)}
-                st.session_state['new_predict_match'] = {str.join('', ('iteration-', str(i))): None
-                                                         for i in np.arange(iteration + 1)}
-                st.session_state['new_annotated_vid_path'] = {str.join('', ('iteration-', str(i))): None
-                                                              for i in np.arange(iteration + 1)}
-            if iter_folder not in st.session_state['new_annotated_vid_path']:
-                st.session_state['new_features'][iter_folder] = None
-                st.session_state['new_predict'][iter_folder] = None
-                st.session_state['new_predict_match'][iter_folder] = None
-                st.session_state['new_annotated_vid_path'][iter_folder] = None
             st.session_state['disabled'] = False
 
             if annot_vid_path == 'Add New Video':
@@ -603,14 +581,9 @@ def main(ri=None, config=None):
                                               origin="BORIS", fps=framerate)
                     single_label = prep_labels_single(labels, annotation_classes)
                     describe_labels_single(single_label, framerate, summary_col)
-                # st.pyplot(fig2)
-                # st.write(prefill_array)
-                # summary_col.pyplot(fig)
                 # display video from video path
-                if annot_vid_path is not None:
+                if os.path.isfile(annot_vid_path):
                     video_col.video(annot_vid_path)
-        # viewer = Viewer(config)
-        # viewer.main()
 
     else:
         st.error(NO_CONFIG_HELP)

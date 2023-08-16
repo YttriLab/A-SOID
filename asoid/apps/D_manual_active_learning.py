@@ -443,8 +443,10 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
     p_cutoff = None
     num_outliers = 0
     output_fps = None
+    min_n_seconds = 0
     frame_dir = None
     shortvid_dir = None
+
     if software == 'CALMS21 (PAPER)':
         ROOT = Path(__file__).parent.parent.parent.resolve()
         new_pose_sav = os.path.join(ROOT.joinpath("new_test"), './new_pose.sav')
@@ -457,6 +459,7 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
         new_pose_csvs = [ri_exapnder.file_uploader('Upload Corresponding Pose Files',
                                                    accept_multiple_files=False,
                                                    type=ftype, key='pose')]
+
         if new_videos is not None and new_pose_csvs[0] is not None:
             st.session_state['uploaded_vid'] = new_videos
             new_pose_list = []
@@ -548,8 +551,6 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
             st.session_state['uploaded_pose'] = []
             st.session_state['uploaded_vid'] = None
 
-        # except:
-        #     pass
     return outlier_method, p_cutoff, num_outliers, output_fps, min_n_seconds, frame_dir, shortvid_dir
 
 
@@ -710,7 +711,7 @@ def main(ri=None, config=None):
                 st.session_state['output_fps'] = None
             if 'examples_idx' not in st.session_state:
                 st.session_state['examples_idx'] = None
-            # st.write(st.session_state)
+
             if st.session_state['selected_refine'] == 'Add New Video' or \
                     len(os.listdir(os.path.join(project_dir, iter_folder, st.session_state['selected_refine']))) < 3:
                 st.session_state['disabled'] = False
@@ -783,7 +784,6 @@ def main(ri=None, config=None):
                                                ])
 
                                 else:
-                                    # st.write('hi')
                                     behav_choice = st.selectbox("Select the behavior: ", annotation_classes,
                                                                 index=int(0),
                                                                 key="behavior_choice")
