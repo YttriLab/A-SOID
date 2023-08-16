@@ -72,7 +72,15 @@ def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder):
                           textfont_size=16,
                           marker=dict(colors=df["colors"],
                                       line=dict(color='#000000', width=1)))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config={
+        'toImageButtonOptions': {
+            'format': 'png',  # one of png, svg, jpeg, webp
+            'filename': f'{predict_npy.rpartition("/")[2].replace(".npy", "_duration_pie")}',
+            'height': 600,
+            'width': 600,
+            'scale': 3  # Multiply title/legend/axis/canvas sizes by this factor
+        }
+    })
 
     return behavior_colors
 
@@ -155,6 +163,9 @@ def ethogram_plot(predict_npy, iter_folder, annotation_classes, exclude_other,
                                         ))
 
         fig.update_layout(
+            # yaxis={
+            #     "tickangle": -30,
+            # },
             xaxis=dict(
                 title='Time (s)',
                 tickmode='array',
@@ -166,7 +177,15 @@ def ethogram_plot(predict_npy, iter_folder, annotation_classes, exclude_other,
         )
         fig['layout']['yaxis']['autorange'] = "reversed"
 
-    plot_col_top.plotly_chart(fig, use_container_width=True)
+    plot_col_top.plotly_chart(fig, use_container_width=True, config={
+        'toImageButtonOptions': {
+            'format': 'png',  # one of png, svg, jpeg, webp
+            'filename': f'{predict_npy.rpartition("/")[2].replace(".npy", "_ethogram")}',
+            'height': 720,
+            'width': 1280,
+            'scale': 3  # Multiply title/legend/axis/canvas sizes by this factor
+        }
+    })
 
 
 def disable():
