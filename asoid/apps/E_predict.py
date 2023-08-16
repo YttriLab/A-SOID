@@ -24,24 +24,58 @@ import datetime
 TITLE = "Predict behaviors"
 
 
-def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder):
+def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder, top_most_container):
     plot_col_top = placeholder.empty()
-    option_expander = placeholder.expander("Configure Plot")
     behavior_colors = {k: [] for k in annotation_classes}
     all_c_options = list(mcolors.CSS4_COLORS.keys())
-
-    if len(annotation_classes) == 4:
-        default_colors = ["red", "darkorange", "dodgerblue", "gray"]
-    else:
-        np.random.seed(42)
-        selected_idx = np.random.choice(np.arange(len(all_c_options)), len(annotation_classes), replace=False)
-        default_colors = [all_c_options[s] for s in selected_idx]
+    np.random.seed(42)
+    selected_idx = np.random.choice(np.arange(len(all_c_options)), len(annotation_classes), replace=False)
+    default_colors = [all_c_options[s] for s in selected_idx]
+    option_expander = top_most_container.expander("Configure Plot")
+    col1, col2, col3, col4 = option_expander.columns(4)
 
     for i, class_name in enumerate(annotation_classes):
-        behavior_colors[class_name] = option_expander.selectbox(f'Color for {class_name}',
-                                                                all_c_options,
-                                                                index=all_c_options.index(default_colors[i]),
-                                                                key=f'color_option{i}')
+        if i % 4 == 0:
+            behavior_colors[class_name] = col1.selectbox(f'select color for {class_name}',
+                                                       all_c_options,
+                                                       index=all_c_options.index(default_colors[i]),
+                                                       key=f'color_option{i}'
+                                                       )
+
+        elif i % 4 == 1:
+            behavior_colors[class_name] = col2.selectbox(f'select color for {class_name}',
+                                                       all_c_options,
+                                                       index=all_c_options.index(default_colors[i]),
+                                                       key=f'color_option{i}'
+                                                       )
+        elif i % 4 == 2:
+            behavior_colors[class_name] = col3.selectbox(f'select color for {class_name}',
+                                                       all_c_options,
+                                                       index=all_c_options.index(default_colors[i]),
+                                                       key=f'color_option{i}'
+                                                       )
+        elif i % 4 == 3:
+            behavior_colors[class_name] = col4.selectbox(f'select color for {class_name}',
+                                                       all_c_options,
+                                                       index=all_c_options.index(default_colors[i]),
+                                                       key=f'color_option{i}'
+                                                       )
+
+    # behavior_colors = {k: [] for k in annotation_classes}
+    # all_c_options = list(mcolors.CSS4_COLORS.keys())
+
+    # if len(annotation_classes) == 4:
+    #     default_colors = ["red", "darkorange", "dodgerblue", "gray"]
+    # else:
+    #     np.random.seed(42)
+    #     selected_idx = np.random.choice(np.arange(len(all_c_options)), len(annotation_classes), replace=False)
+    #     default_colors = [all_c_options[s] for s in selected_idx]
+    #
+    # for i, class_name in enumerate(annotation_classes):
+    #     behavior_colors[class_name] = option_expander.selectbox(f'Color for {class_name}',
+    #                                                             all_c_options,
+    #                                                             index=all_c_options.index(default_colors[i]),
+    #                                                             key=f'color_option{i}')
     predict = np.load(predict_npy, allow_pickle=True)
     # TODO: find a color workaround if a class is missing
     # for f in range(len(st.session_state['features'][condition])):
@@ -73,14 +107,14 @@ def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder):
                           marker=dict(colors=df["colors"],
                                       line=dict(color='#000000', width=1)))
         st.plotly_chart(fig, use_container_width=True, config={
-        'toImageButtonOptions': {
-            'format': 'png',  # one of png, svg, jpeg, webp
-            'filename': f'{predict_npy.rpartition("/")[2].replace(".npy", "_duration_pie")}',
-            'height': 600,
-            'width': 600,
-            'scale': 3  # Multiply title/legend/axis/canvas sizes by this factor
-        }
-    })
+            'toImageButtonOptions': {
+                'format': 'png',  # one of png, svg, jpeg, webp
+                'filename': f'{predict_npy.rpartition("/")[2].replace(".npy", "_duration_pie")}',
+                'height': 600,
+                'width': 600,
+                'scale': 3  # Multiply title/legend/axis/canvas sizes by this factor
+            }
+        })
 
     return behavior_colors
 
@@ -95,36 +129,30 @@ def ethogram_plot(predict_npy, iter_folder, annotation_classes, exclude_other,
     if exclude_other:
         annotation_classes_ex.pop(annotation_classes_ex.index('other'))
         colors_classes.pop(annotation_classes.index('other'))
-    # st.write(colors_classes)
     prefill_array = np.zeros((len(predict),
                               len(annotation_classes_ex)))
     default_colors_wht = ['black']
-    # st.write(colors_classes)
     default_colors_wht.extend(colors_classes)
-    # st.write(default_colors_wht)
-    # default_colors_wht.extend(['black'])
-
     css_cmap = [mcolors.CSS4_COLORS[default_colors_wht[j]] for j in range(len(default_colors_wht))]
-    # st.write(css_cmap)
     count = 0
     for b in range(len(annotation_classes_ex)):
-        # print(b)
         idx_b = np.where(predict == b)[0]
         prefill_array[idx_b, count] = b + 1
         count += 1
 
-    seed_num = placeholder2.number_input('seed for segment',
-                                         min_value=0, max_value=None, value=42,
-                                         key=f'rand_seed')
-    # np.random.seed(seed_num)
     length_ = placeholder2.slider('number of frames',
                                   min_value=25, max_value=len(predict),
                                   value=int(len(predict) / 20),
                                   key=f'length_slider')
+    left_placehldr, right_placehldr = placeholder2.columns(2)
+    rand_checkbox = left_placehldr.checkbox('use randomized time',
+                                            value=False,
+                                            key=f'randtime_ckbx')
 
-    if placeholder2.checkbox('use randomized time',
-                             value=False,
-                             key=f'randtime_ckbx'):
+    if rand_checkbox:
+        seed_num = right_placehldr.number_input('seed for segment',
+                                                min_value=0, max_value=None, value=42,
+                                                key=f'rand_seed')
         np.random.seed(seed_num)
         rand_start = np.random.choice(prefill_array.shape[0] - length_, 1, replace=False)
         unique_id = np.unique(prefill_array[int(rand_start):int(rand_start + length_), :])
@@ -570,12 +598,13 @@ def main(ri=None, config=None):
                                                    annotation_classes,
                                                    frame_dir, videos_dir, iter_folder)
             else:
+                top_most_container = st.container()
                 video_col, summary_col = st.columns([2, 1.5])
                 # display behavioral pie chart
                 behavior_colors = pie_predict(annot_vid_path.replace('mp4', 'npy'),
                                               iter_folder,
                                               annotation_classes,
-                                              summary_col)
+                                              summary_col, top_most_container)
                 ethogram_plot(annot_vid_path.replace('mp4', 'npy'),
                               iter_folder,
                               annotation_classes,
