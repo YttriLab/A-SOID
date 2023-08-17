@@ -152,7 +152,7 @@ def fast_smooth(data, n):
 
 @jit(nopython=True)
 def fast_feature_extraction(data, framerate, index, smooth):
-    window = np.int(np.round(0.05 / (1 / framerate)) * 2 - 1)
+    window = int(np.round(0.05 / (1 / framerate)) * 2 - 1)
     features = []
     for n in range(len(data)):
         displacement_raw = fast_displacment(data[n])
