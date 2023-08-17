@@ -53,6 +53,7 @@ def frame_extraction(video_file, frame_dir):
             st.error('stdout:', e.stdout.decode('utf8'))
             st.error('stderr:', e.stderr.decode('utf8'))
         st.info('Done extracting {} frames from {}'.format(num_frames, video_file))
+        st.success('Done. Type "R" to refresh.')
 
 
 def convert_int(s):
@@ -862,7 +863,7 @@ def main(ri=None, config=None):
                                 with colR:
 
                                     selected_set = st.radio('Select Refinement Set',
-                                                            ('Default Filled', 'Previous Saved'),
+                                                            ('Default Filled', 'Previously Saved'),
                                                             horizontal=True, index=set_def_index,
                                                             key=f'ref_set_{i}')
 
@@ -880,7 +881,22 @@ def main(ri=None, config=None):
                                                 ,
                                             }
                                         )
-                                    elif selected_set == 'Previous Saved':
+                                        edited_df = st.data_editor(
+                                            data_df,
+                                            column_config={
+                                                "Behavior": st.column_config.SelectboxColumn(
+                                                    "Behavior Category",
+                                                    # help="The category of the app",
+                                                    width="medium",
+                                                    options=annotation_classes_ex,
+                                                )
+                                            },
+                                            key=f'{i}',
+                                            hide_index=True,
+                                        )
+                                        st.session_state['refined'][behav_choice][i] = edited_df
+                                    elif selected_set == 'Previously Saved':
+                                        # st.write(st.session_state['curr_vid'])
                                         [st.session_state['video_path'],
                                          st.session_state['features'],
                                          st.session_state['predict'],
@@ -889,21 +905,22 @@ def main(ri=None, config=None):
                                             os.path.join(project_dir, iter_folder),
                                             st.session_state['curr_vid'])
                                         data_df = st.session_state['refined'][behav_choice][i]
+                                        st.dataframe(data_df)
 
-                                    edited_df = st.data_editor(
-                                        data_df,
-                                        column_config={
-                                            "Behavior": st.column_config.SelectboxColumn(
-                                                "Behavior Category",
-                                                # help="The category of the app",
-                                                width="medium",
-                                                options=annotation_classes_ex,
-                                            )
-                                        },
-                                        key=f'{i}',
-                                        hide_index=True,
-                                    )
-                                    st.session_state['refined'][behav_choice][i] = edited_df
+                                    # edited_df = st.data_editor(
+                                    #     data_df,
+                                    #     column_config={
+                                    #         "Behavior": st.column_config.SelectboxColumn(
+                                    #             "Behavior Category",
+                                    #             # help="The category of the app",
+                                    #             width="medium",
+                                    #             options=annotation_classes_ex,
+                                    #         )
+                                    #     },
+                                    #     key=f'{i}',
+                                    #     hide_index=True,
+                                    # )
+                                    # st.session_state['refined'][behav_choice][i] = edited_df
                     else:
                         st.warning('no video'.upper())
                     if save_button:

@@ -64,7 +64,7 @@ def main(ri=None, config=None):
                  examples_idx,
                  refinements] = load_refinement(
                     os.path.join(project_dir, iter_folder), selected_refine_dir)
-                # st.write(refinements, examples_idx)
+
                 new_feats_byclass = []
                 new_targets_byclass = []
                 for i, annotation_cls in enumerate(annotation_classes):
