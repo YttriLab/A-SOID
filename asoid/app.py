@@ -386,9 +386,9 @@ def main():
     #         F_view.main(config=None)
     elif 'Discover' in nav_options:
         try:
-            G_unsupervised_discovery.main(config=st.session_state['config'])
+            G_unsupervised_discovery.main(ri=ri, config=st.session_state['config'])
         except:
-            G_unsupervised_discovery.main(config=None)
+            G_unsupervised_discovery.main(ri=ri, config=None)
 
 
 if __name__ == "__main__":
