@@ -66,9 +66,9 @@ PREPROCESS_HELP = "Press this to create a new project with the above configurati
 
 BEHAVIOR_COLOR_SELECT_HELP = "Rearrange and select colors for behavioral classes to help with visualization."
 
-SPLIT_CLASSES_HELP = "Deselecting this will pool all behaviors into the same histogram."
+SPLIT_CLASSES_HELP = "Deselecting this will pool all behaviors into the same histogram. This is only for visualization purposes and does not affect the feature extraction."
 
-BINS_SLIDER_HELP = "Select the number of bins to use. A higher number results in a better temporal resolution when deciding which minimum duration to pick."
+BINS_SLIDER_HELP = "Select the number of bins to use for plotting. A higher number results in a better temporal resolution when deciding which minimum duration to pick."
 
 MIN_DURATION_HELP = "The minimum duration a behavioral bout is happening at. This input will be translated into a time window for feature extraction." \
                     " It is recommended to select a duration that also incorporates short bouts. For example the 10% quantile."
@@ -81,7 +81,8 @@ NUM_SPLITS_HELP = "Number of shuffled splits to use for cross-validation. "
 """Baseline classification"""
 
 INIT_RATIO_HELP = "The initial sampling ratio is used to select a small training set for the initial classification (iteration 0)." \
-                  " A small ratio can help to decrease the overall required samples. However, make sure that all classes have a minimum amount of samples."
+                  " A small ratio can help to decrease the overall required samples. However, make sure that all classes have a minimum amount of samples." \
+                  "The default value is set, so that each class has at least a 8 samples. Reducing the ratio further will likely result in an error during training."
 
 MAX_ITER_HELP = "The maximum number of iterations during active learning. Note that active learning stops automatically if no new low-confidence predictions are found. "
 
@@ -110,10 +111,10 @@ EGO_SELECT_HELP = "Select two keypoints that an egocentric alignment is based on
 
 """Unsupervised discovery"""
 PREPARE_DATA_HELP = "Before we can run discovery, we need to extract the features from the full data set. This might take a while, but will only run once."
-CLASS_SELECT_HELP = "Select a class for unsupervised clustering (UMAP + HDBscan). If available, the clustering from previous attemps will be visualized."
+CLASS_SELECT_HELP = r"Select a class for unsupervised clustering (UMAP + HDBscan). If available, the clustering from previous attemps will be visualized."
 CLUSTER_RANGE_HELP = "The minimum cluster size that is found by HDBscan clustering. This range allows A-SOiD to look for the best min cluster size."
 START_DISCOVERY_HELP = "Press to start the unsupervised clustering step. This includes rescaling, embedding, and clustering of the data, which can take a while..."
-SUBCLASS_SELECT_HELP = "Select one or more sub-classes from the plot above to include in your new annotations."
+SUBCLASS_SELECT_HELP = r"Select one or more sub-classes from the plot above to include in your new annotations."
 SAVE_NEW_HELP = "Press to save your previous selection in the project folder."
 
 """Final"""
