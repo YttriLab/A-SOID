@@ -14,6 +14,8 @@ from sklearn.preprocessing import LabelEncoder
 from utils.import_data import load_labels_auto
 import numpy as np
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import umap
 import hdbscan
 import joblib
@@ -180,6 +182,26 @@ def plot_targeted_discovery(target_behavior, output_sav):
     # ax.legend([f'groom sub{i}' for i in range(len(np.unique(assignments)))])
     st.pyplot(fig)
 
+def plot_embedding(class_name, output_sav):
+    with open(output_sav, 'rb') as fr:
+        [umap_embeddings, assignments, soft_assignments] = joblib.load(fr)
+    number_to_class = {i: s for i, s in enumerate(class_name)}
+    trace1 = go.Scatter(x=umap_embeddings[:,0],
+                        y=umap_embeddings[:,1],
+                        # name=number_to_class,
+                        mode='markers'
+                        )
+
+    fig = make_subplots()
+    fig.add_trace(trace1)
+
+    fig.update_xaxes(title_text="UMAP Dim 1",row=1,col=1,showticklabels=False)
+    fig.update_yaxes(title_text="UMAP Dim 2",row=1,col=1,showticklabels=False)
+    fig.update_layout(title_text="Unsupervised Embedding",
+                      )
+
+    return fig
+
 
 def main(ri=None, config=None):
     st.markdown("""---""")
@@ -245,9 +267,9 @@ def main(ri=None, config=None):
                 if buttonR.button(':red[Clear Embedding.]'):
                     st.session_state['output_sav'] = None
                     st.success('Cleared. Type "R" to Refresh.')
-                plot_targeted_discovery(target_behavior, st.session_state['output_sav'])
-
-
+                # plot_targeted_discovery(target_behavior, st.session_state['output_sav'])
+                fig = plot_embedding(annotation_classes, st.session_state['output_sav'])
+                st.plotly_chart(fig)
         # st.subheader("Directed discovery")
         # explorer = Explorer(config)
         # explorer.main()
