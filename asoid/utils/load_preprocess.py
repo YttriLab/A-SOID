@@ -229,7 +229,6 @@ class Preprocess:
             st.success("**Selected keypoints/bodyparts**: " + ", ".join(self.selected_bodyparts))
         except:
             pass
-        st.info("The parameters can be changed in the config file later on.")
 
     def select_working_dir(self):
         input_container = st.container()
@@ -500,7 +499,7 @@ class Preprocess:
             """Save data as npy file"""
             # data
             joblib.dump(
-                [np.array(self.processed_input_data), np.array(self.targets)]
+                [self.processed_input_data, self.targets]
                 , f
             )
         # with open(os.path.join(project_folder, 'test.sav'), 'wb') as f:
@@ -564,7 +563,7 @@ class Preprocess:
         col_left, _, col_right = st.columns([1, 1, 1])
         col_left.info('Processed a total of **{}** .{} files, and compiled into a '
                       '**{}** data list.'.format(len(self.processed_input_data), self.ftype,
-                                                 np.array(self.processed_input_data).shape))
+                                                 np.array(self.processed_input_data, dtype= np.object).shape))
         col_right.success("Continue on with next module".upper())
 
     def main(self):
