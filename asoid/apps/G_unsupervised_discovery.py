@@ -182,25 +182,48 @@ def plot_targeted_discovery(target_behavior, output_sav):
     # ax.legend([f'groom sub{i}' for i in range(len(np.unique(assignments)))])
     st.pyplot(fig)
 
-def plot_embedding(class_name, output_sav):
+
+def plot_hdbscan_embedding(output_sav):
     with open(output_sav, 'rb') as fr:
         [umap_embeddings, assignments, soft_assignments] = joblib.load(fr)
-    number_to_class = {i: s for i, s in enumerate(class_name)}
-    trace1 = go.Scatter(x=umap_embeddings[:,0],
-                        y=umap_embeddings[:,1],
-                        # name=number_to_class,
-                        mode='markers'
-                        )
+    # some plotting parameters
+    NOISE_COLOR = 'lightgray'
+    unique_classes = np.unique(assignments)
+    group_types = ['Noise']
+    group_types.extend(['Group{}'.format(i) for i in unique_classes if i >= 0])
+
+    trace_list = []
+
+    for num,g in enumerate(unique_classes):
+
+        if g < 0:
+            idx = np.where(assignments == g)[0]
+            trace_list.append(go.Scatter(x=umap_embeddings[idx,0],
+                                         y=umap_embeddings[idx,1],
+                                         name="Noise",
+                                         mode='markers'
+                                         )
+                              )
+        else:
+            idx = np.where(assignments == g)[0]
+
+            trace_list.append(go.Scatter(x=umap_embeddings[idx,0],
+                                         y=umap_embeddings[idx,1],
+                                         name=group_types[num],
+                                         mode='markers'
+
+                                         ))
 
     fig = make_subplots()
-    fig.add_trace(trace1)
+    for trace in trace_list:
+        fig.add_trace(trace)
 
     fig.update_xaxes(title_text="UMAP Dim 1",row=1,col=1,showticklabels=False)
     fig.update_yaxes(title_text="UMAP Dim 2",row=1,col=1,showticklabels=False)
-    fig.update_layout(title_text="Unsupervised Embedding",
+    fig.update_layout(title_text="Unsupervised Clustering",
                       )
 
-    return fig
+    return fig,group_types
 
 
 def main(ri=None, config=None):
@@ -268,8 +291,8 @@ def main(ri=None, config=None):
                     st.session_state['output_sav'] = None
                     st.success('Cleared. Type "R" to Refresh.')
                 # plot_targeted_discovery(target_behavior, st.session_state['output_sav'])
-                fig = plot_embedding(annotation_classes, st.session_state['output_sav'])
-                st.plotly_chart(fig)
+                fig, group_types = plot_hdbscan_embedding(st.session_state['output_sav'])
+                buttonL.plotly_chart(fig)
         # st.subheader("Directed discovery")
         # explorer = Explorer(config)
         # explorer.main()
