@@ -18,7 +18,7 @@ from utils.extract_features import feature_extraction, \
 from utils.load_workspace import load_new_pose, load_iterX
 from utils.view_results import Viewer
 from sklearn.preprocessing import LabelEncoder
-from utils.import_data import load_labels_auto
+from utils.import_data import load_labels_auto, load_pose_ftype
 import datetime
 
 TITLE = "Predict behaviors"
@@ -331,10 +331,24 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
             st.session_state['uploaded_vid'] = new_videos
             new_pose_list = []
             for i, f in enumerate(new_pose_csvs):
-                current_pose = pd.read_csv(f,
-                                           header=[0, 1, 2], sep=",", index_col=0)
+                # current_pose = pd.read_csv(f,
+                #                            header=[0, 1, 2], sep=",", index_col=0)
+                ftype = f.name.rpartition('.')[-1]
+                current_pose = load_pose_ftype(f, ftype)
                 bp_level = 1
                 bp_index_list = []
+                st.info("Selected keypoints/bodyparts (from config): " + ", ".join(selected_bodyparts))
+                st.info("Available keypoints/bodyparts in pose file: " + ", ".join(current_pose.columns.get_level_values(bp_level).unique()))
+                #check if all bodyparts are in the pose file
+                if len(selected_bodyparts) > len(current_pose.columns.get_level_values(bp_level).unique()):
+                    st.error(f'Not all selected keypoints/bodyparts are in the pose file: {f.name}')
+                    st.stop()
+                elif len(selected_bodyparts) < len(current_pose.columns.get_level_values(bp_level).unique()):
+                    #subselection would take care of this, so we need to make sure that they all exist
+                    for bp in selected_bodyparts:
+                        if bp not in current_pose.columns.get_level_values(bp_level).unique():
+                            st.error(f'At least one keypoint "{bp}" is missing in pose file: {f.name}')
+                            st.stop()
                 for bp in selected_bodyparts:
                     bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
                     bp_index_list.append(bp_index)
@@ -440,6 +454,7 @@ def predict_annotate_video(iterX_model, framerate, frames2integ,
         features = []
         for i, data in enumerate(processed_input_data):
             # using feature scaling from training set
+            st.write(data)
             feats, _ = feature_extraction([data], 1, frames2integ)
             features.append(feats)
 

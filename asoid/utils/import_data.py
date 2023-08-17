@@ -115,6 +115,23 @@ def load_pose(path, origin, multi_animal=False):
 
     return df
 
+def load_pose_ftype(path, ftype, multi_animal=False):
+    """General loading function. loads pose estimation file based on ftype.
+    Limited to csv for dlc and h5 for sleap
+    :param multi_animal:
+    :param path: str, full path to pose estimation file
+    :param origin: str, origin of pose estimation file. 'DeepLabCut' or 'Sleap'"""
+
+    if ftype.lower() == 'csv':
+        # file_j_df = pd.read_csv(filename, low_memory=False)
+        df = load_dlc_data(path, multi_animal)
+    elif ftype.lower() == 'h5':
+        df = load_sleap_data(path, multi_animal)
+    else:
+        raise ValueError(f'Pose estimation file type {ftype} is not supported.')
+
+    return df
+
 
 """LABEL SECTION"""
 
