@@ -563,7 +563,7 @@ class Preprocess:
         col_left, _, col_right = st.columns([1, 1, 1])
         col_left.info('Processed a total of **{}** .{} files, and compiled into a '
                       '**{}** data list.'.format(len(self.processed_input_data), self.ftype,
-                                                 np.array(self.processed_input_data, dtype= np.object).shape))
+                                                 np.array(self.processed_input_data, dtype= object).shape))
         col_right.success("Continue on with next module".upper())
 
     def main(self):
