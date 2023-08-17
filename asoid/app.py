@@ -350,34 +350,34 @@ def main():
     if nav_options == 'Menu':
         index()
     elif 'Upload Data' in nav_options:
-        try:
+        if "config" in st.session_state.keys():
             A_data_preprocess.main(config=st.session_state['config'])
-        except:
+        else:
             A_data_preprocess.main(config=None)
     elif 'Extract Features' in nav_options:
-        try:
+        if "config" in st.session_state.keys():
             B_extract_features.main(config=st.session_state['config'])
-        except:
+        else:
             B_extract_features.main(config=None)
     elif 'Active Learning' in nav_options:
-        try:
+        if "config" in st.session_state.keys():
             C_auto_active_learning.main(ri=ri, config=st.session_state['config'])
-        except:
+        else:
             C_auto_active_learning.main(ri=ri, config=None)
     elif 'Refine Behaviors' in nav_options:
-        try:
+        if "config" in st.session_state.keys():
             D_manual_active_learning.main(ri=ri, config=st.session_state['config'])
-        except:
+        else:
             D_manual_active_learning.main(ri=ri, config=None)
     elif 'Create New Dataset' in nav_options:
-        try:
+        if "config" in st.session_state.keys():
             E_create_new_training.main(ri=ri, config=st.session_state['config'])
-        except:
+        else:
             E_create_new_training.main(ri=ri, config=None)
     elif 'Predict' in nav_options:
-        try:
+        if "config" in st.session_state.keys():
             E_predict.main(ri=ri, config=st.session_state['config'])
-        except:
+        else:
             E_predict.main(ri=ri, config=None)
     # elif 'View' in nav_options:
     #     try:
@@ -385,9 +385,9 @@ def main():
     #     except:
     #         F_view.main(config=None)
     elif 'Discover' in nav_options:
-        try:
+        if "config" in st.session_state.keys():
             G_unsupervised_discovery.main(config=st.session_state['config'])
-        except:
+        else:
             G_unsupervised_discovery.main(config=None)
 
 
