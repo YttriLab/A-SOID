@@ -163,7 +163,7 @@ class Viewer:
         return labels
 
 
-    def plot_ethogram_single(self,df_label):
+    def plot_ethogram_single(self, df_label):
         """ This function plots the labels in a heatmap"""
 
         names = [f"{x}: {y}" for x, y in dict(zip(df_label['labels'].cat.codes, df_label['labels'] )).items()]
@@ -268,7 +268,9 @@ class Viewer:
 
                 with st.expander(label = f_name ):
                     try:
+                        st.write(self.label_csvs[f_name])
                         single_label = self.prep_labels_single(self.label_csvs[f_name])
+                        st.write(single_label)
                         st.subheader("Ethogram")
                         self.plot_ethogram_single(single_label)
                         st.subheader("Label statistics")

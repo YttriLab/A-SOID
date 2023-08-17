@@ -64,7 +64,7 @@ def main(ri=None, config=None):
                  examples_idx,
                  refinements] = load_refinement(
                     os.path.join(project_dir, iter_folder), selected_refine_dir)
-                # st.write(refinements, examples_idx)
+
                 new_feats_byclass = []
                 new_targets_byclass = []
                 for i, annotation_cls in enumerate(annotation_classes):
@@ -98,7 +98,7 @@ def main(ri=None, config=None):
                 create_new_training_features_targets(project_dir, selected_iter, new_features, new_targets)
         else:
             try:
-                [_, _, _, _, _, _] = load_iterX(project_dir, iter_folder)
+                [_, _, _] = load_iterX(project_dir, iter_folder)
                 if 'refinements' not in st.session_state:
                     st.markdown(f'Refine some behaviors in :orange[Refine Behaviors]')
                 else:

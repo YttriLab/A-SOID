@@ -16,56 +16,261 @@ from stqdm import stqdm
 from utils.extract_features import feature_extraction, \
     bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
 from utils.load_workspace import load_new_pose, load_iterX
+from utils.view_results import Viewer
+from sklearn.preprocessing import LabelEncoder
+from utils.import_data import load_labels_auto
+import datetime
 
 TITLE = "Predict behaviors"
 
 
-def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder):
-    behavior_classes = np.arange(len(annotation_classes))
+def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder, top_most_container):
     plot_col_top = placeholder.empty()
-    option_expander = placeholder.expander("Configure Plot")
-    behavior_colors = {k: [] for k in behavior_classes}
+    behavior_colors = {k: [] for k in annotation_classes}
     all_c_options = list(mcolors.CSS4_COLORS.keys())
+    np.random.seed(42)
+    selected_idx = np.random.choice(np.arange(len(all_c_options)), len(annotation_classes), replace=False)
+    default_colors = [all_c_options[s] for s in selected_idx]
+    option_expander = top_most_container.expander("Configure Plot")
+    col1, col2, col3, col4 = option_expander.columns(4)
 
-    if len(annotation_classes) == 4:
-        default_colors = ["red", "darkorange", "dodgerblue", "gray"]
-    else:
-        np.random.seed(42)
-        selected_idx = np.random.choice(np.arange(len(all_c_options)), len(behavior_classes), replace=False)
-        default_colors = [all_c_options[s] for s in selected_idx]
+    for i, class_name in enumerate(annotation_classes):
+        if i % 4 == 0:
+            behavior_colors[class_name] = col1.selectbox(f'select color for {class_name}',
+                                                         all_c_options,
+                                                         index=all_c_options.index(default_colors[i]),
+                                                         key=f'color_option{i}'
+                                                         )
 
-    for i, class_id in enumerate(behavior_classes):
-        behavior_colors[class_id] = option_expander.selectbox(f'Color for {annotation_classes[i]}',
-                                                              all_c_options,
-                                                              index=all_c_options.index(default_colors[i]),
-                                                              key=f'color_option{i}')
+        elif i % 4 == 1:
+            behavior_colors[class_name] = col2.selectbox(f'select color for {class_name}',
+                                                         all_c_options,
+                                                         index=all_c_options.index(default_colors[i]),
+                                                         key=f'color_option{i}'
+                                                         )
+        elif i % 4 == 2:
+            behavior_colors[class_name] = col3.selectbox(f'select color for {class_name}',
+                                                         all_c_options,
+                                                         index=all_c_options.index(default_colors[i]),
+                                                         key=f'color_option{i}'
+                                                         )
+        elif i % 4 == 3:
+            behavior_colors[class_name] = col4.selectbox(f'select color for {class_name}',
+                                                         all_c_options,
+                                                         index=all_c_options.index(default_colors[i]),
+                                                         key=f'color_option{i}'
+                                                         )
+
     predict = np.load(predict_npy, allow_pickle=True)
-    # TODO: find a color workaround if a class is missing
-    # for f in range(len(st.session_state['features'][condition])):
-    #     predict.append(st.session_state['classifier'].predict(st.session_state['features'][condition][f]))
     predict_dict = {'iteration': np.repeat(iter_folder, len(np.hstack(predict))),
                     'behavior': np.hstack(predict)}
     df_raw = pd.DataFrame(data=predict_dict)
     labels = df_raw['behavior'].value_counts(sort=False).index
     values = df_raw['behavior'].value_counts(sort=False).values
+
     # summary dataframe
     df = pd.DataFrame()
-    # do i need this?
+    # I need this just in case there is a missing behavior
     behavior_labels = []
     for l in labels:
-        behavior_labels.append(behavior_classes[int(l)])
+        behavior_labels.append(annotation_classes[int(l)])
+
     df["values"] = values
     df['labels'] = behavior_labels
     df["colors"] = df["labels"].apply(lambda x:
                                       behavior_colors.get(x))  # to connect Column value to Color in Dict
+
     with plot_col_top:
         fig = go.Figure(
-            data=[go.Pie(labels=[annotation_classes[int(i)] for i in df["labels"]], values=df["values"], hole=.4)])
+            data=[go.Pie(labels=df["labels"], values=df["values"], hole=.4)])
         fig.update_traces(hoverinfo='label+percent',
                           textinfo='value',
                           textfont_size=16,
                           marker=dict(colors=df["colors"],
                                       line=dict(color='#000000', width=1)))
+        st.plotly_chart(fig, use_container_width=True, config={
+            'toImageButtonOptions': {
+                'format': 'png',  # one of png, svg, jpeg, webp
+                'filename': f'{predict_npy.rpartition("/")[2].replace(".npy", "_duration_pie")}',
+                'height': 600,
+                'width': 600,
+                'scale': 3  # Multiply title/legend/axis/canvas sizes by this factor
+            }
+        })
+
+    return behavior_colors
+
+
+def ethogram_plot(predict_npy, iter_folder, annotation_classes, exclude_other,
+                  behavior_colors, framerate, placeholder2):
+    plot_col_top = placeholder2.empty()
+    predict = np.load(predict_npy, allow_pickle=True)
+    annotation_classes_ex = annotation_classes.copy()
+    colors_classes = list(behavior_colors.values()).copy()
+
+    if exclude_other:
+        annotation_classes_ex.pop(annotation_classes_ex.index('other'))
+        colors_classes.pop(annotation_classes.index('other'))
+    prefill_array = np.zeros((len(predict),
+                              len(annotation_classes_ex)))
+    default_colors_wht = ['black']
+    default_colors_wht.extend(colors_classes)
+    css_cmap = [mcolors.CSS4_COLORS[default_colors_wht[j]] for j in range(len(default_colors_wht))]
+    count = 0
+    for b in range(len(annotation_classes_ex)):
+        idx_b = np.where(predict == b)[0]
+        prefill_array[idx_b, count] = b + 1
+        count += 1
+
+    length_ = placeholder2.slider('number of frames',
+                                  min_value=25, max_value=len(predict),
+                                  value=int(len(predict) / 20),
+                                  key=f'length_slider')
+    left_placehldr, right_placehldr = placeholder2.columns(2)
+    rand_checkbox = left_placehldr.checkbox('use randomized time',
+                                            value=False,
+                                            key=f'randtime_ckbx')
+
+    if rand_checkbox:
+        seed_num = right_placehldr.number_input('seed for segment',
+                                                min_value=0, max_value=None, value=42,
+                                                key=f'rand_seed')
+        np.random.seed(seed_num)
+        rand_start = np.random.choice(prefill_array.shape[0] - length_, 1, replace=False)
+        unique_id = np.unique(prefill_array[int(rand_start):int(rand_start + length_), :])
+        le = LabelEncoder()
+        relabeled_1d = le.fit_transform(prefill_array[int(rand_start):int(rand_start + length_), :].ravel())
+        relabeled_2d = relabeled_1d.reshape(int(rand_start + length_) - int(rand_start), -1)
+        fig = go.Figure(data=go.Heatmap(z=relabeled_2d.T,
+                                        y=annotation_classes_ex,
+                                        colorscale=[css_cmap[int(i)] for i in unique_id],
+                                        showscale=False
+                                        ))
+        fig.update_layout(
+            xaxis=dict(
+                title='Time (s)',
+                tickmode='array',
+                tickvals=np.arange(0, length_ + 1, (length_ + 1) / 5),
+                ticktext=np.round(np.arange(np.round(rand_start / framerate, 1),
+                                            np.round((rand_start + length_ + 1) / framerate, 1),
+                                            np.round(
+                                                ((rand_start + length_ + 1) / framerate - rand_start / framerate) / 5,
+                                                1)), 1)
+            )
+        )
+        fig['layout']['yaxis']['autorange'] = "reversed"
+    else:
+        rand_start = 0
+        unique_id = np.unique(prefill_array[int(rand_start):int(rand_start + length_), :])
+        le = LabelEncoder()
+        relabeled_1d = le.fit_transform(prefill_array[int(rand_start):int(rand_start + length_), :].ravel())
+        relabeled_2d = relabeled_1d.reshape(int(rand_start + length_) - int(rand_start), -1)
+        fig = go.Figure(data=go.Heatmap(z=relabeled_2d.T,
+                                        y=annotation_classes_ex,
+                                        colorscale=[css_cmap[int(i)] for i in unique_id],
+                                        showscale=False,
+
+                                        ))
+
+        fig.update_layout(
+            xaxis=dict(
+                title='Time (s)',
+                tickmode='array',
+                tickvals=np.arange(0, length_ + 1, (length_ + 1) / 5),
+                ticktext=np.round(np.arange(0,
+                                            np.round(length_ + 1 / framerate, 1),
+                                            np.round(((length_ + 1) / framerate) / 5, 1)), 1)
+            )
+        )
+        fig['layout']['yaxis']['autorange'] = "reversed"
+
+    plot_col_top.plotly_chart(fig, use_container_width=True, config={
+        'toImageButtonOptions': {
+            'format': 'png',  # one of png, svg, jpeg, webp
+            'filename': f'{predict_npy.rpartition("/")[2].replace(".npy", "_ethogram")}',
+            'height': 720,
+            'width': 1280,
+            'scale': 3  # Multiply title/legend/axis/canvas sizes by this factor
+        }
+    })
+
+
+def get_duration_bouts(predict, behavior_classes, framerate):
+    behav_durations = []
+    bout_start_idx = np.where(np.diff(np.hstack([-1, predict])) != 0)[0]
+    bout_durations = np.hstack([np.diff(bout_start_idx), len(predict) - np.max(bout_start_idx)])
+    bout_start_label = predict[bout_start_idx]
+    for b in behavior_classes:
+        idx_b = np.where(bout_start_label == int(b))[0]
+        if len(idx_b) > 0:
+            behav_durations.append(bout_durations[idx_b] / framerate)
+        else:
+            behav_durations.append(np.zeros(1))
+    return behav_durations
+
+
+def boolean_indexing(v, fillval=np.nan):
+    lens = np.array([len(item) for item in v])
+    mask = lens[:, None] > np.arange(lens.max())
+    out = np.full(mask.shape, fillval)
+    out[mask] = np.concatenate(v)
+    return out
+
+
+def ridge_predict(predict_npy, iter_folder, annotation_classes, exclude_other,
+                  behavior_colors, framerate,
+                  placeholder):
+    predict = np.load(predict_npy, allow_pickle=True)
+    annotation_classes_ex = annotation_classes.copy()
+    colors_classes = list(behavior_colors.values()).copy()
+
+    if exclude_other:
+        annotation_classes_ex.pop(annotation_classes_ex.index('other'))
+        colors_classes.pop(annotation_classes.index('other'))
+    behavior_classes = np.arange(len(annotation_classes_ex))
+
+    with placeholder:
+
+        duration_ = get_duration_bouts(predict, behavior_classes, framerate)
+        css_cmap = [mcolors.CSS4_COLORS[j] for j in colors_classes]
+        duration_matrix = boolean_indexing(duration_)
+        max_dur = st.slider('max duration',
+                            min_value=0,
+                            max_value=int(
+                                np.nanpercentile(np.array(duration_matrix),
+                                                 99)) + 1,
+                            value=int(np.nanpercentile(np.array(duration_matrix),
+                                                       90)),
+                            key=f'maxdur_slider_')
+        # st.write(duration_matrix)
+        # fig = go.Figure()
+        # for data_line, color, name in zip(duration_matrix, css_cmap, annotation_classes_ex):
+        #     fig.add_trace(go.Violin(x=data_line[(data_line < np.nanpercentile(data_line, 95)) &
+        #                                         (data_line > np.nanpercentile(data_line, 5))],
+        #                             line_color=color,
+        #                             name=name))
+        # fig.update_traces(
+        #     orientation='h', side='positive', width=3, points=False,
+        # )
+        # fig.update_layout(xaxis_showgrid=False, xaxis_zeroline=False,
+        #                   xaxis_range=[0, max_dur], xaxis=dict(title='seconds'))
+        # st.plotly_chart(fig, use_container_width=True)
+
+        fig = go.Figure()
+        for data_line, color, name in zip(duration_matrix, css_cmap, annotation_classes_ex):
+            # st.write(data_line)
+            fig.add_trace(go.Box(y=data_line[(data_line <= np.nanpercentile(data_line, 95)) &
+                                             (data_line >= np.nanpercentile(data_line, 0))],
+                                 jitter=0.5,
+                                 whiskerwidth=0.5,
+                                 fillcolor=color,
+                                 marker_size=2,
+                                 line_width=1.5,
+                                 line_color='#EEEEEE',
+                                 name=name))
+        fig.update_layout(yaxis=dict(title='bout duration (seconds)'),
+                          yaxis_range=[0, max_dur],
+                          )
         st.plotly_chart(fig, use_container_width=True)
 
 
@@ -100,6 +305,7 @@ def frame_extraction(video_file, frame_dir):
             st.error('stdout:', e.stdout.decode('utf8'))
             st.error('stderr:', e.stderr.decode('utf8'))
         st.info('Done extracting {} frames from {}'.format(num_frames, video_file))
+        st.success('Done. Type "R" to refresh.')
 
 
 def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
@@ -146,24 +352,7 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
             st.session_state['uploaded_pose'] = new_pose_list
             # col1, col3 = st.columns(2)
 
-            col3_exp = st.expander('Output folders'.upper(), expanded=True)
-            frame_dir = col3_exp.text_input('Enter a directory for frames',
-                                            os.path.join(videos_dir,
-                                                         str.join('', (
-                                                             st.session_state['uploaded_vid'].name.rpartition('.mp4')[
-                                                                 0],
-                                                             '_pngs'))),
-                                            disabled=st.session_state.disabled, on_change=disable
-                                            )
 
-            try:
-                os.listdir(frame_dir)
-                col3_exp.success(f'Entered **{frame_dir}** as the frame directory.')
-            except FileNotFoundError:
-                if col3_exp.button('create frame directory'):
-                    os.makedirs(frame_dir, exist_ok=True)
-                    col3_exp.info('Created. Type "R" to refresh.')
-                    # st.experimental_rerun()
 
         else:
             st.session_state['uploaded_pose'] = []
@@ -171,7 +360,6 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
 
         # except:
         #     pass
-    return frame_dir
 
 
 def convert_int(s):
@@ -189,59 +377,62 @@ def sort_nicely(l):
     l.sort(key=alphanum_key)
 
 
-def create_annotated_videos(prediction, prob,
-                            framerate, frames2integ, annotation_classes,
-                            frame_dir, videos_dir, iter_folder):
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    fontScale = 1.25
-    fontColor = (0, 0, 255)
-    thickness_text = 2
-    lineType = 2
-    images = [img for img in os.listdir(frame_dir) if img.endswith(".png")]
-    sort_nicely(images)
-    fourcc = cv2.VideoWriter_fourcc(*'avc1')
-    frame = cv2.imread(os.path.join(frame_dir, images[0]))
-    height, width, layers = frame.shape
-    bottomLeftCornerOfText = (25, height - 50)
-    repeat_n = int(frames2integ / 10)
-    predictions_match = np.pad(prediction.repeat(repeat_n), (repeat_n, 0), 'edge')[:len(images)]
-
-    new_images = []
-    for j in stqdm(range(len(images)), desc=f'Annotating {st.session_state["video"].name}'):
-        image = images[j]
-        rgb_im = cv2.imread(os.path.join(frame_dir, image))
-        cv2.putText(rgb_im, f'{annotation_classes[int(predictions_match[j])]}',
-                    bottomLeftCornerOfText,
-                    font,
-                    fontScale,
-                    fontColor,
-                    thickness_text,
-                    lineType)
-        new_images.append(rgb_im)
+def create_annotated_videos(
+        framerate, annotation_classes,
+        frame_dir, videos_dir, iter_folder,
+        video_checkbox, predictions_match):
     video_type = str.join('', ('.', st.session_state['video'].type.rpartition('video/')[2]))
     video_prefix = st.session_state['video'].name.rpartition(video_type)[0]
     annotated_vid_str = str.join('', ('_annotated_', iter_folder))
     annotated_vid_name = str.join('', (video_prefix, annotated_vid_str, video_type))
-    st.session_state['new_annotated_vid_path'][iter_folder] = os.path.join(videos_dir, annotated_vid_name)
+    vidpath_out = os.path.join(videos_dir, annotated_vid_name)
+    if video_checkbox:
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        fontScale = 1.25
+        fontColor = (0, 0, 255)
+        thickness_text = 2
+        lineType = 2
+        images = [img for img in os.listdir(frame_dir) if img.endswith(".png")]
+        sort_nicely(images)
+        fourcc = cv2.VideoWriter_fourcc(*'avc1')
+        frame = cv2.imread(os.path.join(frame_dir, images[0]))
+        height, width, layers = frame.shape
+        bottomLeftCornerOfText = (25, height - 50)
 
-    video = cv2.VideoWriter(st.session_state['new_annotated_vid_path'][iter_folder],
-                            fourcc, framerate, (width, height))
-    for j, image in enumerate(new_images):
-        video.write(image)
-    cv2.destroyAllWindows()
-    video.release()
-    return predictions_match
+        new_images = []
+        for j in stqdm(range(len(images)), desc=f'Annotating {st.session_state["video"].name}'):
+            image = images[j]
+            rgb_im = cv2.imread(os.path.join(frame_dir, image))
+            cv2.putText(rgb_im, f'{annotation_classes[int(predictions_match[j])]}',
+                        bottomLeftCornerOfText,
+                        font,
+                        fontScale,
+                        fontColor,
+                        thickness_text,
+                        lineType)
+            new_images.append(rgb_im)
+
+        video = cv2.VideoWriter(vidpath_out,
+                                fourcc, framerate, (width, height))
+        for j, image in enumerate(new_images):
+            video.write(image)
+        cv2.destroyAllWindows()
+        video.release()
+    return vidpath_out
 
 
 def predict_annotate_video(iterX_model, framerate, frames2integ,
                            annotation_classes,
-                           frame_dir, videos_dir, iter_folder):
+                           frame_dir, videos_dir, iter_folder,
+                           video_checkbox, colL, total_n_frames):
     features = [None]
     predict_arr = None
     predictions_match = None
-    action_button = st.button("Create Labeled Video")
+
+    action_button = colL.button('Predict and Generate Summary Statistics')
     message_box = st.empty()
     processed_input_data = st.session_state['uploaded_pose']
+    repeat_n = int(frames2integ / 10)
     if action_button:
         st.session_state['disabled'] = True
         message_box.info('Predicting labels... ')
@@ -258,15 +449,180 @@ def predict_annotate_video(iterX_model, framerate, frames2integ,
                 pred_proba = bsoid_predict_proba_numba_noscale([features[i]], iterX_model)
                 predict_arr = np.array(predict).flatten()
 
-        with st.spinner('Creating annotated video'):
-            predictions_match = create_annotated_videos(predict_arr, pred_proba[0],
-                                                        framerate, frames2integ, annotation_classes,
-                                                        frame_dir, videos_dir, iter_folder)
+        predictions_match = np.pad(predict_arr.repeat(repeat_n), (repeat_n, 0), 'edge')[:total_n_frames]
+        with st.spinner('Matching video frames'):
+            vidpath_out = create_annotated_videos(
+                framerate, annotation_classes,
+                frame_dir, videos_dir, iter_folder,
+                video_checkbox, predictions_match)
             st.balloons()
             message_box.success('Done. Type "R" to refresh.')
-        np.save(st.session_state['new_annotated_vid_path'][iter_folder].replace('mp4', 'npy'),
+        np.save(vidpath_out.replace('mp4', 'npy'),
                 predictions_match)
-    return features[0], predict_arr, predictions_match
+
+
+def annotate_video(video_path, framerate, annotation_classes,
+                   frame_dir, videos_dir, iter_folder,
+                   predictions_match):
+    video_type = str.join('', ('.', video_path.rpartition('.')[2]))
+    video_prefix = video_path.rpartition('/')[2].replace('.mp4', '')
+    annotated_vid_str = str.join('', ('_annotated_', iter_folder))
+    annotated_vid_name = str.join('', (video_prefix, annotated_vid_str, video_type))
+    vidpath_out = os.path.join(videos_dir, annotated_vid_name)
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    fontScale = 1.25
+    fontColor = (0, 0, 255)
+    thickness_text = 2
+    lineType = 2
+    images = [img for img in os.listdir(frame_dir) if img.endswith(".png")]
+    sort_nicely(images)
+    fourcc = cv2.VideoWriter_fourcc(*'avc1')
+    frame = cv2.imread(os.path.join(frame_dir, images[0]))
+    height, width, layers = frame.shape
+    bottomLeftCornerOfText = (25, height - 50)
+
+    new_images = []
+    for j in stqdm(range(len(images)), desc=f'Annotating {annotated_vid_name}'):
+        image = images[j]
+        rgb_im = cv2.imread(os.path.join(frame_dir, image))
+        cv2.putText(rgb_im, f'{annotation_classes[int(predictions_match[j])]}',
+                    bottomLeftCornerOfText,
+                    font,
+                    fontScale,
+                    fontColor,
+                    thickness_text,
+                    lineType)
+        new_images.append(rgb_im)
+
+    video = cv2.VideoWriter(vidpath_out,
+                            fourcc, framerate, (width, height))
+    for j, image in enumerate(new_images):
+        video.write(image)
+    cv2.destroyAllWindows()
+    video.release()
+
+
+def just_annotate_video(predict_npy, framerate,
+                        annotation_classes,
+                        frame_dir, videos_dir, iter_folder,
+                        colL):
+    video_path = str.join('', (predict_npy.replace('npy', 'mp4').rpartition('_annotated_')[0], '.mp4'))
+    action_button = colL.button('Create Labeled Video')
+    message_box = st.empty()
+    if action_button:
+        predict = np.load(predict_npy, allow_pickle=True)
+        with st.spinner('Matching video frames'):
+            annotate_video(video_path, framerate, annotation_classes,
+                           frame_dir, videos_dir, iter_folder,
+                           predict)
+            st.balloons()
+            message_box.success('Done. Type "R" to refresh.')
+
+
+def save_predictions(predict_npy, source_file_name, annotation_classes, framerate):
+    """takes numerical labels and transforms back into one-hot encoded file (BORIS style). Saves as csv"""
+    predict = np.load(predict_npy, allow_pickle=True)
+
+    df = pd.DataFrame(predict, columns=["labels"])
+    time_clm = np.round(np.arange(0, df.shape[0]) / framerate, 2)
+    # convert numbers into behavior names
+    class_dict = {i: x for i, x in enumerate(annotation_classes)}
+    df["classes"] = df["labels"].copy()
+    for cl_idx, cl_name in class_dict.items():
+        df["classes"].iloc[df["labels"] == cl_idx] = cl_name
+
+    # for simplicity let's convert this back into BORIS type file
+    dummy_df = pd.get_dummies(df["classes"])
+    # add 0 columns for each class that wasn't predicted in the file
+    not_predicted_classes = [x for x in annotation_classes if x not in np.unique(df["classes"].values)]
+    for not_predicted_class in not_predicted_classes:
+        dummy_df[not_predicted_class] = 0
+
+    dummy_df["time"] = time_clm
+    dummy_df = dummy_df.set_index("time")
+
+    # save to csv
+    dummy_df.to_csv(source_file_name)
+
+
+def convert_dummies_to_labels(labels, annotation_classes):
+    """
+    This function converts dummy variables to labels
+    :param labels: pandas dataframe with dummy variables
+    :return: pandas dataframe with labels and codes
+    """
+    conv_labels = pd.from_dummies(labels)
+    cat_df = pd.DataFrame(conv_labels.values, columns=["labels"])
+    if annotation_classes is not None:
+        cat_df["labels"] = pd.Categorical(cat_df["labels"], ordered=True, categories=annotation_classes)
+    else:
+        cat_df["labels"] = pd.Categorical(cat_df["labels"], ordered=True, categories=cat_df["labels"].unique())
+    cat_df["codes"] = cat_df["labels"].cat.codes
+
+    return cat_df
+
+
+def prep_labels_single(labels, annotation_classes):
+    """
+    This function loads the labels from a single file and prepares them for plotting
+    :param labels: pandas dataframe with labels
+    :return: pandas dataframe with labels
+    """
+    labels = labels.drop(columns=["time"], errors="ignore")
+    labels = convert_dummies_to_labels(labels, annotation_classes)
+
+    return labels
+
+
+def count_events(df_label):
+    """ This function counts the number of events for each label in a dataframe"""
+    df_label_cp = df_label.copy()
+    # prepare event counter
+    event_counter = pd.DataFrame(df_label_cp["labels"].unique(), columns=["labels"])
+    event_counter["events"] = 0
+
+    # Count the number of isolated blocks of labels for each unique label
+    # go through each unique label and create a binary column
+    for label in df_label_cp["labels"].unique():
+        df_label_cp[label] = (df_label_cp["labels"] == label)
+        df_label_cp[label].iloc[df_label_cp[label] == False] = np.NaN
+        # go through each unique label and count the number of isolated blocks
+        df_label_cp[f"{label}_block"] = np.where(df_label_cp[label].notnull(),
+                                                 (df_label_cp[label].notnull() & (df_label_cp[label] != df_label_cp[
+                                                     label].shift())).cumsum(),
+                                                 np.nan)
+        event_counter["events"].iloc[event_counter["labels"] == label] = df_label_cp[f"{label}_block"].max()
+
+    return event_counter
+
+
+def describe_labels_single(df_label, framerate, placeholder):
+    """ This function describes the labels in a table"""
+
+    event_counter = count_events(df_label)
+
+    count_df = df_label.value_counts().to_frame().reset_index().rename(columns={0: "frame count"})
+    # heatmap already shows this information
+    # count_df["percentage"] = count_df["frame count"] / count_df["frame count"].sum() *100
+
+    if framerate is not None:
+        count_df["total duration"] = count_df["frame count"] / framerate
+        count_df["total duration"] = count_df["total duration"].apply(lambda x: str(datetime.timedelta(seconds=x)))
+
+    count_df["bouts"] = event_counter["events"]
+
+    count_df.set_index("codes", inplace=True)
+    count_df.sort_index(inplace=True)
+    # rename all columns to include their units
+    count_df.rename(columns={"bouts": "bouts [-]",
+                             "frame count": "frame count [-]",
+                             "total duration": "total duration [hh:mm:ss]",
+                             "percentage": "percentage [%]",
+
+                             },
+                    inplace=True)
+    # TODO: autosize columns with newer streamlit versions (e.g., using use_container_width=True)
+    placeholder.dataframe(count_df, hide_index=True)
 
 
 def main(ri=None, config=None):
@@ -280,6 +636,7 @@ def main(ri=None, config=None):
         software = config["Project"].get("PROJECT_TYPE")
         ftype = config["Project"].get("FILE_TYPE")
         selected_bodyparts = [x.strip() for x in config["Project"].get("KEYPOINTS_CHOSEN").split(",")]
+        exclude_other = config["Project"].getboolean("EXCLUDE_OTHER")
         # threshold = config["Processing"].getfloat("SCORE_THRESHOLD")
         threshold = 0.1
         iteration = config["Processing"].getint("ITERATION")
@@ -293,12 +650,13 @@ def main(ri=None, config=None):
         os.makedirs(videos_dir, exist_ok=True)
         frames2integ = round(float(framerate) * (duration_min / 0.1))
         annotated_vids = [d for d in os.listdir(videos_dir)
-                          if d.endswith(str.join('', (iter_folder, '.mp4')))]
+                          if d.endswith(str.join('', (iter_folder, '.npy')))]
         annotated_vids.extend(['Add New Video'])
 
-        selected_annot_video = ri.radio('Select Annotated Video', annotated_vids, horizontal=True)
+        selected_annot_video = ri.radio('Select Video Prediction',
+                                        annotated_vids, horizontal=True)
         if selected_annot_video != 'Add New Video':
-            annot_vid_path = os.path.join(videos_dir, selected_annot_video)
+            annot_vid_path = os.path.join(videos_dir, selected_annot_video.replace('npy', 'mp4'))
         else:
             annot_vid_path = 'Add New Video'
 
@@ -312,37 +670,12 @@ def main(ri=None, config=None):
                 st.session_state['disabled'] = False
             if 'uploaded_pose' not in st.session_state:
                 st.session_state['uploaded_pose'] = []
-            #
-            if 'video_path' not in st.session_state:
-                st.session_state['video_path'] = None
-            if 'new_features' not in st.session_state:
-                st.session_state['new_features'] = None
-            if 'new_predict' not in st.session_state:
-                st.session_state['new_predict'] = None
-            if 'new_predict_match' not in st.session_state:
-                st.session_state['new_predict_match'] = None
-            if 'new_annotated_vid_path' not in st.session_state:
-                st.session_state['new_annotated_vid_path'] = None
 
-            if st.session_state['new_features'] is None:
-                st.session_state['new_features'] = {str.join('', ('iteration-', str(i))): None
-                                                    for i in np.arange(iteration + 1)}
-                st.session_state['new_predict'] = {str.join('', ('iteration-', str(i))): None
-                                                   for i in np.arange(iteration + 1)}
-                st.session_state['new_predict_match'] = {str.join('', ('iteration-', str(i))): None
-                                                         for i in np.arange(iteration + 1)}
-                st.session_state['new_annotated_vid_path'] = {str.join('', ('iteration-', str(i))): None
-                                                              for i in np.arange(iteration + 1)}
-            if iter_folder not in st.session_state['new_annotated_vid_path']:
-                st.session_state['new_features'][iter_folder] = None
-                st.session_state['new_predict'][iter_folder] = None
-                st.session_state['new_predict_match'][iter_folder] = None
-                st.session_state['new_annotated_vid_path'][iter_folder] = None
             st.session_state['disabled'] = False
 
             if annot_vid_path == 'Add New Video':
-                frame_dir = prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
-                                         framerate, videos_dir, project_dir, iter_folder)
+                prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
+                             framerate, videos_dir, project_dir, iter_folder)
 
                 if st.session_state['video'] is not None and len(st.session_state['uploaded_pose']) > 0:
                     if os.path.exists(os.path.join(videos_dir, st.session_state['video'].name)):
@@ -354,28 +687,121 @@ def main(ri=None, config=None):
                             out.write(g.read())  # Read bytes into file
                         out.close()
 
-                    if os.path.exists(frame_dir):
-                        framedir_ = os.listdir(frame_dir)
-                        if len(framedir_) < 2:
-                            frame_extraction(video_file=temporary_location, frame_dir=frame_dir)
-                        else:
-                            [iterX_model, _, _, _, _, _] = load_iterX(project_dir, iter_folder)
-                            st.info(f'loaded {iter_folder} model')
-                            st.session_state['new_features'][iter_folder], \
-                                st.session_state['new_predict'][iter_folder], \
-                                st.session_state['new_predict_match'][iter_folder] = \
+                    cap = cv2.VideoCapture(temporary_location)
+                    total_n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+                    colL, colR = st.columns(2)
+                    video_checkbox = colL.checkbox("Create Labeled Video?")
+
+                    if video_checkbox:
+                        col3_exp = st.expander('Output folders'.upper(), expanded=True)
+                        frame_dir = col3_exp.text_input('Enter a directory for frames',
+                                                        os.path.join(videos_dir,
+                                                                     str.join('', (
+                                                                         st.session_state[
+                                                                             'uploaded_vid'].name.rpartition('.mp4')[
+                                                                             0],
+                                                                         '_pngs'))),
+                                                        disabled=st.session_state.disabled, on_change=disable
+                                                        )
+
+                        try:
+                            os.listdir(frame_dir)
+                            col3_exp.success(f'Entered **{frame_dir}** as the frame directory.')
+                        except FileNotFoundError:
+                            if col3_exp.button('create frame directory'):
+                                os.makedirs(frame_dir, exist_ok=True)
+                                col3_exp.info('Created. Type "R" to refresh.')
+                        if os.path.exists(frame_dir):
+                            framedir_ = os.listdir(frame_dir)
+                            if len(framedir_) < 2:
+                                frame_extraction(video_file=temporary_location, frame_dir=frame_dir)
+                            else:
+                                [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
+                                st.info(f'loaded {iter_folder} model')
                                 predict_annotate_video(iterX_model, framerate, frames2integ,
                                                        annotation_classes,
-                                                       frame_dir, videos_dir, iter_folder)
+                                                       frame_dir, videos_dir, iter_folder,
+                                                       video_checkbox, colL, total_n_frames)
+                    else:
+                        [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
+                        st.info(f'loaded {iter_folder} model')
+                        predict_annotate_video(iterX_model, framerate, frames2integ,
+                                               annotation_classes,
+                                               None, videos_dir, iter_folder,
+                                               video_checkbox, colL, total_n_frames)
+
             else:
+                top_most_container = st.container()
                 video_col, summary_col = st.columns([2, 1.5])
                 # display behavioral pie chart
-                pie_predict(annot_vid_path.replace('mp4', 'npy'),
-                            iter_folder,
-                            annotation_classes,
-                            summary_col)
+                behavior_colors = pie_predict(annot_vid_path.replace('mp4', 'npy'),
+                                              iter_folder,
+                                              annotation_classes,
+                                              summary_col, top_most_container)
+
+                ethogram_plot(annot_vid_path.replace('mp4', 'npy'),
+                              iter_folder,
+                              annotation_classes,
+                              exclude_other,
+                              behavior_colors,
+                              framerate,
+                              video_col,
+
+                              )
+                if not os.path.isfile(annot_vid_path.replace('mp4', 'csv')):
+                    save_predictions(annot_vid_path.replace('mp4', 'npy'),
+                                     annot_vid_path.replace('mp4', 'csv'),
+                                     annotation_classes,
+                                     framerate)
+                    st.info(f'Saved ethogram csv as {annot_vid_path.replace("mp4", "csv")}. Type "R" to view in app.')
+
+                else:
+                    labels = load_labels_auto(annot_vid_path.replace('mp4', 'csv'),
+                                              origin="BORIS", fps=framerate)
+                    single_label = prep_labels_single(labels, annotation_classes)
+                    describe_labels_single(single_label, framerate, summary_col)
+                    ridge_predict(annot_vid_path.replace('mp4', 'npy'),
+                                  iter_folder,
+                                  annotation_classes,
+                                  exclude_other,
+                                  behavior_colors,
+                                  framerate,
+                                  summary_col)
                 # display video from video path
-                video_col.video(annot_vid_path)
+                if os.path.isfile(annot_vid_path):
+                    video_col.video(annot_vid_path)
+                else:
+
+                    video_checkbox = video_col.checkbox("Create Labeled Video?")
+
+                    if video_checkbox:
+                        col3_exp = video_col.expander('Output folders'.upper(), expanded=True)
+                        frame_dir = col3_exp.text_input('Enter a directory for frames',
+                                                        str.join('', (
+                                                            annot_vid_path.rpartition('_annotated_')[0],
+                                                            '_pngs')),
+                                                        disabled=st.session_state.disabled, on_change=disable
+                                                        )
+
+                        try:
+                            os.listdir(frame_dir)
+                            col3_exp.success(f'Entered **{frame_dir}** as the frame directory.')
+                        except FileNotFoundError:
+                            if col3_exp.button('create frame directory'):
+                                os.makedirs(frame_dir, exist_ok=True)
+                                col3_exp.info('Created. Type "R" to refresh.')
+
+                        if os.path.exists(frame_dir):
+                            framedir_ = os.listdir(frame_dir)
+                            if len(framedir_) < 2:
+                                frame_extraction(video_file=annot_vid_path, frame_dir=frame_dir)
+                            else:
+                                just_annotate_video(annot_vid_path.replace('mp4', 'npy'),
+                                                    framerate,
+                                                    annotation_classes,
+                                                    frame_dir, videos_dir, iter_folder,
+                                                    video_col)
 
 
     else:

@@ -253,18 +253,18 @@ def main():
                 previous_refine_dir = current_refine_dir.copy()
 
             menu_options = ['Menu', 'Upload Data ✔', 'Extract Features', 'Active Learning',
-                            'Refine Behaviors', 'Create New Dataset', 'Predict', "View", "Discover"]
+                            'Refine Behaviors', 'Create New Dataset', 'Predict', "Discover"]
             st.session_state['page'] = 'Step 2'
             try:
                 [_, _, _, _] = load_features(project_dir, iteration_0)
                 menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔', 'Active Learning',
-                                'Refine Behaviors', 'Create New Dataset', 'Predict', "View", "Discover"]
+                                'Refine Behaviors', 'Create New Dataset', 'Predict', "Discover"]
                 st.session_state['page'] = 'Step 3'
                 try:
-                    [_, _, _, _, _, _] = load_iterX(project_dir, previous_iter)
+                    [_, _, _] = load_iterX(project_dir, previous_iter)
                     menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔',
                                     f'Active Learning iter{previous_iter_num}',
-                                    'Refine Behaviors', 'Create New Dataset', 'Predict', "View", "Discover"]
+                                    'Refine Behaviors', 'Create New Dataset', 'Predict', "Discover"]
                     st.session_state['page'] = 'Step 4'
                     # if 'refinements.sav' in np.concatenate([os.listdir(os.path.join(project_dir, previous_iter,
                     #                                                  previous_refine_dir[i]))
@@ -276,10 +276,10 @@ def main():
                     #     st.session_state['page'] = 'Step 5'
 
                     try:
-                        [_, _, _, _, _, _] = load_iterX(project_dir, current_iter)
+                        [_, _, _] = load_iterX(project_dir, current_iter)
                         menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔',
                                         f'Active Learning iter{current_iter_num}',
-                                        'Refine Behaviors', 'Create New Dataset', 'Predict', "View", "Discover"]
+                                        'Refine Behaviors', 'Create New Dataset', 'Predict', "Discover"]
                         st.session_state['page'] = 'Step 4'
 
                         # if 'refinements.sav' in np.concatenate([os.listdir(os.path.join(project_dir, current_iter,
@@ -302,7 +302,7 @@ def main():
 
         except:
             menu_options = ['Menu', 'Upload Data', 'Extract Features', 'Active Learning',
-                            'Refine Behaviors', 'Create New Dataset', 'Predict', 'View', 'Discover']
+                            'Refine Behaviors', 'Create New Dataset', 'Predict', 'Discover']
 
         app_names = np.array(['index',
                               'A-data-preprocess',
@@ -311,7 +311,6 @@ def main():
                               'D-manual-active-learning',
                               'E-create-new-training'
                               'E-predict',
-                              'F-view',
                               'G-unsupervised-discovery',
                               ])
         icon_options = ['window-desktop',
@@ -321,7 +320,6 @@ def main():
                         'images',
                         'file-earmark-plus',
                         'robot',
-                        'binoculars',
                         "signpost-split",
                         ]
         # print(np.where(app_names == get_url_app())[0])
@@ -381,11 +379,11 @@ def main():
             E_predict.main(ri=ri, config=st.session_state['config'])
         except:
             E_predict.main(ri=ri, config=None)
-    elif 'View' in nav_options:
-        try:
-            F_view.main(config=st.session_state['config'])
-        except:
-            F_view.main(config=None)
+    # elif 'View' in nav_options:
+    #     try:
+    #         F_view.main(config=st.session_state['config'])
+    #     except:
+    #         F_view.main(config=None)
     elif 'Discover' in nav_options:
         try:
             G_unsupervised_discovery.main(config=st.session_state['config'])
