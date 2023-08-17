@@ -82,11 +82,11 @@ NUM_SPLITS_HELP = "Number of shuffled splits to use for cross-validation. "
 
 INIT_RATIO_HELP = "The initial sampling ratio is used to select a small training set for the initial classification (iteration 0)." \
                   " A small ratio can help to decrease the overall required samples. However, make sure that all classes have a minimum amount of samples." \
-                  "The default value is set, so that each class has at least a 8 samples. Reducing the ratio further will likely result in an error during training."
+                  " The default value is set, so that each class has at least a 8 samples. Reducing the ratio further will likely result in an error during training."
 
 MAX_ITER_HELP = "The maximum number of iterations during active learning. Note that active learning stops automatically if no new low-confidence predictions are found. "
 
-MAX_SAMPLES_HELP = "The maximum number of samples across all classes that are taken from the pool of low-confidence predictions each iteration during active learning."
+MAX_SAMPLES_HELP = "The maximum number of samples across all classes that are taken from the pool of low-confidence predictions each iteration during active learning. The default value is set to 10 samples per class." \
 
 SHOW_FINAL_RESULTS_HELP = "Check to reveal results of the latest active learning cycle."
 
