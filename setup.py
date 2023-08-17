@@ -50,7 +50,7 @@ setup(
                     ,"umap-learn"
                     ,"click"
                     ,"moviepy"
-                    ,"ffmpeg"
+                    ,"ffmpeg-python"
                     ],
     python_requires=">=3.7",
 )
