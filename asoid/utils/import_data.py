@@ -146,7 +146,6 @@ def load_labels_boris(path: str, fps: int = None):
 
     if path.name.endswith("csv"):
         labels = pd.read_csv(path)
-        st.write(labels)
     elif path.name.endswith("tsv"):
         labels = pd.read_csv(path, sep='\t')
     else:
