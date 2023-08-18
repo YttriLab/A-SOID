@@ -194,7 +194,7 @@ def load_labels_boris_auto(path: str, fps: int = None):
     with 30 Hz aka 33.333333333333 ms , BORIS can do 0.033 s/step (33 ms) at best. This inaccuracy results in a mismatch of frames downstream.
     so we save the BORIS lables as 100 ms time steps
     Optional: upsample each step into 3 resulting in 30Hz (or any other desired framerate) samples."""
-
+    #TODO: CHANGE TO USER INPUT ASKING FOR SAMPLING RATE; THEN throw error if not divisible by framerate
     if path.endswith("csv"):
         labels = pd.read_csv(path)
     elif path.endswith("tsv"):

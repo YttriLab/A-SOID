@@ -7,7 +7,7 @@ import joblib
 import numpy as np
 import pandas as pd
 import streamlit as st
-from utils.import_data import load_pose, get_bodyparts, get_animals, load_labels
+from utils.import_data import load_pose, get_bodyparts, get_animals, load_labels, load_labels_auto
 from utils.project_utils import create_new_project, update_config
 from config.help_messages import POSE_ORIGIN_SELECT_HELP, FPS_HELP, MULTI_ANIMAL_HELP, MULTI_ANIMAL_SELECT_HELP,\
     BODYPART_SELECT, WORKING_DIR_HELP,PREFIX_HELP, DATA_DIR_IMPORT_HELP, POSE_DIR_IMPORT_HELP, POSE_ORIGIN_HELP,\
@@ -127,7 +127,6 @@ class Preprocess:
                 for i in range(len(self.label_csvs)):
                     # load all label files and upsample them to fit pose estimation
                     # (WARNING: This only works with sample rates that are convertible into each other)
-                    # TODO: Adapt to other input type
                     self.label_df.append(load_labels(self.label_csvs[i], origin="BORIS", fps=self.framerate))
                 # go through all label files to make sure to catch all optional classes
                 # There is probably a faster solution...
@@ -262,98 +261,34 @@ class Preprocess:
             self.select_software()
             upload_container = st.container()
             if not self.software == 'CALMS21 (PAPER)':
-                #upload_container = st.container()
-                if upload_container.checkbox("Use folder import", help = DATA_DIR_IMPORT_HELP):
-                    #find our pose and label files automatically
-                    #self.select_data_directories()
 
-                    self.pose_data_directories = upload_container.text_input('Select the directory containing the pose estimation files'
-                                                                            ,os.getcwd()
-                                                                            ,help = POSE_DIR_IMPORT_HELP)
-                    try:
-                        os.listdir(self.pose_data_directories)
-                        upload_container.success(
-                            'You have selected **{}** as your _data directory_'.format("%r" % self.pose_data_directories))
+                self.pose_files = upload_container.file_uploader('Upload corresponding pose files',
+                                                                 accept_multiple_files=True,
+                                                                 type=self.ftype, key='pose'
+                                                                 ,help = POSE_ORIGIN_HELP)
 
-                        if self.ftype is not None:
-                            found_pose_files = glob.glob(os.path.join(self.pose_data_directories,"*.{}".format(self.ftype)))
-                            if len(found_pose_files) == 0:
-                                upload_container.warning(
-                                    "Make sure that the pose estimation files have the correct file type (*.{}).".format(
-                                        self.ftype))
-                        # make it a dictionary for later sorting
-                        self.pose_files = {os.path.basename(x): x for x in found_pose_files}
-
-                        if self.pose_files:
-                            self.pose_csvs = upload_container.multiselect(
-                                'Order them to match the sequence of label files below'
-                                ,self.pose_files.keys(),self.pose_files.keys()
-                                ,help= POSE_SELECT_HELP
-                            )
-                            # retrieve files in right order:
-                            self.pose_csvs = [self.pose_files[x] for x in self.pose_csvs]
-                        upload_container.write('---')
-
-                    except FileNotFoundError:
-                        upload_container.error('No such directory')
-
-
-                    self.label_data_directories = upload_container.text_input('Select the directory containing the pose estimation files'
-                                                                              , os.getcwd()
-                                                                              , help = LABEL_DIR_IMPORT_HELP + LABEL_ORIGIN_HELP)
-                    # do the same for labels
-                    try:
-                        os.listdir(self.label_data_directories)
-                        upload_container.success('You have selected **{}** as your _data directory_'.format(
-                                "%r" % self.label_data_directories))
-
-                        found_label_files = glob.glob(os.path.join(self.label_data_directories,"*.csv"))
-                        if len(found_label_files) == 0:
-                            upload_container.warning(
-                                "Make sure that the label files have the correct file type (*.csv).")
-                        # make it a dictionary for later sorting
-                        self.label_files = {os.path.basename(x): x for x in found_label_files}
-                        if self.label_files:
-                            self.label_csvs = upload_container.multiselect(
-                                'Order them to match the sequence of label files below'
-                                ,self.label_files.keys(),self.label_files.keys()
-                                ,help = LABEL_SELECT_HELP
-                                )
-                            # retrieve files in right order:
-                            self.label_csvs = [self.label_files[x] for x in self.label_csvs]
-                        upload_container.write('---')
-
-                    except FileNotFoundError:
-                        upload_container.error('No such directory')
-
-                else:
-                    #Use file uploader
-
-                    self.pose_files = upload_container.file_uploader('Upload corresponding pose files',
-                                                                     accept_multiple_files=True,
-                                                                     type=self.ftype, key='pose'
-                                                                     ,help = POSE_ORIGIN_HELP)
+                if self.pose_files:
                     # make it a dictionary for later sorting
                     self.pose_files = {x.name: x for x in self.pose_files}
-
                     self.pose_csvs = upload_container.multiselect(
                         'Order them to match the sequence of label files below'
-                        , self.pose_files.keys()
+                        , self.pose_files.keys() , default= self.pose_files.keys()
                         , help = POSE_SELECT_HELP)
                     # retrieve files in right order:
                     self.pose_csvs = [self.pose_files[x] for x in self.pose_csvs]
                     upload_container.write('---')
-                    # do the same for labels
-                    self.label_files = upload_container.file_uploader(
-                        'Upload corresponding annotation files',
-                        accept_multiple_files=True,
-                        type=self.label_ftype,
-                        key='label',
-                        help= LABEL_ORIGIN_HELP)
+                # do the same for labels
+                self.label_files = upload_container.file_uploader(
+                    'Upload corresponding annotation files',
+                    accept_multiple_files=True,
+                    type=self.label_ftype,
+                    key='label',
+                    help= LABEL_ORIGIN_HELP)
+                if self.label_files:
                     self.label_files = {x.name: x for x in self.label_files}
                     self.label_csvs = upload_container.multiselect(
                         'Order them to match the sequence of pose files above'
-                        , self.label_files.keys()
+                        , self.label_files.keys(), default= self.label_files.keys()
                         , help = LABEL_SELECT_HELP)
                     self.label_csvs = [self.label_files[x] for x in self.label_csvs]
 
