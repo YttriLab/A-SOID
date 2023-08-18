@@ -7,12 +7,12 @@ import joblib
 import numpy as np
 import pandas as pd
 import streamlit as st
-from utils.import_data import load_pose, get_bodyparts, get_animals, load_labels, load_labels_auto
+from utils.import_data import load_pose, get_bodyparts, get_animals, load_labels
 from utils.project_utils import create_new_project, update_config
 from config.help_messages import POSE_ORIGIN_SELECT_HELP, FPS_HELP, MULTI_ANIMAL_HELP, MULTI_ANIMAL_SELECT_HELP,\
     BODYPART_SELECT, WORKING_DIR_HELP,PREFIX_HELP, DATA_DIR_IMPORT_HELP, POSE_DIR_IMPORT_HELP, POSE_ORIGIN_HELP,\
     POSE_SELECT_HELP, LABEL_DIR_IMPORT_HELP, LABEL_ORIGIN_HELP, LABEL_SELECT_HELP, PREPROCESS_HELP, EXCLUDE_OTHER_HELP,\
-    INIT_CLASS_SELECT_HELP
+    INIT_CLASS_SELECT_HELP, SAMPLE_RATE_HELP
 
 
 
@@ -98,6 +98,7 @@ class Preprocess:
         self.selected_pose_idx = []
 
         self.framerate = None
+        self.sample_rate = None
         self.resolution = None
         self.classes = None
         self.multi_animal = False
@@ -123,11 +124,15 @@ class Preprocess:
                 input_container.number_input('Enter the average video frame-rate of your pose estimation files.',
                                              value=30,
                                              help = FPS_HELP))
+            self.sample_rate = int(
+                input_container.number_input('Enter the sample rate of your annotation files.',
+                                                value=10,
+                                                help = SAMPLE_RATE_HELP))
             try:
                 for i in range(len(self.label_csvs)):
                     # load all label files and upsample them to fit pose estimation
                     # (WARNING: This only works with sample rates that are convertible into each other)
-                    self.label_df.append(load_labels(self.label_csvs[i], origin="BORIS", fps=self.framerate))
+                    self.label_df.append(load_labels(self.label_csvs[i], origin="BORIS", fps=self.framerate, sample_rate= self.sample_rate))
                 # go through all label files to make sure to catch all optional classes
                 # There is probably a faster solution...
                 optional_classes = []

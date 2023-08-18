@@ -17,6 +17,8 @@ POSE_ORIGIN_SELECT_HELP = "If you want to replicate the published results, selec
                           " Otherwise, we currently support DeepLabCut and SLEAP pose estimation."
 
 FPS_HELP = "This information can usually be found in the meta data of the original videos used for pose estimation."
+SAMPLE_RATE_HELP = "The sample rate is the number of annotated time steps per second that are used for annotation. " \
+                   "For example, if you annotated every 0.1 seconds, the sample rate would be 10."
 
 INIT_CLASS_SELECT_HELP =  "This will move all available data from the excluded classes to be included in 'other'."
 
