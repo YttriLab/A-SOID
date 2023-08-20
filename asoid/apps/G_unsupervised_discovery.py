@@ -25,13 +25,11 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.decomposition import PCA
 import seaborn as sns
 
-
 TITLE = "Unsupervised discovery"
 
 
 def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                  framerate, videos_dir, project_dir, iter_dir, pose_expander, left_checkbox):
-
     if software == 'CALMS21 (PAPER)':
         ROOT = Path(__file__).parent.parent.parent.resolve()
         new_pose_sav = os.path.join(ROOT.joinpath("new_test"), './new_pose.sav')
@@ -41,7 +39,6 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
             new_pose_csvs = pose_expander.file_uploader('Upload Corresponding Pose Files',
                                                         accept_multiple_files=True,
                                                         type=ftype, key='pose')
-
 
             if len(new_pose_csvs) > 0:
                 new_pose_list = []
@@ -75,6 +72,7 @@ def get_features_labels(X, y, iterX_model, frames2integ, project_dir, iter_folde
     old_feats = X.copy()
     old_labels = y.copy()
     if placeholder.button('preprocess files'):
+        # st.session_state['disabled'] = True
         if len(processed_input_data) > 0:
             st.session_state['disabled'] = True
             # extract features, bin them
@@ -99,7 +97,7 @@ def get_features_labels(X, y, iterX_model, frames2integ, project_dir, iter_folde
 
         with st.spinner('Saving...'):
             save_data(project_dir, iter_folder, 'embedding_input.sav',
-                  [all_feats, all_labels])
+                      [all_feats, all_labels])
         st.session_state['input_sav'] = os.path.join(project_dir, iter_folder, 'embedding_input.sav')
         st.success('Done. Type "R" to Refresh.')
 
@@ -110,19 +108,18 @@ UMAP_PARAMS = {
     'random_state': 42,
 }
 
-
 HDBSCAN_PARAMS = {
     'min_samples': 1
 }
 
 
-def hdbscan_classification(umap_embeddings,cluster_range):
+def hdbscan_classification(umap_embeddings, cluster_range):
     max_num_clusters = -np.infty
     num_clusters = []
     min_cluster_size = np.linspace(cluster_range[0], cluster_range[1], 20)
     for min_c in min_cluster_size:
         learned_hierarchy = hdbscan.HDBSCAN(
-            prediction_data=True,min_cluster_size=int(round(min_c * 0.01 * umap_embeddings.shape[0])),
+            prediction_data=True, min_cluster_size=int(round(min_c * 0.01 * umap_embeddings.shape[0])),
             **HDBSCAN_PARAMS).fit(umap_embeddings)
         num_clusters.append(len(np.unique(learned_hierarchy.labels_)))
         if num_clusters[-1] > max_num_clusters:
@@ -130,76 +127,82 @@ def hdbscan_classification(umap_embeddings,cluster_range):
             retained_hierarchy = learned_hierarchy
     assignments = retained_hierarchy.labels_
     assign_prob = hdbscan.all_points_membership_vectors(retained_hierarchy)
-    soft_assignments = np.argmax(assign_prob,axis=1)
-    return retained_hierarchy,assignments,assign_prob,soft_assignments
+    soft_assignments = np.argmax(assign_prob, axis=1)
+    return retained_hierarchy, assignments, assign_prob, soft_assignments
 
 
 def pca_umap_hdbscan(target_behavior, annotation_classes, input_sav, cluster_range,
-                     project_dir, iter_folder, placeholder):
-    with open(input_sav, 'rb') as fr:
-        [features, predictions] = joblib.load(fr)
+                     project_dir, iter_folder, left_col, right_col):
+    if input_sav is not None:
+        with open(input_sav, 'rb') as fr:
+            [features, predictions] = joblib.load(fr)
 
-    if placeholder.button('embed'):
-        for target_behav in target_behavior:
-            target_beh_id = annotation_classes.index(target_behav)
-            selected_features = features[predictions==target_beh_id]
-            scalar = StandardScaler()
-            selected_feats_scaled = scalar.fit_transform(selected_features)
-            pca = PCA(random_state=42)
-            pca.fit(selected_feats_scaled)
-            n_dim = np.where(np.cumsum(pca.explained_variance_ratio_) >= 0.7)[0][0]
-            st.info(f'{n_dim} latent dimension achieves 70% variacne')
-            reducer = umap.UMAP(**UMAP_PARAMS, n_components=n_dim)
+        if right_col.button('Embed and Cluster Targeted Behavior'):
+            for target_behav in target_behavior:
+                target_beh_id = annotation_classes.index(target_behav)
+                selected_features = features[predictions == target_beh_id]
+                scalar = StandardScaler()
+                selected_feats_scaled = scalar.fit_transform(selected_features)
+                pca = PCA(random_state=42)
+                pca.fit(selected_feats_scaled)
+                n_dim = np.where(np.cumsum(pca.explained_variance_ratio_) >= 0.7)[0][0]
+                st.info(f'{n_dim} latent dimension achieves 70% variacne')
+                reducer = umap.UMAP(**UMAP_PARAMS, n_components=n_dim)
 
-            with st.spinner(f'Embedding into {n_dim} dimensions...'):
-                umap_embeddings = reducer.fit_transform(selected_feats_scaled)
-            with st.spinner('Clustering...'):
-                retained_hierarchy, assignments, assign_prob, soft_assignments = hdbscan_classification(umap_embeddings,
-                                                                                                        cluster_range)
-            save_data(project_dir, iter_folder, 'embedding_output.sav',
-                      [umap_embeddings, assignments, soft_assignments])
-            st.session_state['output_sav'] = os.path.join(project_dir, iter_folder, 'embedding_output.sav')
-            st.success('Done. Type "R" to Refresh.')
+                with st.spinner(f'Embedding into {n_dim} dimensions...'):
+                    umap_embeddings = reducer.fit_transform(selected_feats_scaled)
+                with st.spinner('Clustering...'):
+                    retained_hierarchy, assignments, assign_prob, soft_assignments = hdbscan_classification(umap_embeddings,
+                                                                                                            cluster_range)
+                save_data(project_dir, iter_folder, 'embedding_output.sav',
+                          [umap_embeddings, assignments, soft_assignments])
+                st.session_state['output_sav'] = os.path.join(project_dir, iter_folder, 'embedding_output.sav')
+                st.success('Done. Type "R" to Refresh.')
 
 
 def plot_hdbscan_embedding(output_sav):
-    with open(output_sav, 'rb') as fr:
-        [umap_embeddings, assignments, soft_assignments] = joblib.load(fr)
-    # some plotting parameters
-    NOISE_COLOR = 'lightgray'
-    unique_classes = np.unique(assignments)
-    group_types = ['Noise']
-    group_types.extend(['Group{}'.format(i) for i in unique_classes if i >= 0])
+    if output_sav is not None:
+        with open(output_sav, 'rb') as fr:
+            [umap_embeddings, assignments, soft_assignments] = joblib.load(fr)
+        # some plotting parameters
+        unique_classes = np.unique(assignments)
+        group_types = ['Noise']
+        group_types.extend(['Group{}'.format(i) for i in unique_classes if i >= 0])
 
-    trace_list = []
+        trace_list = []
 
-    for num,g in enumerate(unique_classes):
-        if g < 0:
-            idx = np.where(assignments == g)[0]
-            trace_list.append(go.Scatter(x=umap_embeddings[idx,0],
-                                         y=umap_embeddings[idx,1],
-                                         name="Noise",
-                                         mode='markers'
-                                         )
-                              )
-        else:
-            idx = np.where(assignments == g)[0]
-            trace_list.append(go.Scatter(x=umap_embeddings[idx,0],
-                                         y=umap_embeddings[idx,1],
-                                         name=group_types[num],
-                                         mode='markers'
-                                         ))
+        for num, g in enumerate(unique_classes):
+            if g < 0:
+                idx = np.where(assignments == g)[0]
+                trace_list.append(go.Scatter(x=umap_embeddings[idx, 0],
+                                             y=umap_embeddings[idx, 1],
+                                             name="Noise",
+                                             mode='markers'
+                                             )
+                                  )
+            else:
+                idx = np.where(assignments == g)[0]
+                trace_list.append(go.Scatter(x=umap_embeddings[idx, 0],
+                                             y=umap_embeddings[idx, 1],
+                                             name=group_types[num],
+                                             mode='markers'
+                                             ))
 
-    fig = make_subplots()
-    for trace in trace_list:
-        fig.add_trace(trace)
+        fig = make_subplots()
+        for trace in trace_list:
+            fig.add_trace(trace)
 
-    fig.update_xaxes(title_text="UMAP Dim 1",row=1,col=1,showticklabels=False)
-    fig.update_yaxes(title_text="UMAP Dim 2",row=1,col=1,showticklabels=False)
-    fig.update_layout(title_text="Unsupervised Clustering",
-                      )
-
-    return fig, group_types
+        fig.update_layout(
+            autosize=True,
+            # width=800,
+            # height=400,
+            xaxis_title=dict(text='Dim. 1', font=dict(size=16, color='#EEEEEE')),
+            yaxis_title=dict(text='Dim. 2', font=dict(size=16, color='#EEEEEE')),
+            xaxis=dict(tickfont=dict(size=14, color='#EEEEEE')),
+            yaxis=dict(tickfont=dict(size=14, color='#EEEEEE')),
+            legend=dict(x=0.0, y=1.2, orientation='h', font=dict(color='#EEEEEE')),
+        )
+        return fig, group_types
 
 
 def main(ri=None, config=None):
@@ -232,9 +235,9 @@ def main(ri=None, config=None):
         if 'uploaded_pose' not in st.session_state:
             st.session_state['uploaded_pose'] = []
 
-        st.session_state['disabled'] = False
+        # st.session_state['disabled'] = False
         left_col, right_col = st.columns(2)
-        left_checkbox = left_col.checkbox('Add Additional Pose Files?')
+        left_checkbox = left_col.checkbox('Add Additional Pose Files?', disabled=st.session_state.disabled)
 
         pose_expander = left_col.expander('pose'.upper(), expanded=True)
         prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
@@ -251,32 +254,40 @@ def main(ri=None, config=None):
             y = targets.copy()
 
         [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
-        st.info(f'loaded {iter_folder} model')
+
         buttonL, buttonR = st.columns(2)
         if 'input_sav' not in st.session_state:
             st.session_state['input_sav'] = None
         if 'output_sav' not in st.session_state:
             st.session_state['output_sav'] = None
         if st.session_state['input_sav'] is None:
-            get_features_labels(X, y, iterX_model, frames2integ, project_dir, iter_folder, buttonL
-                            )
+            get_features_labels(X, y, iterX_model, frames2integ, project_dir, iter_folder, left_col
+                                )
 
-        target_behavior = right_col.multiselect('Select Behavior to Split', annotation_classes, annotation_classes[3])
+        target_behavior = ri.multiselect('Select Behavior to Split', annotation_classes, annotation_classes[3])
         if st.session_state['input_sav'] is not None:
+            st.session_state['disabled'] = True
 
-            if buttonR.button(':red[Clear Processed Pose.]'):
+            if buttonL.button(':red[Clear Processed Pose]'):
                 st.session_state['input_sav'] = None
                 st.success('Cleared. Type "R" to Refresh.')
+                st.session_state['disabled'] = False
+
             if st.session_state['output_sav'] is None:
                 pca_umap_hdbscan(target_behavior, annotation_classes, st.session_state['input_sav'], [5, 5.5],
-                                 project_dir, iter_folder, buttonL)
+                                 project_dir, iter_folder, left_col, ri)
 
             else:
-                if buttonR.button(':red[Clear Embedding.]'):
+                right_col_top = right_col.empty()
+                if buttonR.button(':red[Clear Embedding]'):
                     st.session_state['output_sav'] = None
                     st.success('Cleared. Type "R" to Refresh.')
-                fig, group_types = plot_hdbscan_embedding(st.session_state['output_sav'])
-                buttonL.plotly_chart(fig, use_container_width=True)
+
+                if st.session_state['output_sav'] is not None:
+                    fig, group_types = plot_hdbscan_embedding(st.session_state['output_sav'])
+                    right_col_top.plotly_chart(fig, use_container_width=True)
+        else:
+            st.session_state['disabled'] = False
 
 
     else:
@@ -287,10 +298,5 @@ def main(ri=None, config=None):
 
         st.markdown("""---""")
         st.write('')
-        # button_col1, button_col2, button_col3, button_col4, button_col5 = st.columns([3, 3, 1, 1, 1])
-        # if button_col1.button('◀  PRIOR STEP'):
-        #     swap_app('F-view')
-        # if button_col5.button('NEXT STEP ▶'):
-        #     swap_app('A-data-preprocess')
         st.write('')
         st.markdown('<span style="color:grey">{}</span>'.format(IMPRESS_TEXT), unsafe_allow_html=True)
