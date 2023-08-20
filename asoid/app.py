@@ -224,95 +224,95 @@ def main():
 
         mid_im.image(logo_im_)
         st.write('---')
-        try:
-            sections = [x for x in st.session_state['config'].keys() if x != "DEFAULT"]
-            for parameter, value in st.session_state['config'][sections[0]].items():
-                if parameter == 'PROJECT_PATH':
-                    working_dir = value
-                elif parameter == 'PROJECT_NAME':
-                    prefix = value
-                elif parameter == 'CLASSES':
-                    annotations = value
-            for parameter, value in st.session_state['config'][sections[2]].items():
-                if parameter == "ITERATION":
-                    current_iter_num = value
-            project_dir = os.path.join(working_dir, prefix)
-            iteration_0 = 'iteration-0'
-            current_iter = str.join('', ('iteration-', str(current_iter_num)))
-            current_refine_dir = [d for d in os.listdir(os.path.join(project_dir, current_iter))
-                                if os.path.isdir(os.path.join(project_dir, current_iter, d))]
+        # try:
+        #     sections = [x for x in st.session_state['config'].keys() if x != "DEFAULT"]
+        #     for parameter, value in st.session_state['config'][sections[0]].items():
+        #         if parameter == 'PROJECT_PATH':
+        #             working_dir = value
+        #         elif parameter == 'PROJECT_NAME':
+        #             prefix = value
+        #         elif parameter == 'CLASSES':
+        #             annotations = value
+        #     for parameter, value in st.session_state['config'][sections[2]].items():
+        #         if parameter == "ITERATION":
+        #             current_iter_num = value
+        #     project_dir = os.path.join(working_dir, prefix)
+        #     iteration_0 = 'iteration-0'
+        #     current_iter = str.join('', ('iteration-', str(current_iter_num)))
+        #     current_refine_dir = [d for d in os.listdir(os.path.join(project_dir, current_iter))
+        #                         if os.path.isdir(os.path.join(project_dir, current_iter, d))]
+        #
+        #     if int(current_iter_num) > 0:
+        #         previous_iter_num = int(current_iter_num)-1
+        #         previous_iter = str.join('', ('iteration-', str(int(current_iter_num)-1)))
+        #         previous_refine_dir = [d for d in os.listdir(os.path.join(project_dir, previous_iter))
+        #                         if os.path.isdir(os.path.join(project_dir, previous_iter, d))]
+        #     else:
+        #         previous_iter_num = current_iter_num
+        #         previous_iter = current_iter
+        #         previous_refine_dir = current_refine_dir.copy()
 
-            if int(current_iter_num) > 0:
-                previous_iter_num = int(current_iter_num)-1
-                previous_iter = str.join('', ('iteration-', str(int(current_iter_num)-1)))
-                previous_refine_dir = [d for d in os.listdir(os.path.join(project_dir, previous_iter))
-                                if os.path.isdir(os.path.join(project_dir, previous_iter, d))]
-            else:
-                previous_iter_num = current_iter_num
-                previous_iter = current_iter
-                previous_refine_dir = current_refine_dir.copy()
+        #     menu_options = ['Menu', 'Upload Data ✔', 'Extract Features', 'Active Learning',
+        #                     'Refine Behaviors', 'Create New Dataset', 'Predict', "Discover"]
+        #     st.session_state['page'] = 'Step 2'
+        #     try:
+        #         [_, _, _, _] = load_features(project_dir, iteration_0)
+        #         menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔', 'Active Learning',
+        #                         'Refine Behaviors', 'Create New Dataset', 'Predict', "Discover"]
+        #         st.session_state['page'] = 'Step 3'
+        #         try:
+        #             [_, _, _] = load_iterX(project_dir, previous_iter)
+        #             menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔',
+        #                             f'Active Learning iter{previous_iter_num}',
+        #                             'Refine Behaviors', 'Create New Dataset', 'Predict', "Discover"]
+        #             st.session_state['page'] = 'Step 4'
+        #             # if 'refinements.sav' in np.concatenate([os.listdir(os.path.join(project_dir, previous_iter,
+        #             #                                                  previous_refine_dir[i]))
+        #             #                          for i in range(len(previous_refine_dir))]):
+        #             #     menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔',
+        #             #                     f'Active Learning iter{previous_iter_num}',
+        #             #                     f'Refine Behaviors iter{previous_iter_num}',
+        #             #                     'Create New Dataset', 'Predict', "View", "Discover"]
+        #             #     st.session_state['page'] = 'Step 5'
+        #
+        #             try:
+        #                 [_, _, _] = load_iterX(project_dir, current_iter)
+        #                 menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔',
+        #                                 f'Active Learning iter{current_iter_num}',
+        #                                 'Refine Behaviors', 'Create New Dataset', 'Predict', "Discover"]
+        #                 st.session_state['page'] = 'Step 4'
+        #
+        #                 # if 'refinements.sav' in np.concatenate([os.listdir(os.path.join(project_dir, current_iter,
+        #                 #                                                                 current_refine_dir[i]))
+        #                 #                                         for i in range(len(current_refine_dir))]):
+        #                 #     menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔',
+        #                 #                     f'Active Learning iter{current_iter_num}',
+        #                 #                     f'Refine Behaviors iter{current_iter_num}',
+        #                 #                     'Create New Dataset', 'Predict', "View", "Discover"]
+        #                 #     st.session_state['page'] = 'Step 5'
+        #
+        #
+        #             except:
+        #                 pass
+        #
+        #         except:
+        #             pass
+        #     except:
+        #         pass
+        #
+        # except:
+        menu_options = ['Menu', 'Upload Data', 'Extract Features', 'Active Learning',
+                        'Refine Behaviors', 'Create New Dataset', 'Predict', 'Discover']
 
-            menu_options = ['Menu', 'Upload Data ✔', 'Extract Features', 'Active Learning',
-                            'Refine Behaviors', 'Create New Dataset', 'Predict', "Discover"]
-            st.session_state['page'] = 'Step 2'
-            try:
-                [_, _, _, _] = load_features(project_dir, iteration_0)
-                menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔', 'Active Learning',
-                                'Refine Behaviors', 'Create New Dataset', 'Predict', "Discover"]
-                st.session_state['page'] = 'Step 3'
-                try:
-                    [_, _, _] = load_iterX(project_dir, previous_iter)
-                    menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔',
-                                    f'Active Learning iter{previous_iter_num}',
-                                    'Refine Behaviors', 'Create New Dataset', 'Predict', "Discover"]
-                    st.session_state['page'] = 'Step 4'
-                    # if 'refinements.sav' in np.concatenate([os.listdir(os.path.join(project_dir, previous_iter,
-                    #                                                  previous_refine_dir[i]))
-                    #                          for i in range(len(previous_refine_dir))]):
-                    #     menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔',
-                    #                     f'Active Learning iter{previous_iter_num}',
-                    #                     f'Refine Behaviors iter{previous_iter_num}',
-                    #                     'Create New Dataset', 'Predict', "View", "Discover"]
-                    #     st.session_state['page'] = 'Step 5'
-
-                    try:
-                        [_, _, _] = load_iterX(project_dir, current_iter)
-                        menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔',
-                                        f'Active Learning iter{current_iter_num}',
-                                        'Refine Behaviors', 'Create New Dataset', 'Predict', "Discover"]
-                        st.session_state['page'] = 'Step 4'
-
-                        # if 'refinements.sav' in np.concatenate([os.listdir(os.path.join(project_dir, current_iter,
-                        #                                                                 current_refine_dir[i]))
-                        #                                         for i in range(len(current_refine_dir))]):
-                        #     menu_options = ['Menu', 'Upload Data ✔', 'Extract Features ✔',
-                        #                     f'Active Learning iter{current_iter_num}',
-                        #                     f'Refine Behaviors iter{current_iter_num}',
-                        #                     'Create New Dataset', 'Predict', "View", "Discover"]
-                        #     st.session_state['page'] = 'Step 5'
-
-
-                    except:
-                        pass
-
-                except:
-                    pass
-            except:
-                pass
-
-        except:
-            menu_options = ['Menu', 'Upload Data', 'Extract Features', 'Active Learning',
-                            'Refine Behaviors', 'Create New Dataset', 'Predict', 'Discover']
-
-        app_names = np.array(['index',
-                              'A-data-preprocess',
-                              'B-extract-features',
-                              'C-auto-active-learning',
-                              'D-manual-active-learning',
-                              'E-create-new-training'
-                              'E-predict',
-                              'G-unsupervised-discovery',
-                              ])
+        # app_names = np.array(['index',
+        #                       'A-data-preprocess',
+        #                       'B-extract-features',
+        #                       'C-auto-active-learning',
+        #                       'D-manual-active-learning',
+        #                       'E-create-new-training'
+        #                       'E-predict',
+        #                       'G-unsupervised-discovery',
+        #                       ])
         icon_options = ['window-desktop',
                         'upload',
                         'bar-chart-line',
@@ -322,7 +322,7 @@ def main():
                         'robot',
                         "signpost-split",
                         ]
-        # print(np.where(app_names == get_url_app())[0])
+
         nav_options = option_menu(None, menu_options,
                                   icons=icon_options,
                                   menu_icon="",
@@ -379,11 +379,6 @@ def main():
             E_predict.main(ri=ri, config=st.session_state['config'])
         else:
             E_predict.main(ri=ri, config=None)
-    # elif 'View' in nav_options:
-    #     try:
-    #         F_view.main(config=st.session_state['config'])
-    #     except:
-    #         F_view.main(config=None)
     elif 'Discover' in nav_options:
         if "config" in st.session_state.keys():
             G_unsupervised_discovery.main(ri=ri, config=st.session_state['config'])
