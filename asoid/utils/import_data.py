@@ -252,11 +252,9 @@ def load_labels(file, origin: str, fps: int, sample_rate: int):
         raise ValueError(f"Label origin {origin} is not supported.")
     #testing
     # upsample labels to test downsampling
-    st.write(labels.shape)
     labels = pd.DataFrame(
             np.repeat(labels.values, 6, axis=0), columns=labels.columns
         )
-    st.write(labels.shape)
     if sample_rate != fps:
         re_labels = resample_labels(labels, fps, sample_rate)
         return re_labels

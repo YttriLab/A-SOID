@@ -6,14 +6,29 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
+import re
 import streamlit as st
 from utils.import_data import load_pose, get_bodyparts, get_animals, load_labels
 from utils.project_utils import create_new_project, update_config
-from config.help_messages import POSE_ORIGIN_SELECT_HELP, FPS_HELP, MULTI_ANIMAL_HELP, MULTI_ANIMAL_SELECT_HELP,\
-    BODYPART_SELECT, WORKING_DIR_HELP,PREFIX_HELP, DATA_DIR_IMPORT_HELP, POSE_DIR_IMPORT_HELP, POSE_ORIGIN_HELP,\
-    POSE_SELECT_HELP, LABEL_DIR_IMPORT_HELP, LABEL_ORIGIN_HELP, LABEL_SELECT_HELP, PREPROCESS_HELP, EXCLUDE_OTHER_HELP,\
+from config.help_messages import POSE_ORIGIN_SELECT_HELP, FPS_HELP, MULTI_ANIMAL_HELP, MULTI_ANIMAL_SELECT_HELP, \
+    BODYPART_SELECT, WORKING_DIR_HELP, PREFIX_HELP, DATA_DIR_IMPORT_HELP, POSE_DIR_IMPORT_HELP, POSE_ORIGIN_HELP, \
+    POSE_SELECT_HELP, LABEL_DIR_IMPORT_HELP, LABEL_ORIGIN_HELP, LABEL_SELECT_HELP, PREPROCESS_HELP, EXCLUDE_OTHER_HELP, \
     INIT_CLASS_SELECT_HELP, SAMPLE_RATE_HELP
 
+
+def convert_int(s):
+    if s.isdigit():
+        return int(s)
+    else:
+        return s
+
+
+def alphanum_key(s):
+    return [convert_int(c) for c in re.split('([0-9]+)', s)]
+
+
+def sort_nicely(l):
+    l.sort(key=alphanum_key)
 
 
 def convert_data_format(data, train=False):
@@ -47,14 +62,15 @@ def convert_data_format(data, train=False):
     else:
         return collection
 
+
 def select_software():
     """
     Ask for software
     :return:
     """
     software = st.selectbox('Select the type of pose estimation file:',
-                                 ('DeepLabCut', 'SLEAP', "CALMS21 (PAPER)"),
-                                 help = POSE_ORIGIN_SELECT_HELP)
+                            ('DeepLabCut', 'SLEAP', "CALMS21 (PAPER)"),
+                            help=POSE_ORIGIN_SELECT_HELP)
     if software == 'DeepLabCut':
         # TODO: Add functionality to deal with H5 files from DLC
         # self.ftype = st.selectbox('Select the type of pose estimation file:',
@@ -68,7 +84,6 @@ def select_software():
         ftype = 'npy'
 
     return software, ftype
-
 
 
 class Preprocess:
@@ -106,7 +121,7 @@ class Preprocess:
         self.working_dir = None
         self.prefix = None
 
-        #for CALMS21 data only
+        # for CALMS21 data only
         self.train_data_path = None
         self.test_data_path = None
 
@@ -123,16 +138,17 @@ class Preprocess:
             self.framerate = int(
                 input_container.number_input('Enter the average video frame-rate of your pose estimation files.',
                                              value=30,
-                                             help = FPS_HELP))
+                                             help=FPS_HELP))
             self.sample_rate = int(
                 input_container.number_input('Enter the sample rate of your annotation files.',
-                                                value=10,
-                                                help = SAMPLE_RATE_HELP))
+                                             value=10,
+                                             help=SAMPLE_RATE_HELP))
             try:
                 for i in range(len(self.label_csvs)):
                     # load all label files and upsample them to fit pose estimation
                     # (WARNING: This only works with sample rates that are convertible into each other)
-                    self.label_df.append(load_labels(self.label_csvs[i], origin="BORIS", fps=self.framerate, sample_rate= self.sample_rate))
+                    self.label_df.append(load_labels(self.label_csvs[i], origin="BORIS", fps=self.framerate,
+                                                     sample_rate=self.sample_rate))
                 # go through all label files to make sure to catch all optional classes
                 # There is probably a faster solution...
                 optional_classes = []
@@ -146,20 +162,18 @@ class Preprocess:
                             # if not append
                             optional_classes.append(temp_optional_class)
 
-
-
                 self.classes = input_container.multiselect(
                     "Deselect classes that should not be included in training."
-                    , optional_classes, optional_classes, help = INIT_CLASS_SELECT_HELP
+                    , optional_classes, optional_classes, help=INIT_CLASS_SELECT_HELP
                 )
 
-                #move other to last place
+                # move other to last place
                 if "other" in optional_classes:
                     optional_classes.append(optional_classes.pop(optional_classes.index("other")))
 
                 self.exclude_other = input_container.checkbox("Exclude 'other'?", False,
-                                                              key= "exclude_other_check",
-                                                              help= EXCLUDE_OTHER_HELP)
+                                                              key="exclude_other_check",
+                                                              help=EXCLUDE_OTHER_HELP)
             except IndexError:
                 st.warning('Please select corresponding label files first.')
             except TypeError:
@@ -167,7 +181,7 @@ class Preprocess:
 
             self.multi_animal = st.checkbox("Is this a multiple animal project?",
                                             False, key="multi_animal_check",
-                                            help = MULTI_ANIMAL_HELP)
+                                            help=MULTI_ANIMAL_HELP)
         else:
             self.framerate = 30
             self.classes = ['attack', 'investigation', 'mount', 'other']
@@ -205,7 +219,7 @@ class Preprocess:
                 animals = get_animals(file0_df, lvl=animal_lvl)
                 self.selected_animals = st.multiselect('Identified animals to include:', animals,
                                                        animals
-                                                       ,help = MULTI_ANIMAL_SELECT_HELP)
+                                                       , help=MULTI_ANIMAL_SELECT_HELP)
                 # find the indexes where the animal has bps
                 an_index_list = []
                 for an in self.selected_animals:
@@ -219,7 +233,7 @@ class Preprocess:
             # file0_df = pd.read_csv(data_files[0],low_memory=False)
             self.selected_bodyparts = st.multiselect('Identified keypoints/bodyparts to include:', bodyparts,
                                                      bodyparts,
-                                                     help = BODYPART_SELECT)
+                                                     help=BODYPART_SELECT)
             bp_index_list = []
             for bp in self.selected_bodyparts:
                 bp_index = np.argwhere(file0_df.columns.get_level_values(bp_level) == bp)
@@ -239,7 +253,7 @@ class Preprocess:
         # TODO: adapt to run with mac and ubuntu
         self.working_dir = input_container.text_input('Enter a working directory',
                                                       str.join('', (str(Path.home()), '/Desktop/asoid_output')),
-                                                      help = WORKING_DIR_HELP)
+                                                      help=WORKING_DIR_HELP)
         try:
             os.listdir(self.working_dir)
             st.success('Entered **{}** as the working directory.'.format("%r" % self.working_dir))
@@ -251,7 +265,7 @@ class Preprocess:
         d4 = today.strftime("%b-%d-%Y")
 
         self.prefix = input_container.text_input('Enter filename prefix', d4,
-                                                 help = PREFIX_HELP)
+                                                 help=PREFIX_HELP)
         if self.prefix:
             st.success(f'Entered **{self.prefix}** as the prefix.')
         else:
@@ -270,17 +284,19 @@ class Preprocess:
                 self.pose_files = upload_container.file_uploader('Upload corresponding pose files',
                                                                  accept_multiple_files=True,
                                                                  type=self.ftype, key='pose'
-                                                                 ,help = POSE_ORIGIN_HELP)
+                                                                 , help=POSE_ORIGIN_HELP)
 
                 if self.pose_files:
                     # make it a dictionary for later sorting
                     self.pose_files = {x.name: x for x in self.pose_files}
+                    pose_order = list(self.pose_files.keys())
+                    sort_nicely(pose_order)
                     self.pose_csvs = upload_container.multiselect(
-                        'Order them to match the sequence of label files below'
-                        , self.pose_files.keys() , default= self.pose_files.keys()
-                        , help = POSE_SELECT_HELP)
+                        'Order them to match the sequence of label files below',
+                        pose_order, default=pose_order, help=POSE_SELECT_HELP)
                     # retrieve files in right order:
                     self.pose_csvs = [self.pose_files[x] for x in self.pose_csvs]
+                    # st.write(self.pose_csvs)
                     upload_container.write('---')
                 # do the same for labels
                 self.label_files = upload_container.file_uploader(
@@ -288,17 +304,19 @@ class Preprocess:
                     accept_multiple_files=True,
                     type=self.label_ftype,
                     key='label',
-                    help= LABEL_ORIGIN_HELP)
+                    help=LABEL_ORIGIN_HELP)
                 if self.label_files:
                     self.label_files = {x.name: x for x in self.label_files}
+                    labels_order = list(self.label_files.keys())
+                    sort_nicely(labels_order)
                     self.label_csvs = upload_container.multiselect(
-                        'Order them to match the sequence of pose files above'
-                        , self.label_files.keys(), default= self.label_files.keys()
-                        , help = LABEL_SELECT_HELP)
+                        'Order them to match the sequence of pose files above',
+                        labels_order, default=labels_order, help=LABEL_SELECT_HELP)
                     self.label_csvs = [self.label_files[x] for x in self.label_csvs]
+                    # st.write(self.label_csvs)
 
             else:
-                #for CALMS21 we need the test and train files directly
+                # for CALMS21 we need the test and train files directly
                 self.train_data_path = upload_container.text_input(
                     'Select the full path for the CalMS21 train file (calms21_task1_train.npy)'
                     , os.getcwd())
@@ -341,7 +359,7 @@ class Preprocess:
         # drop all classes that are deselected
         # select_label_df.drop(columns=deselected_classes, inplace=True)
         # make sure that other is one of the selected classes
-        #if "other" not in self.classes and not self.exclude_other:
+        # if "other" not in self.classes and not self.exclude_other:
 
         if "other" not in self.classes:
             self.classes.append("other")
@@ -356,7 +374,7 @@ class Preprocess:
         select_label_df = select_label_df.reindex(
             columns=(list([clm for clm in self.classes if clm != "other"]) + ["other"]))
 
-        #get rid of "other" column if excluded
+        # get rid of "other" column if excluded
         # if self.exclude_other:
         #     select_label_df.drop(columns=["other"], inplace=True)
 
@@ -366,14 +384,14 @@ class Preprocess:
         return label_vector
 
     def compile_data(self):
-        if st.button("Create Project/Preprocess", help = PREPROCESS_HELP):
+        if st.button("Create Project/Preprocess", help=PREPROCESS_HELP):
             self.input_datafiles = []
             self.input_labelfiles = []
             self.processed_input_data = []
             if self.software == "CALMS21 (PAPER)" and self.ftype == "npy":
                 # ROOT = Path(__file__).parent.parent.parent.resolve()
                 # filenames = glob.glob(str(ROOT.joinpath("train")) + '/*.npy')[0]
-                #train = np.load(os.path.join(ROOT.joinpath("train"), filenames), allow_pickle=True)
+                # train = np.load(os.path.join(ROOT.joinpath("train"), filenames), allow_pickle=True)
                 train = np.load(self.train_data_path, allow_pickle=True)
                 self.processed_input_data, self.targets = convert_data_format(train, train=True)
                 self.input_datafiles.append(self.train_data_path)
@@ -396,7 +414,7 @@ class Preprocess:
                         self.input_datafiles.append(f.name)
                         self.input_labelfiles.append(self.label_csvs[i].name)
                     else:
-                        #we used the folder import, which results in a string
+                        # we used the folder import, which results in a string
                         self.input_datafiles.append(os.path.basename(f))
                         self.input_labelfiles.append(os.path.basename(self.label_csvs[i]))
 
@@ -411,7 +429,7 @@ class Preprocess:
                     # the loaded sleap file has them too, so exclude for both
                     idx_selected = [i for i in idx_selected if i not in idx_llh]
 
-                    #train_portion = int(np.array(current_pose.shape[0]) * 0.7)
+                    # train_portion = int(np.array(current_pose.shape[0]) * 0.7)
                     self.processed_input_data.append(np.array(current_pose.iloc[:, idx_selected]))
 
                     # self.processed_input_data.append(np.array(current_pose.iloc[:train_portion, idx_selected]))
@@ -422,13 +440,11 @@ class Preprocess:
                     # st.write(self.label_df, label_vector.shape, current_pose.shape)
                     # continue with partioning
                     targets = label_vector[-current_pose.shape[0]:].copy()
-                    #train_portion_labels = int(targets.shape[0] * 0.7)
+                    # train_portion_labels = int(targets.shape[0] * 0.7)
                     self.targets.append(targets)
 
                     # self.targets.append(targets[:train_portion_labels])
                     # self.targets_test.append(targets[train_portion_labels:])
-
-
 
             self.save_update_info()
 
@@ -469,7 +485,7 @@ class Preprocess:
                     PROJECT_PATH=self.working_dir,
                     CLASSES=self.classes,
                     MULTI_ANIMAL=self.multi_animal,
-                    EXCLUDE_OTHER = self.exclude_other
+                    EXCLUDE_OTHER=self.exclude_other
                 ),
                 "Processing": dict(
                     ITERATION=0,
@@ -503,7 +519,7 @@ class Preprocess:
         col_left, _, col_right = st.columns([1, 1, 1])
         col_left.info('Processed a total of **{}** .{} files, and compiled into a '
                       '**{}** data list.'.format(len(self.processed_input_data), self.ftype,
-                                                 np.array(self.processed_input_data, dtype= object).shape))
+                                                 np.array(self.processed_input_data, dtype=object).shape))
         col_right.success("Continue on with next module".upper())
 
     def main(self):
