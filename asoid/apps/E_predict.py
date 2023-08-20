@@ -589,15 +589,15 @@ def main(ri=None, config=None):
                           if d.endswith(str.join('', (iter_folder, '.npy')))]
         annotated_vids_trim = [annotated_vids[i].rpartition('_annotated_')[0] for i in range(len(annotated_vids))]
         annotated_vids_trim.extend(['Add New Data'])
-        annotated_vids.extend(['Add New Video'])
+        annotated_vids.extend(['Add New Data'])
 
         selection = ri.selectbox('Select Video Prediction', annotated_vids_trim)
         selected_annot_video = annotated_vids[annotated_vids_trim.index(selection)]
 
-        if selected_annot_video != 'Add New Video':
+        if selected_annot_video != 'Add New Data':
             annot_vid_path = os.path.join(videos_dir, selected_annot_video.replace('npy', 'mp4'))
         else:
-            annot_vid_path = 'Add New Video'
+            annot_vid_path = 'Add New Data'
 
         if software == 'CALMS21 (PAPER)':
             ROOT = Path(__file__).parent.parent.parent.resolve()
@@ -612,7 +612,7 @@ def main(ri=None, config=None):
 
             st.session_state['disabled'] = False
 
-            if annot_vid_path == 'Add New Video':
+            if annot_vid_path == 'Add New Data':
                 prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                                          framerate, videos_dir, project_dir, iter_folder)
 
