@@ -245,8 +245,8 @@ def frame_extraction(video_file, frame_dir, placeholder=None):
 
 def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                  framerate, videos_dir, project_dir, iter_dir):
-    left_col, right_col = st.columns(2)
-    le_exapnder = left_col.expander('pose'.upper(), expanded=True)
+    # left_col, right_col = st.columns(2)
+    pose_exapnder = st.expander('pose'.upper(), expanded=True)
     # ri_exapnder = right_col.expander('video'.upper(), expanded=True)
     frame_dir = None
     shortvid_dir = None
@@ -256,10 +256,11 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
         new_pose_list = load_new_pose(new_pose_sav)
     else:
         # try:
-        new_pose_csvs = [le_exapnder.file_uploader('Upload Corresponding Pose Files',
-                                                   accept_multiple_files=False,
-                                                   type=ftype, key='pose')]
-        if new_pose_csvs[0] is not None:
+        new_pose_csvs = pose_exapnder.file_uploader('Upload Corresponding Pose Files',
+                                                   accept_multiple_files=True,
+                                                   type=ftype, key='pose')
+        if len(new_pose_csvs) > 0:
+
             # st.session_state['uploaded_vid'] = new_videos
             new_pose_list = []
             for i, f in enumerate(new_pose_csvs):
@@ -267,32 +268,33 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                                            header=[0, 1, 2], sep=",", index_col=0)
                 bp_level = 1
                 bp_index_list = []
-                st.info("Selected keypoints/bodyparts (from config): " + ", ".join(selected_bodyparts))
-                st.info("Available keypoints/bodyparts in pose file: " + ", ".join(
-                    current_pose.columns.get_level_values(bp_level).unique()))
-                # check if all bodyparts are in the pose file
-                if len(selected_bodyparts) > len(current_pose.columns.get_level_values(bp_level).unique()):
-                    st.error(f'Not all selected keypoints/bodyparts are in the pose file: {f.name}')
-                    st.stop()
-                elif len(selected_bodyparts) < len(current_pose.columns.get_level_values(bp_level).unique()):
-                    # subselection would take care of this, so we need to make sure that they all exist
+                if i == 0:
+                    st.info("Selected keypoints/bodyparts (from config): " + ", ".join(selected_bodyparts))
+                    st.info("Available keypoints/bodyparts in pose file: " + ", ".join(
+                        current_pose.columns.get_level_values(bp_level).unique()))
+                    # check if all bodyparts are in the pose file
+
+                    if len(selected_bodyparts) > len(current_pose.columns.get_level_values(bp_level).unique()):
+                        st.error(f'Not all selected keypoints/bodyparts are in the pose file: {f.name}')
+                        st.stop()
+                    elif len(selected_bodyparts) < len(current_pose.columns.get_level_values(bp_level).unique()):
+                        # subselection would take care of this, so we need to make sure that they all exist
+                        for bp in selected_bodyparts:
+                            if bp not in current_pose.columns.get_level_values(bp_level).unique():
+                                st.error(f'At least one keypoint "{bp}" is missing in pose file: {f.name}')
+                                st.stop()
                     for bp in selected_bodyparts:
-                        if bp not in current_pose.columns.get_level_values(bp_level).unique():
-                            st.error(f'At least one keypoint "{bp}" is missing in pose file: {f.name}')
-                            st.stop()
-                for bp in selected_bodyparts:
-                    bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
-                    bp_index_list.append(bp_index)
-                selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
-                # get rid of likelihood columns for deeplabcut
-                idx_llh = selected_pose_idx[2::3]
-                # the loaded sleap file has them too, so exclude for both
-                idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
+                        bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
+                        bp_index_list.append(bp_index)
+                    selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
+                    # get rid of likelihood columns for deeplabcut
+                    idx_llh = selected_pose_idx[2::3]
+                    # the loaded sleap file has them too, so exclude for both
+                    idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
                 new_pose_list.append(np.array(current_pose.iloc[:, idx_selected]))
             st.session_state['uploaded_pose'] = new_pose_list
         else:
             st.session_state['uploaded_pose'] = []
-    return right_col
 
 
 def convert_int(s):
@@ -358,8 +360,9 @@ def predict_annotate_video(iterX_model, framerate, frames2integ,
     action_button = colL.button('Predict and Generate Summary Statistics')
     message_box = st.empty()
     processed_input_data = st.session_state['uploaded_pose']
-    total_n_frames = processed_input_data[0].shape[0]
+    # total_n_frames = processed_input_data[0].shape[0]
     repeat_n = int(frames2integ / 10)
+    total_n_frames = []
     if action_button:
         st.session_state['disabled'] = True
         message_box.info('Predicting labels... ')
@@ -367,6 +370,7 @@ def predict_annotate_video(iterX_model, framerate, frames2integ,
         features = []
         for i, data in enumerate(processed_input_data):
             # using feature scaling from training set
+            total_n_frames.append(data.shape[0])
             feats, _ = feature_extraction([data], 1, frames2integ)
             features.append(feats)
         for i in stqdm(range(len(features)), desc="Behavior prediction from spatiotemporal features"):
@@ -374,23 +378,24 @@ def predict_annotate_video(iterX_model, framerate, frames2integ,
                 predict = bsoid_predict_numba_noscale([features[i]], iterX_model)
                 pred_proba = bsoid_predict_proba_numba_noscale([features[i]], iterX_model)
                 predict_arr = np.array(predict).flatten()
-        predictions_match = np.pad(predict_arr.repeat(repeat_n), (repeat_n, 0), 'edge')[:total_n_frames]
-        pose_type = str.join('', ('.', st.session_state['pose'].type.rpartition('text/')[2]))
-        pose_prefix = st.session_state['pose'].name.rpartition(pose_type)[0]
-        annotated_str = str.join('', ('_annotated_', iter_folder))
-        annotated_vid_name = str.join('', (pose_prefix, annotated_str, '.mp4'))
 
-        vidpath_out = os.path.join(videos_dir, annotated_vid_name)
+            predictions_match = np.pad(predict_arr.repeat(repeat_n), (repeat_n, 0), 'edge')[:total_n_frames[i]]
+            pose_type = str.join('', ('.', st.session_state['pose'][i].type.rpartition('text/')[2]))
+            pose_prefix = st.session_state['pose'][i].name.rpartition(pose_type)[0]
+            annotated_str = str.join('', ('_annotated_', iter_folder))
+            annotated_vid_name = str.join('', (pose_prefix, annotated_str, '.mp4'))
 
-        with st.spinner('Matching video frames'):
-            create_annotated_videos(vidpath_out,
-                                    framerate, annotation_classes,
-                                    frame_dir,
-                                    video_checkbox, predictions_match)
-            st.balloons()
-            message_box.success('Done. Type "R" to refresh.')
-        np.save(vidpath_out.replace('mp4', 'npy'),
-                predictions_match)
+            vidpath_out = os.path.join(videos_dir, annotated_vid_name)
+
+            with st.spinner('Matching video frames'):
+                create_annotated_videos(vidpath_out,
+                                        framerate, annotation_classes,
+                                        frame_dir,
+                                        video_checkbox, predictions_match)
+                st.balloons()
+                message_box.success('Done. Type "R" to refresh.')
+            np.save(vidpath_out.replace('mp4', 'npy'),
+                    predictions_match)
 
 
 def annotate_video(video_path, framerate, annotation_classes,
@@ -582,10 +587,13 @@ def main(ri=None, config=None):
         frames2integ = round(float(framerate) * (duration_min / 0.1))
         annotated_vids = [d for d in os.listdir(videos_dir)
                           if d.endswith(str.join('', (iter_folder, '.npy')))]
+        annotated_vids_trim = [annotated_vids[i].rpartition('_annotated_')[0] for i in range(len(annotated_vids))]
+        annotated_vids_trim.extend(['Add New Data'])
         annotated_vids.extend(['Add New Video'])
 
-        selected_annot_video = ri.radio('Select Video Prediction',
-                                        annotated_vids, horizontal=True)
+        selection = ri.selectbox('Select Video Prediction', annotated_vids_trim)
+        selected_annot_video = annotated_vids[annotated_vids_trim.index(selection)]
+
         if selected_annot_video != 'Add New Video':
             annot_vid_path = os.path.join(videos_dir, selected_annot_video.replace('npy', 'mp4'))
         else:
@@ -605,53 +613,55 @@ def main(ri=None, config=None):
             st.session_state['disabled'] = False
 
             if annot_vid_path == 'Add New Video':
-                right_col = prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
+                prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                                          framerate, videos_dir, project_dir, iter_folder)
 
                 if len(st.session_state['uploaded_pose']) > 0:
-                    colL, colR = st.columns(2)
-                    video_checkbox = colL.checkbox("Create Labeled Video?")
-                    prefix = st.session_state['pose'].name.rpartition(str.join('', ('.', ftype)))[0]
-                    path_prefix = os.path.join(videos_dir,
-                                               prefix)
-                    if video_checkbox:
-                        ri_exapnder = right_col.expander('VIDEO', expanded=True)
-                        ri_exapnder.file_uploader(f'Upload Corresponding Video: '
-                                                  f'{prefix}',
-                                                  accept_multiple_files=False,
-                                                  type=['avi', 'mp4'], key='video')
+                    placeholder = st.empty()
+                    # colL, colR = st.columns(2)
+                    # video_checkbox = colL.checkbox("Create Labeled Video?")
 
-                        frame_dir = str.join('', (path_prefix, '_pngs'))
-                        os.makedirs(frame_dir, exist_ok=True)
-                        if os.path.exists(frame_dir):
-                            framedir_ = os.listdir(frame_dir)
-                            if len(framedir_) < 2:
-                                if st.session_state['video']:
-                                    if os.path.exists(os.path.join(videos_dir, st.session_state['video'].name)):
-                                        temporary_location = str(
-                                            os.path.join(videos_dir, st.session_state['video'].name))
-                                    else:
-                                        g = io.BytesIO(st.session_state['video'].read())  # BytesIO Object
-                                        temporary_location = str(
-                                            os.path.join(videos_dir, st.session_state['video'].name))
-                                        with open(temporary_location, 'wb') as out:  # Open temporary file as bytes
-                                            out.write(g.read())  # Read bytes into file
-                                        out.close()
-                                    frame_extraction(temporary_location, frame_dir, right_col)
-                            else:
-                                [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
-                                st.info(f'loaded {iter_folder} model')
-                                predict_annotate_video(iterX_model, framerate, frames2integ,
-                                                       annotation_classes,
-                                                       frame_dir, videos_dir, iter_folder,
-                                                       video_checkbox, colL)
-                    else:
-                        [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
-                        st.info(f'loaded {iter_folder} model')
-                        predict_annotate_video(iterX_model, framerate, frames2integ,
-                                               annotation_classes,
-                                               None, videos_dir, iter_folder,
-                                               video_checkbox, colL)
+                    # if video_checkbox:
+                    #     prefix = st.session_state['pose'].name.rpartition(str.join('', ('.', ftype)))[0]
+                    #     path_prefix = os.path.join(videos_dir,
+                    #                                prefix)
+                    #     ri_exapnder = right_col.expander('VIDEO', expanded=True)
+                    #     ri_exapnder.file_uploader(f'Upload Corresponding Video: '
+                    #                               f'{prefix}',
+                    #                               accept_multiple_files=False,
+                    #                               type=['avi', 'mp4'], key='video')
+                    #
+                    #     frame_dir = str.join('', (path_prefix, '_pngs'))
+                    #     os.makedirs(frame_dir, exist_ok=True)
+                    #     if os.path.exists(frame_dir):
+                    #         framedir_ = os.listdir(frame_dir)
+                    #         if len(framedir_) < 2:
+                    #             if st.session_state['video']:
+                    #                 if os.path.exists(os.path.join(videos_dir, st.session_state['video'].name)):
+                    #                     temporary_location = str(
+                    #                         os.path.join(videos_dir, st.session_state['video'].name))
+                    #                 else:
+                    #                     g = io.BytesIO(st.session_state['video'].read())  # BytesIO Object
+                    #                     temporary_location = str(
+                    #                         os.path.join(videos_dir, st.session_state['video'].name))
+                    #                     with open(temporary_location, 'wb') as out:  # Open temporary file as bytes
+                    #                         out.write(g.read())  # Read bytes into file
+                    #                     out.close()
+                    #                 frame_extraction(temporary_location, frame_dir, right_col)
+                    #         else:
+                    #             [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
+                    #             st.info(f'loaded {iter_folder} model')
+                    #             predict_annotate_video(iterX_model, framerate, frames2integ,
+                    #                                    annotation_classes,
+                    #                                    frame_dir, videos_dir, iter_folder,
+                    #                                    video_checkbox, colL)
+                    # else:
+                    [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
+                    st.info(f'loaded {iter_folder} model')
+                    predict_annotate_video(iterX_model, framerate, frames2integ,
+                                           annotation_classes,
+                                           None, videos_dir, iter_folder,
+                                           None, placeholder)
             else:
                 top_most_container = st.container()
                 video_col, summary_col = st.columns([2, 1.5])
