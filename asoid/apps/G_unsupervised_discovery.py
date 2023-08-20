@@ -8,7 +8,7 @@ from utils.unsupervised_discovery import Explorer
 from stqdm import stqdm
 from utils.extract_features import feature_extraction, \
     bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
-from utils.load_workspace import load_new_pose, load_iterX, save_data
+from utils.load_workspace import load_new_pose, load_iterX, save_data, load_features
 from utils.view_results import Viewer
 from sklearn.preprocessing import LabelEncoder
 from utils.import_data import load_labels_auto
@@ -74,7 +74,7 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
             # st.session_state['uploaded_vid'] = None
 
 
-def get_features_labels(iterX_model, frames2integ, project_dir, iter_folder, placeholder,
+def get_features_labels(X, y, iterX_model, frames2integ, project_dir, iter_folder, placeholder,
                         ):
     features = [None]
     predict_arr = [None]
@@ -94,9 +94,14 @@ def get_features_labels(iterX_model, frames2integ, project_dir, iter_folder, pla
                 predict = bsoid_predict_numba_noscale([features[i]], iterX_model)
                 pred_proba = bsoid_predict_proba_numba_noscale([features[i]], iterX_model)
                 predict_arr.append(np.array(predict).flatten())
+        new_feats = np.vstack(features)
+        old_feats = X.copy()
+        new_labels = np.hstack(predict_arr)
+        old_labels = y.copy()
+        # st.write(np.vstack((old_feats, new_feats)).shape, np.hstack((old_labels, new_labels)).shape)
         with st.spinner('Saving...'):
             save_data(project_dir, iter_folder, 'embedding_input.sav',
-                  [np.vstack(features), np.hstack(predict_arr)])
+                  [np.vstack((old_feats, new_feats)), np.hstack((old_labels, new_labels))])
         st.session_state['input_sav'] = os.path.join(project_dir, iter_folder, 'embedding_input.sav')
         st.success('Done. Type "R" to Refresh.')
 
@@ -141,6 +146,7 @@ def pca_umap_hdbscan(target_behavior, annotation_classes, input_sav, cluster_ran
             target_beh_id = annotation_classes.index(target_behav)
             selected_features = features[predictions==target_beh_id]
             st.write(selected_features.shape)
+
             scalar = StandardScaler()
             selected_feats_scaled = scalar.fit_transform(selected_features)
             pca = PCA(random_state=42)
@@ -259,10 +265,19 @@ def main(ri=None, config=None):
         st.session_state['disabled'] = False
         left_col, right_col = st.columns(2)
         pose_expander = left_col.expander('pose'.upper(), expanded=True)
-        # split_behav_exapnder = right_col.expander('Select Behavior to Split', expanded=True)
-
         prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                      framerate, videos_dir, project_dir, iter_folder, pose_expander)
+        [features, targets, _, frames2integ] = load_features(project_dir, iter_folder)
+        if features.shape[0] > targets.shape[0]:
+            X = features[:targets.shape[0]].copy()
+            y = targets.copy()
+        elif features.shape[0] < targets.shape[0]:
+            X = features.copy()
+            y = targets[:features.shape[0]].copy()
+        else:
+            X = features.copy()
+            y = targets.copy()
+
         [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
         st.info(f'loaded {iter_folder} model')
         buttonL, buttonR = st.columns(2)
@@ -271,10 +286,9 @@ def main(ri=None, config=None):
         if 'output_sav' not in st.session_state:
             st.session_state['output_sav'] = None
         if st.session_state['input_sav'] is None:
-            get_features_labels(iterX_model, frames2integ, project_dir, iter_folder, buttonL
+            get_features_labels(X, y, iterX_model, frames2integ, project_dir, iter_folder, buttonL
                             )
 
-        # st.write(st.session_state)
         target_behavior = right_col.multiselect('Select Behavior to Split', annotation_classes, annotation_classes[3])
         if st.session_state['input_sav'] is not None:
 

@@ -386,9 +386,9 @@ def main():
     #         F_view.main(config=None)
     elif 'Discover' in nav_options:
         if "config" in st.session_state.keys():
-            G_unsupervised_discovery.main(config=st.session_state['config'])
+            G_unsupervised_discovery.main(ri=ri, config=st.session_state['config'])
         else:
-            G_unsupervised_discovery.main(config=None)
+            G_unsupervised_discovery.main(ri=None, config=None)
 
 
 if __name__ == "__main__":
