@@ -476,9 +476,11 @@ def save_predictions(predict_npy, source_file_name, annotation_classes, framerat
 
     dummy_df["time"] = time_clm
     dummy_df = dummy_df.set_index("time")
-
-    # save to csv
-    dummy_df.to_csv(source_file_name)
+    if not os.path.isfile(source_file_name):
+        # save to csv
+        dummy_df.to_csv(source_file_name)
+        st.info(f'Saved ethogram csv as {source_file_name}.')
+    return dummy_df
 
 
 def convert_dummies_to_labels(labels, annotation_classes):
@@ -678,25 +680,28 @@ def main(ri=None, config=None):
                               framerate,
                               video_col,
                               )
-                if not os.path.isfile(annot_vid_path.replace('mp4', 'csv')):
-                    save_predictions(annot_vid_path.replace('mp4', 'npy'),
-                                     annot_vid_path.replace('mp4', 'csv'),
-                                     annotation_classes,
-                                     framerate)
-                    st.info(f'Saved ethogram csv as {annot_vid_path.replace("mp4", "csv")}. Type "R" to view in app.')
 
-                else:
-                    labels = load_labels_auto(annot_vid_path.replace('mp4', 'csv'),
-                                              origin="BORIS", fps=framerate)
-                    single_label = prep_labels_single(labels, annotation_classes)
-                    describe_labels_single(single_label, framerate, summary_col)
-                    ridge_predict(annot_vid_path.replace('mp4', 'npy'),
-                                  iter_folder,
-                                  annotation_classes,
-                                  exclude_other,
-                                  behavior_colors,
-                                  framerate,
-                                  summary_col)
+                # if not os.path.isfile(annot_vid_path.replace('mp4', 'csv')):
+                #     labels = save_predictions(annot_vid_path.replace('mp4', 'npy'),
+                #                      annot_vid_path.replace('mp4', 'csv'),
+                #                      annotation_classes,
+                #                      framerate)
+                #
+                #
+                # else:
+                labels = save_predictions(annot_vid_path.replace('mp4', 'npy'),
+                                          annot_vid_path.replace('mp4', 'csv'),
+                                          annotation_classes,
+                                          framerate)
+                single_label = prep_labels_single(labels, annotation_classes)
+                describe_labels_single(single_label, framerate, summary_col)
+                ridge_predict(annot_vid_path.replace('mp4', 'npy'),
+                              iter_folder,
+                              annotation_classes,
+                              exclude_other,
+                              behavior_colors,
+                              framerate,
+                              summary_col)
                 # display video from video path
                 if os.path.isfile(annot_vid_path):
                     video_col.video(annot_vid_path)
