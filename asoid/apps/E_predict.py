@@ -589,7 +589,9 @@ def main(ri=None, config=None):
         frames2integ = round(float(framerate) * (duration_min / 0.1))
         annotated_vids = [d for d in os.listdir(videos_dir)
                           if d.endswith(str.join('', (iter_folder, '.npy')))]
-        annotated_vids_trim = [annotated_vids[i].rpartition('_annotated_')[0] for i in range(len(annotated_vids))]
+        sort_nicely(annotated_vids)
+        annotated_vids_trim = [annotated_vids[i].rpartition('_annotated_')[0]
+                               for i in range(len(annotated_vids))]
         annotated_vids_trim.extend(['Add New Data'])
         annotated_vids.extend(['Add New Data'])
 
