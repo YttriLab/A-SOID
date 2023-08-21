@@ -220,17 +220,8 @@ def save_update_info(config, behavior_names_split):
     working_dir = config["Project"].get("PROJECT_PATH")
     prefix_old = config["Project"].get("PROJECT_NAME")
     project_folder = os.path.join(working_dir, prefix_old)
-    annotation_classes = [x.strip() for x in config["Project"].get("CLASSES").split(",")]
-    software = config["Project"].get("PROJECT_TYPE")
-    ftype = config["Project"].get("FILE_TYPE")
-    selected_bodyparts = [x.strip() for x in config["Project"].get("KEYPOINTS_CHOSEN").split(",")]
-    exclude_other = config["Project"].getboolean("EXCLUDE_OTHER")
-    # threshold = config["Processing"].getfloat("SCORE_THRESHOLD")
-    threshold = 0.1
     iteration = config["Processing"].getint("ITERATION")
     iter_folder = str.join('', ('iteration-', str(iteration)))
-    framerate = config["Project"].getint("FRAMERATE")
-    duration_min = config["Processing"].getfloat("MIN_DURATION")
     today = date.today()
     d4 = today.strftime("%b-%d-%Y")
     prefix_new = input_container.text_input('Enter filename prefix', d4,
@@ -239,40 +230,6 @@ def save_update_info(config, behavior_names_split):
         st.success(f'Entered **{prefix_new}** as the prefix.')
     else:
         st.error('Please enter a prefix.')
-
-    # project_folder, _ = create_new_project(working_dir, prefix, overwrite=True)
-
-    # with open(os.path.join(project_folder, 'data.sav'), 'wb') as f:
-    #     """Save data as npy file"""
-    #     # data
-    #     joblib.dump(
-    #         [processed_input_data, targets]
-    #         , f
-    #     )
-    # if not software == "CALMS21 (PAPER)":
-    #     # update config with new parameters:
-    #     parameters_dict = {'Data': dict(
-    #         ROOT_PATH=None,
-    #         DATA_INPUT_FILES=self.input_datafiles,
-    #         LABEL_INPUT_FILES=self.input_labelfiles
-    #     ),
-    #         "Project": dict(
-    #             PROJECT_TYPE=self.software,
-    #             FILE_TYPE=self.ftype,
-    #             FRAMERATE=self.framerate,
-    #             INDIVIDUALS_CHOSEN=self.selected_animals if self.selected_animals else ["single animal"],
-    #             KEYPOINTS_CHOSEN=self.selected_bodyparts,
-    #             PROJECT_PATH=self.working_dir,
-    #             CLASSES=self.classes,
-    #             MULTI_ANIMAL=self.multi_animal,
-    #             EXCLUDE_OTHER=self.exclude_other
-    #         ),
-    #         "Processing": dict(
-    #             ITERATION=0,
-    #         )
-    #     }
-    #
-    # else:
     if st.button('create new project'):
         parameters_dict = {
             "Project": dict(
@@ -284,6 +241,7 @@ def save_update_info(config, behavior_names_split):
 
         copy_config(project_folder, os.path.join(working_dir, prefix_new), iter_folder,
                     updated_params=parameters_dict)
+        st.info(f'Created. Please delete the config, and reupload the new config from: {prefix_new}.')
     return working_dir, iter_folder, prefix_new
 
 
@@ -381,17 +339,13 @@ def main(ri=None, config=None):
                         idx_other = np.where(all_labels == other_id)[0]
 
                     target_beh_id = annotation_classes_ex.index(target_behavior[0])
-                    # st.write(np.unique(all_labels, return_counts=True))
                     idx_target_beh = np.where(all_labels == target_beh_id)[0]
                     all_labels_split = all_labels.copy()
                     all_labels_split[idx_target_beh] = soft_assignments + np.max(all_labels) + 1
-                    # st.write(np.unique(all_labels_split))
                     if exclude_other:
                         all_labels_split[idx_other] = np.max(all_labels_split[idx_target_beh]) + 1
-                    # st.write(np.unique(all_labels_split))
                     encoder = LabelEncoder()
                     all_labels_split_reorg = encoder.fit_transform(all_labels_split)
-                    # st.write(np.unique(all_labels_split_reorg))
                     annot_array = np.array(annotation_classes_ex)
 
                     behavior_names_split = list(annot_array[annot_array != target_behavior[0]])
@@ -399,7 +353,6 @@ def main(ri=None, config=None):
                                                  for i in range(len(np.unique(soft_assignments)))])
                     if exclude_other:
                         behavior_names_split.extend(['other'])
-
 
                     working_dir, iter_folder, prefix_new = save_update_info(config, behavior_names_split)
 

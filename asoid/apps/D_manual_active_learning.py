@@ -514,39 +514,52 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                                                disabled=st.session_state.disabled)
 
             col1_exp.write(f'equivalent to {round(output_fps / framerate, 2)} X speed')
-            frame_dir = col3_exp.text_input('Enter a directory for frames',
-                                            os.path.join(videos_dir,
-                                                         str.join('', (
-                                                             st.session_state['uploaded_vid'].name.rpartition('.mp4')[
-                                                                 0],
-                                                             '_pngs'))),
-                                            disabled=st.session_state.disabled, on_change=disable
-                                            )
+            # frame_dir = col3_exp.text_input('Enter a directory for frames',
+            #                                 os.path.join(videos_dir,
+            #                                              str.join('', (
+            #                                                  st.session_state['uploaded_vid'].name.rpartition('.mp4')[
+            #                                                      0],
+            #                                                  '_pngs'))),
+            #                                 disabled=st.session_state.disabled, on_change=disable
+            #                                 )
+            # st.write(videos_dir, str.join('', (st.session_state['uploaded_vid'].name.rpartition('.mp4')[0],
+            #                                        '_pngs')))
+            frame_dir = os.path.join(videos_dir,
+                                     str.join('', (st.session_state['uploaded_vid'].name.rpartition('.mp4')[0],
+                                                   '_pngs')))
+            os.makedirs(frame_dir, exist_ok=True)
+            col3_exp.success(f'Entered **{frame_dir}** as the frame directory.')
 
-            try:
-                os.listdir(frame_dir)
-                col3_exp.success(f'Entered **{frame_dir}** as the frame directory.')
-            except FileNotFoundError:
-                if col3_exp.button('create frame directory'):
-                    os.makedirs(frame_dir, exist_ok=True)
-                    col3_exp.info('Created. Type "R" to refresh.')
-                    # st.experimental_rerun()
+            # try:
+            #     os.listdir(frame_dir)
+            #     col3_exp.success(f'Entered **{frame_dir}** as the frame directory.')
+            # except FileNotFoundError:
+            #     if col3_exp.button('create frame directory'):
+            #         os.makedirs(frame_dir, exist_ok=True)
+            #         col3_exp.info('Created. Type "R" to refresh.')
+            #         # st.experimental_rerun()
 
-            shortvid_dir = col3_exp.text_input('Enter a directory for refined videos',
-                                               os.path.join(project_dir, iter_dir,
-                                                            str.join('', (
-                                                                st.session_state['uploaded_vid'].name.rpartition(
-                                                                    '.mp4')[0],
-                                                                '_refine_vids'))),
-                                               disabled=st.session_state.disabled, on_change=disable
-                                               )
-            try:
-                os.listdir(shortvid_dir)
-                col3_exp.success(f'Entered **{shortvid_dir}** as the refined video directory.')
-            except FileNotFoundError:
-                if col3_exp.button('create refined video directory'):
-                    os.makedirs(shortvid_dir, exist_ok=True)
-                    col3_exp.info('Created. Type "R" to refresh.')
+            # shortvid_dir = col3_exp.text_input('Enter a directory for refined videos',
+            #                                    os.path.join(project_dir, iter_dir,
+            #                                                 str.join('', (
+            #                                                     st.session_state['uploaded_vid'].name.rpartition(
+            #                                                         '.mp4')[0],
+            #                                                     '_refine_vids'))),
+            #                                    disabled=st.session_state.disabled, on_change=disable
+            #                                    )
+
+            shortvid_dir = os.path.join(project_dir, iter_dir,
+                                     str.join('', (st.session_state['uploaded_vid'].name.rpartition('.mp4')[0],
+                                                   '_refine_vids')))
+            os.makedirs(shortvid_dir, exist_ok=True)
+            col3_exp.success(f'Entered **{shortvid_dir}** as the refined video directory.')
+            # try:
+            #     os.listdir(shortvid_dir)
+            #     col3_exp.success(f'Entered **{shortvid_dir}** as the refined video directory.')
+            # except FileNotFoundError:
+            #     if col3_exp.button('create refined video directory'):
+            #         os.makedirs(shortvid_dir, exist_ok=True)
+            #         col3_exp.info('Created. Type "R" to refresh.')
 
         else:
             st.session_state['uploaded_pose'] = []

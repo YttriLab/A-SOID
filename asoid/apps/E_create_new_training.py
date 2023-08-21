@@ -5,35 +5,35 @@ from config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP
 from utils.load_workspace import load_refinement, load_features, load_iterX, save_data
 from utils.project_utils import update_config
 
-
 TITLE = "Create new dataset"
 
 
 def create_new_training_features_targets(project_dir, selected_iter, new_features, new_targets):
     # load existing training
     iter_folder = str.join('', ('iteration-', str(selected_iter)))
-    [features, targets, shuffled_splits, frames2integ] = \
+    [features, targets, frames2integ] = \
         load_features(project_dir, iter_folder)
     # add iteration number
-    new_iter_folder = str.join('', ('iteration-', str(selected_iter+1)))
+    new_iter_folder = str.join('', ('iteration-', str(selected_iter + 1)))
     os.makedirs(os.path.join(project_dir, new_iter_folder), exist_ok=True)
     # incorporate new features/targets into existing training
     appended_features = np.vstack((features, new_features))
     appended_targets = np.hstack((targets, new_targets))
     # save into new iteration folder
     save_data(project_dir, new_iter_folder, 'feats_targets.sav',
-              [appended_features,
-               appended_targets,
-               shuffled_splits,
-               frames2integ])
+              [
+                  appended_features,
+                  appended_targets,
+                  frames2integ
+              ])
     parameters_dict = {
         "Processing": dict(
-            ITERATION = selected_iter+1,
+            ITERATION=selected_iter + 1,
         )
     }
     st.session_state['config'] = update_config(project_dir, updated_params=parameters_dict)
     st.success(f'Included new training data ({new_targets.shape[0]} samples) into '
-               f':orange[ITERATION {selected_iter+1}]. '
+               f':orange[ITERATION {selected_iter + 1}]. '
                f'Updated config.')
     st.balloons()
 
@@ -72,8 +72,8 @@ def main(ri=None, config=None):
                     submitted_targets = []
                     for j in range(len(examples_idx[annotation_cls])):
                         refined_behaviors = [refinements[annotation_cls][j]['Behavior'][k]
-                                                  for k in range(
-                            len(refinements[annotation_cls][j]['Behavior']))]
+                                             for k in range(
+                                len(refinements[annotation_cls][j]['Behavior']))]
                         start_idx = examples_idx[annotation_cls][j][0]
                         stop_idx = examples_idx[annotation_cls][j][1]
 
@@ -93,7 +93,7 @@ def main(ri=None, config=None):
             pass
 
         if len(selected_refine_dirs) > 0:
-            create_button = st.button(f'Create :orange[ITERATION {selected_iter+1}] training dataset')
+            create_button = st.button(f'Create :orange[ITERATION {selected_iter + 1}] training dataset')
             if create_button:
                 create_new_training_features_targets(project_dir, selected_iter, new_features, new_targets)
         else:
