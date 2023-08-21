@@ -411,15 +411,11 @@ def create_videos(processed_input_data, iterX_model, framerate, frames2integ,
             # using feature scaling from training set
             feats, _ = feature_extraction([data], 1, frames2integ)
             features.append(feats)
-            # scaled_features.append(scaled_feats)
         for i in stqdm(range(len(features)), desc="Behavior prediction from spatiotemporal features"):
             with st.spinner('Predicting behavior from features...'):
                 predict = bsoid_predict_numba_noscale([features[i]], iterX_model)
                 pred_proba = bsoid_predict_proba_numba_noscale([features[i]], iterX_model)
-                # st.write(pred_proba[0].shape) # 1800, 6
-
                 predict_arr = np.array(predict).flatten()
-                # st.write(predict_arr.shape)
         try:
             examples_idx = create_labeled_vid(predict_arr, pred_proba[0],
                                               outlier_method, p_cutoff,
@@ -468,20 +464,17 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                 current_pose = pd.read_csv(f,
                                            header=[0, 1, 2], sep=",", index_col=0
                                            )
-
                 bp_level = 1
                 bp_index_list = []
                 for bp in selected_bodyparts:
                     bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
                     bp_index_list.append(bp_index)
-
                 selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
 
                 # get rid of likelihood columns for deeplabcut
                 idx_llh = selected_pose_idx[2::3]
                 # the loaded sleap file has them too, so exclude for both
                 idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
-                #
                 # idx_selected = np.array([0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16])
                 new_pose_list.append(np.array(current_pose.iloc[:, idx_selected]))
 
@@ -514,52 +507,17 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                                                disabled=st.session_state.disabled)
 
             col1_exp.write(f'equivalent to {round(output_fps / framerate, 2)} X speed')
-            # frame_dir = col3_exp.text_input('Enter a directory for frames',
-            #                                 os.path.join(videos_dir,
-            #                                              str.join('', (
-            #                                                  st.session_state['uploaded_vid'].name.rpartition('.mp4')[
-            #                                                      0],
-            #                                                  '_pngs'))),
-            #                                 disabled=st.session_state.disabled, on_change=disable
-            #                                 )
-            # st.write(videos_dir, str.join('', (st.session_state['uploaded_vid'].name.rpartition('.mp4')[0],
-            #                                        '_pngs')))
             frame_dir = os.path.join(videos_dir,
                                      str.join('', (st.session_state['uploaded_vid'].name.rpartition('.mp4')[0],
                                                    '_pngs')))
             os.makedirs(frame_dir, exist_ok=True)
             col3_exp.success(f'Entered **{frame_dir}** as the frame directory.')
 
-            # try:
-            #     os.listdir(frame_dir)
-            #     col3_exp.success(f'Entered **{frame_dir}** as the frame directory.')
-            # except FileNotFoundError:
-            #     if col3_exp.button('create frame directory'):
-            #         os.makedirs(frame_dir, exist_ok=True)
-            #         col3_exp.info('Created. Type "R" to refresh.')
-            #         # st.experimental_rerun()
-
-            # shortvid_dir = col3_exp.text_input('Enter a directory for refined videos',
-            #                                    os.path.join(project_dir, iter_dir,
-            #                                                 str.join('', (
-            #                                                     st.session_state['uploaded_vid'].name.rpartition(
-            #                                                         '.mp4')[0],
-            #                                                     '_refine_vids'))),
-            #                                    disabled=st.session_state.disabled, on_change=disable
-            #                                    )
-
             shortvid_dir = os.path.join(project_dir, iter_dir,
                                      str.join('', (st.session_state['uploaded_vid'].name.rpartition('.mp4')[0],
                                                    '_refine_vids')))
             os.makedirs(shortvid_dir, exist_ok=True)
             col3_exp.success(f'Entered **{shortvid_dir}** as the refined video directory.')
-            # try:
-            #     os.listdir(shortvid_dir)
-            #     col3_exp.success(f'Entered **{shortvid_dir}** as the refined video directory.')
-            # except FileNotFoundError:
-            #     if col3_exp.button('create refined video directory'):
-            #         os.makedirs(shortvid_dir, exist_ok=True)
-            #         col3_exp.info('Created. Type "R" to refresh.')
 
         else:
             st.session_state['uploaded_pose'] = []
