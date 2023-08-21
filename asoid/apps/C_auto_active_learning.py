@@ -15,7 +15,7 @@ TITLE = "Active learning"
 
 def prompt_setup(software, train_fx, working_dir, prefix, iteration_dir, exclude_other, annotation_classes):
     project_dir = os.path.join(working_dir, prefix)
-    [_, targets, _, _] = load_features(project_dir, iteration_dir)
+    [_, targets, _] = load_features(project_dir, iteration_dir)
     col1, col2 = st.columns(2)
     if exclude_other:
         selected_class_num = np.arange((len(annotation_classes)))[:-1]
@@ -96,9 +96,9 @@ def main(ri=None, config=None):
             conf_threshold = 0.5
 
         try:
-            [_, _, all_f1_scores] = \
+            [all_f1_scores] = \
                 load_all_train(project_dir, iter_folder)
-            [_, _, iter0_Y_train, iter0_f1_scores, _] = \
+            [iter0_Y_train, iter0_f1_scores] = \
                 load_iter0(project_dir, iter_folder)
             [_, iterX_Y_train_list, iterX_f1_scores] = \
                 load_iterX(project_dir, iter_folder)

@@ -174,7 +174,7 @@ class RF_Classify:
         self.perf2beat_by_class = {k: [] for k in annotation_classes}
 
     def split_data(self):
-        [features, targets, shuffled_splits, self.frames2integ] = \
+        [features, targets, self.frames2integ] = \
             load_features(self.project_dir, self.iter_dir)
         # partitioning into N randomly selected train/test splits
         if features.shape[0] > targets.shape[0]:
@@ -758,33 +758,24 @@ class RF_Classify:
 
     def save_subsampled_info(self):
         save_data(self.project_dir, self.iter_dir, 'iter0.sav',
-                  [self.iter0_model,
-                   self.iter0_X_train,
-                   self.iter0_Y_train,
-                   self.iter0_f1_scores,
-                   # self.iter0_macro_scores,
-                   self.iter0_predict_prob
-                   ])
+                  [
+                      self.iter0_Y_train,
+                      self.iter0_f1_scores,
+                  ])
 
     def save_all_train_info(self):
         save_data(self.project_dir, self.iter_dir, 'all_train.sav',
-                  [self.all_model,
-                   # self.all_X_train,
-                   self.all_Y_train,
-                   self.all_f1_scores,
-                   # self.all_macro_scores,
-                   # self.all_predict_prob
-                   ])
+                  [
+                      self.all_f1_scores,
+                  ])
 
     def save_final_model_info(self):
         save_data(self.project_dir, self.iter_dir, 'iterX.sav',
-                  [self.iterX_model,
-                   # self.iterX_X_train_list,
-                   self.iterX_Y_train_list,
-                   self.iterX_f1_scores_list,
-                   # self.iterX_macro_scores_list,
-                   # self.iterX_predict_prob_list
-                   ])
+                  [
+                      self.iterX_model,
+                      self.iterX_Y_train_list,
+                      self.iterX_f1_scores_list,
+                  ])
 
     def main(self):
         self.base_classification()

@@ -106,6 +106,7 @@ def get_features_labels(X, y, iterX_model, frames2integ, project_dir, iter_folde
                       [all_feats, all_labels])
         st.session_state['input_sav'] = os.path.join(project_dir, iter_folder, 'embedding_input.sav')
         st.success('Done. Type "R" to Refresh.')
+    return all_feats, all_labels
 
 
 UMAP_PARAMS = {
@@ -281,6 +282,7 @@ def save_update_info(config):
 
         copy_config(project_folder, os.path.join(working_dir, prefix_new),
                     updated_params=parameters_dict)
+    return working_dir, prefix_new
 
 
 def main(ri=None, config=None):
@@ -306,7 +308,7 @@ def main(ri=None, config=None):
         os.makedirs(os.path.join(project_dir, iter_folder), exist_ok=True)
         videos_dir = os.path.join(project_dir, 'videos')
         os.makedirs(videos_dir, exist_ok=True)
-        frames2integ = round(float(framerate) * (duration_min / 0.1))
+        # frames2integ = round(float(framerate) * (duration_min / 0.1))
 
         if 'disabled' not in st.session_state:
             st.session_state['disabled'] = False
@@ -320,7 +322,7 @@ def main(ri=None, config=None):
         pose_expander = left_col.expander('pose'.upper(), expanded=True)
         prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                      framerate, videos_dir, project_dir, iter_folder, pose_expander, left_checkbox)
-        [features, targets, _, frames2integ] = load_features(project_dir, iter_folder)
+        [features, targets, frames2integ] = load_features(project_dir, iter_folder)
         if features.shape[0] > targets.shape[0]:
             X = features[:targets.shape[0]].copy()
             y = targets.copy()
@@ -339,8 +341,9 @@ def main(ri=None, config=None):
         if 'output_sav' not in st.session_state:
             st.session_state['output_sav'] = None
         if st.session_state['input_sav'] is None:
-            get_features_labels(X, y, iterX_model, frames2integ, project_dir, iter_folder, left_col
-                                )
+            all_feats, all_labels = get_features_labels(X, y, iterX_model, frames2integ, project_dir, iter_folder,
+                                                        left_col
+                                                        )
 
         target_behavior = ri.multiselect('Select Behavior to Split', annotation_classes, annotation_classes[3])
         if st.session_state['input_sav'] is not None:
@@ -364,7 +367,22 @@ def main(ri=None, config=None):
                 if st.session_state['output_sav'] is not None:
                     fig, group_types = plot_hdbscan_embedding(st.session_state['output_sav'])
                     right_col_top.plotly_chart(fig, use_container_width=True)
-                    save_update_info(config)
+                    working_dir, prefix_new = save_update_info(config)
+                    save_data(os.path.join(working_dir, prefix_new), iter_folder,
+                              'feats_targets.sav',
+                              [
+                                  all_feats,
+                                  all_labels,
+                                  frames2integ
+                              ])
+                    save_data(os.path.join(working_dir, prefix_new), iter_folder,
+                              'feats_targets.sav',
+                              [
+                                  all_feats,
+                                  all_labels,
+                                  frames2integ
+                              ])
+
         else:
             st.session_state['disabled'] = False
 
