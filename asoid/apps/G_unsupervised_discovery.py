@@ -77,6 +77,7 @@ def get_features_labels(X, y, iterX_model, frames2integ, project_dir, iter_folde
     processed_input_data = st.session_state['uploaded_pose']
     old_feats = X.copy()
     old_labels = y.copy()
+    all_feats, all_labels = None, None
     if placeholder.button('preprocess files'):
         # st.session_state['disabled'] = True
         if len(processed_input_data) > 0:
@@ -213,7 +214,7 @@ def plot_hdbscan_embedding(output_sav):
         return fig, group_types
 
 
-def save_update_info(config):
+def save_update_info(config, behavior_names_split):
     input_container = st.container()
     # create new project folder with prefix as name:
     working_dir = config["Project"].get("PROJECT_PATH")
@@ -227,6 +228,7 @@ def save_update_info(config):
     # threshold = config["Processing"].getfloat("SCORE_THRESHOLD")
     threshold = 0.1
     iteration = config["Processing"].getint("ITERATION")
+    iter_folder = str.join('', ('iteration-', str(iteration)))
     framerate = config["Project"].getint("FRAMERATE")
     duration_min = config["Processing"].getfloat("MIN_DURATION")
     today = date.today()
@@ -276,13 +278,13 @@ def save_update_info(config):
             "Project": dict(
                 PROJECT_PATH=working_dir,
                 PROJECT_NAME=prefix_new,
-                CLASSES=annotation_classes,
+                CLASSES=behavior_names_split,
             )
         }
 
-        copy_config(project_folder, os.path.join(working_dir, prefix_new),
+        copy_config(project_folder, os.path.join(working_dir, prefix_new), iter_folder,
                     updated_params=parameters_dict)
-    return working_dir, prefix_new
+    return working_dir, iter_folder, prefix_new
 
 
 def main(ri=None, config=None):
@@ -367,21 +369,48 @@ def main(ri=None, config=None):
                 if st.session_state['output_sav'] is not None:
                     fig, group_types = plot_hdbscan_embedding(st.session_state['output_sav'])
                     right_col_top.plotly_chart(fig, use_container_width=True)
-                    working_dir, prefix_new = save_update_info(config)
-                    save_data(os.path.join(working_dir, prefix_new), iter_folder,
-                              'feats_targets.sav',
-                              [
-                                  all_feats,
-                                  all_labels,
-                                  frames2integ
-                              ])
-                    save_data(os.path.join(working_dir, prefix_new), iter_folder,
-                              'feats_targets.sav',
-                              [
-                                  all_feats,
-                                  all_labels,
-                                  frames2integ
-                              ])
+
+                    with open(st.session_state['input_sav'], 'rb') as fr:
+                        [all_feats, all_labels] = joblib.load(fr)
+                    with open(st.session_state['output_sav'], 'rb') as fr:
+                        [_, assignments, soft_assignments] = joblib.load(fr)
+                    annotation_classes_ex = annotation_classes.copy()
+                    if exclude_other:
+                        other_id = annotation_classes.index('other')
+                        annotation_classes_ex.pop(other_id)
+                        idx_other = np.where(all_labels == other_id)[0]
+
+                    target_beh_id = annotation_classes_ex.index(target_behavior[0])
+                    # st.write(np.unique(all_labels, return_counts=True))
+                    idx_target_beh = np.where(all_labels == target_beh_id)[0]
+                    all_labels_split = all_labels.copy()
+                    all_labels_split[idx_target_beh] = soft_assignments + np.max(all_labels) + 1
+                    # st.write(np.unique(all_labels_split))
+                    if exclude_other:
+                        all_labels_split[idx_other] = np.max(all_labels_split[idx_target_beh]) + 1
+                    # st.write(np.unique(all_labels_split))
+                    encoder = LabelEncoder()
+                    all_labels_split_reorg = encoder.fit_transform(all_labels_split)
+                    # st.write(np.unique(all_labels_split_reorg))
+                    annot_array = np.array(annotation_classes_ex)
+
+                    behavior_names_split = list(annot_array[annot_array != target_behavior[0]])
+                    behavior_names_split.extend([f'{target_behavior[0]}_{i}'
+                                                 for i in range(len(np.unique(soft_assignments)))])
+                    if exclude_other:
+                        behavior_names_split.extend(['other'])
+
+
+                    working_dir, iter_folder, prefix_new = save_update_info(config, behavior_names_split)
+
+                    if os.path.isdir(os.path.join(working_dir, prefix_new, iter_folder)):
+                        save_data(os.path.join(working_dir, prefix_new), iter_folder,
+                                  'feats_targets.sav',
+                                  [
+                                      all_feats,
+                                      all_labels_split_reorg,
+                                      frames2integ
+                                  ])
 
         else:
             st.session_state['disabled'] = False

@@ -70,7 +70,7 @@ def update_config(project_path, updated_params: dict):
     return config
 
 
-def copy_config(project_path, destination, updated_params: dict):
+def copy_config(project_path, destination, iteration, updated_params: dict):
     """
     Updates project config.ini with new parameter values given by updated_params dictionary
     :param project_path: path to project
@@ -87,7 +87,8 @@ def copy_config(project_path, destination, updated_params: dict):
             else:
                 config.set(section, parameter, str(value))
     try:
-        os.makedirs(destination, exist_ok=False)
+        # os.makedirs(destination, exist_ok=False)
+        os.makedirs(os.path.join(destination, iteration), exist_ok=False)
     except FileExistsError as e:
         raise FileExistsError("Project already exists!") from e
     write_ini(config, destination + "/config.ini")
