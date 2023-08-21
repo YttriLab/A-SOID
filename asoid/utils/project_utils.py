@@ -70,6 +70,32 @@ def update_config(project_path, updated_params: dict):
     return config
 
 
+def copy_config(project_path, destination, updated_params: dict):
+    """
+    Updates project config.ini with new parameter values given by updated_params dictionary
+    :param project_path: path to project
+    :param updated_params: dictionary in style dict(section: dict(parameter: value, ...), ...)
+    :return: updated config
+    """
+
+    config, project_name = load_config(project_path)
+
+    for section, parameters in updated_params.items():
+        for parameter, value in parameters.items():
+            if isinstance(value, list) or isinstance(value, tuple):
+                config.set(section, parameter, ", ".join(map(str, value)))
+            else:
+                config.set(section, parameter, str(value))
+    try:
+        os.makedirs(destination, exist_ok=False)
+    except FileExistsError as e:
+        raise FileExistsError("Project already exists!") from e
+    write_ini(config, destination + "/config.ini")
+    print("Config updated.".format(project_name))
+
+    return config
+
+
 def create_new_project(base_path: str, project_name: str = None, overwrite=False):
     """Creates folder structure for new project
     General project structe:

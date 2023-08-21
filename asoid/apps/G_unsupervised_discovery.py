@@ -12,6 +12,12 @@ from utils.load_workspace import load_new_pose, load_iterX, save_data, load_feat
 from utils.view_results import Viewer
 from sklearn.preprocessing import LabelEncoder
 from utils.import_data import load_labels_auto
+from datetime import date
+from utils.project_utils import create_new_project, update_config, copy_config
+from config.help_messages import POSE_ORIGIN_SELECT_HELP, FPS_HELP, MULTI_ANIMAL_HELP, MULTI_ANIMAL_SELECT_HELP, \
+    BODYPART_SELECT, WORKING_DIR_HELP, PREFIX_HELP, DATA_DIR_IMPORT_HELP, POSE_DIR_IMPORT_HELP, POSE_ORIGIN_HELP, \
+    POSE_SELECT_HELP, LABEL_DIR_IMPORT_HELP, LABEL_ORIGIN_HELP, LABEL_SELECT_HELP, PREPROCESS_HELP, EXCLUDE_OTHER_HELP, \
+    INIT_CLASS_SELECT_HELP, SAMPLE_RATE_HELP
 import numpy as np
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
@@ -152,8 +158,9 @@ def pca_umap_hdbscan(target_behavior, annotation_classes, input_sav, cluster_ran
                 with st.spinner(f'Embedding into {n_dim} dimensions...'):
                     umap_embeddings = reducer.fit_transform(selected_feats_scaled)
                 with st.spinner('Clustering...'):
-                    retained_hierarchy, assignments, assign_prob, soft_assignments = hdbscan_classification(umap_embeddings,
-                                                                                                            cluster_range)
+                    retained_hierarchy, assignments, assign_prob, soft_assignments = hdbscan_classification(
+                        umap_embeddings,
+                        cluster_range)
                 save_data(project_dir, iter_folder, 'embedding_output.sav',
                           [umap_embeddings, assignments, soft_assignments])
                 st.session_state['output_sav'] = os.path.join(project_dir, iter_folder, 'embedding_output.sav')
@@ -203,6 +210,77 @@ def plot_hdbscan_embedding(output_sav):
             legend=dict(x=0.0, y=1.2, orientation='h', font=dict(color='#EEEEEE')),
         )
         return fig, group_types
+
+
+def save_update_info(config):
+    input_container = st.container()
+    # create new project folder with prefix as name:
+    working_dir = config["Project"].get("PROJECT_PATH")
+    prefix_old = config["Project"].get("PROJECT_NAME")
+    project_folder = os.path.join(working_dir, prefix_old)
+    annotation_classes = [x.strip() for x in config["Project"].get("CLASSES").split(",")]
+    software = config["Project"].get("PROJECT_TYPE")
+    ftype = config["Project"].get("FILE_TYPE")
+    selected_bodyparts = [x.strip() for x in config["Project"].get("KEYPOINTS_CHOSEN").split(",")]
+    exclude_other = config["Project"].getboolean("EXCLUDE_OTHER")
+    # threshold = config["Processing"].getfloat("SCORE_THRESHOLD")
+    threshold = 0.1
+    iteration = config["Processing"].getint("ITERATION")
+    framerate = config["Project"].getint("FRAMERATE")
+    duration_min = config["Processing"].getfloat("MIN_DURATION")
+    today = date.today()
+    d4 = today.strftime("%b-%d-%Y")
+    prefix_new = input_container.text_input('Enter filename prefix', d4,
+                                            help=PREFIX_HELP)
+    if prefix_new:
+        st.success(f'Entered **{prefix_new}** as the prefix.')
+    else:
+        st.error('Please enter a prefix.')
+
+    # project_folder, _ = create_new_project(working_dir, prefix, overwrite=True)
+
+    # with open(os.path.join(project_folder, 'data.sav'), 'wb') as f:
+    #     """Save data as npy file"""
+    #     # data
+    #     joblib.dump(
+    #         [processed_input_data, targets]
+    #         , f
+    #     )
+    # if not software == "CALMS21 (PAPER)":
+    #     # update config with new parameters:
+    #     parameters_dict = {'Data': dict(
+    #         ROOT_PATH=None,
+    #         DATA_INPUT_FILES=self.input_datafiles,
+    #         LABEL_INPUT_FILES=self.input_labelfiles
+    #     ),
+    #         "Project": dict(
+    #             PROJECT_TYPE=self.software,
+    #             FILE_TYPE=self.ftype,
+    #             FRAMERATE=self.framerate,
+    #             INDIVIDUALS_CHOSEN=self.selected_animals if self.selected_animals else ["single animal"],
+    #             KEYPOINTS_CHOSEN=self.selected_bodyparts,
+    #             PROJECT_PATH=self.working_dir,
+    #             CLASSES=self.classes,
+    #             MULTI_ANIMAL=self.multi_animal,
+    #             EXCLUDE_OTHER=self.exclude_other
+    #         ),
+    #         "Processing": dict(
+    #             ITERATION=0,
+    #         )
+    #     }
+    #
+    # else:
+    if st.button('create new project'):
+        parameters_dict = {
+            "Project": dict(
+                PROJECT_PATH=working_dir,
+                PROJECT_NAME=prefix_new,
+                CLASSES=annotation_classes,
+            )
+        }
+
+        copy_config(project_folder, os.path.join(working_dir, prefix_new),
+                    updated_params=parameters_dict)
 
 
 def main(ri=None, config=None):
@@ -286,8 +364,11 @@ def main(ri=None, config=None):
                 if st.session_state['output_sav'] is not None:
                     fig, group_types = plot_hdbscan_embedding(st.session_state['output_sav'])
                     right_col_top.plotly_chart(fig, use_container_width=True)
+                    save_update_info(config)
         else:
             st.session_state['disabled'] = False
+
+
 
 
     else:
