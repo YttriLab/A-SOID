@@ -623,44 +623,6 @@ def main(ri=None, config=None):
 
                 if len(st.session_state['uploaded_pose']) > 0:
                     placeholder = st.empty()
-                    # colL, colR = st.columns(2)
-                    # video_checkbox = colL.checkbox("Create Labeled Video?")
-
-                    # if video_checkbox:
-                    #     prefix = st.session_state['pose'].name.rpartition(str.join('', ('.', ftype)))[0]
-                    #     path_prefix = os.path.join(videos_dir,
-                    #                                prefix)
-                    #     ri_exapnder = right_col.expander('VIDEO', expanded=True)
-                    #     ri_exapnder.file_uploader(f'Upload Corresponding Video: '
-                    #                               f'{prefix}',
-                    #                               accept_multiple_files=False,
-                    #                               type=['avi', 'mp4'], key='video')
-                    #
-                    #     frame_dir = str.join('', (path_prefix, '_pngs'))
-                    #     os.makedirs(frame_dir, exist_ok=True)
-                    #     if os.path.exists(frame_dir):
-                    #         framedir_ = os.listdir(frame_dir)
-                    #         if len(framedir_) < 2:
-                    #             if st.session_state['video']:
-                    #                 if os.path.exists(os.path.join(videos_dir, st.session_state['video'].name)):
-                    #                     temporary_location = str(
-                    #                         os.path.join(videos_dir, st.session_state['video'].name))
-                    #                 else:
-                    #                     g = io.BytesIO(st.session_state['video'].read())  # BytesIO Object
-                    #                     temporary_location = str(
-                    #                         os.path.join(videos_dir, st.session_state['video'].name))
-                    #                     with open(temporary_location, 'wb') as out:  # Open temporary file as bytes
-                    #                         out.write(g.read())  # Read bytes into file
-                    #                     out.close()
-                    #                 frame_extraction(temporary_location, frame_dir, right_col)
-                    #         else:
-                    #             [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
-                    #             st.info(f'loaded {iter_folder} model')
-                    #             predict_annotate_video(iterX_model, framerate, frames2integ,
-                    #                                    annotation_classes,
-                    #                                    frame_dir, videos_dir, iter_folder,
-                    #                                    video_checkbox, colL)
-                    # else:
                     [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
                     st.info(f'loaded {iter_folder} model')
                     predict_annotate_video(iterX_model, framerate, frames2integ,
@@ -683,15 +645,6 @@ def main(ri=None, config=None):
                               framerate,
                               video_col,
                               )
-
-                # if not os.path.isfile(annot_vid_path.replace('mp4', 'csv')):
-                #     labels = save_predictions(annot_vid_path.replace('mp4', 'npy'),
-                #                      annot_vid_path.replace('mp4', 'csv'),
-                #                      annotation_classes,
-                #                      framerate)
-                #
-                #
-                # else:
                 labels = save_predictions(annot_vid_path.replace('mp4', 'npy'),
                                           annot_vid_path.replace('mp4', 'csv'),
                                           annotation_classes,

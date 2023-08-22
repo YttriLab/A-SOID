@@ -15,8 +15,6 @@ from utils.load_workspace import load_data, save_data
 from config.help_messages import BEHAVIOR_COLOR_SELECT_HELP
 
 
-
-
 @jit(nopython=True)
 def fast_standardize(data):
     a_ = (data - np.mean(data)) / np.std(data)
@@ -203,6 +201,7 @@ def feature_extraction(train_datalist, num_train, framerate):
     scaled_features = scaler.transform(features)
     return features, scaled_features
 
+
 def feature_extraction_with_extr_scaler(train_datalist, num_train, framerate, scaler):
     f_integrated = []
     for i in stqdm(range(num_train), desc="Extracting spatiotemporal features from pose"):
@@ -373,20 +372,20 @@ def interactive_durations_dist(targets, behavior_classes, framerate, plot_contai
 
             for i, class_id in enumerate(behavior_classes):
                 behavior_colors[class_id] = option_expander.selectbox(f'Color for {behavior_classes[i]}',
-                                                                 all_c_options,
-                                                                 index=all_c_options.index(default_colors[i]),
-                                                                 key=f'color_option{i}',
-                                                                 help= BEHAVIOR_COLOR_SELECT_HELP)
+                                                                      all_c_options,
+                                                                      index=all_c_options.index(default_colors[i]),
+                                                                      key=f'color_option{i}',
+                                                                      help=BEHAVIOR_COLOR_SELECT_HELP)
             colors = [behavior_colors[class_id] for class_id in behavior_classes]
         else:
             behavior_colors = {k: [] for k in ['All']}
             default_colors = ['dodgerblue']
             for i, class_id in enumerate(['All']):
                 behavior_colors[class_id] = option_expander.selectbox(f'Color for all',
-                                                                 all_c_options,
-                                                                 index=all_c_options.index(default_colors[i]),
-                                                                 key=f'color_option{i}',
-                                                                 help = BEHAVIOR_COLOR_SELECT_HELP)
+                                                                      all_c_options,
+                                                                      index=all_c_options.index(default_colors[i]),
+                                                                      key=f'color_option{i}',
+                                                                      help=BEHAVIOR_COLOR_SELECT_HELP)
             colors = [behavior_colors[class_id] for class_id in ['All']]
 
     duration_dict = {k: [] for k in behavior_classes}
@@ -399,7 +398,7 @@ def interactive_durations_dist(targets, behavior_classes, framerate, plot_contai
     for seq in range(len(durations)):
         current_seq_durs = durations[seq]
         for unique_beh in np.unique(np.hstack(corr_targets)):
-            #make sure it's an int
+            # make sure it's an int
             unique_beh = int(unique_beh)
             idx_behavior = np.where(corr_targets[seq] == unique_beh)[0]
             curr_annot = behavior_classes[unique_beh]
@@ -452,14 +451,13 @@ def interactive_durations_dist(targets, behavior_classes, framerate, plot_contai
 
 class Extract:
 
-    def __init__(self, working_dir, prefix, frames2integ, shuffled_splits):
+    def __init__(self, working_dir, prefix, frames2integ):
 
         self.working_dir = working_dir
         self.prefix = prefix
         self.project_dir = os.path.join(working_dir, prefix)
         self.iteration_0 = 'iteration-0'
         self.frames2integ = frames2integ
-        self.shuffled_splits = shuffled_splits
 
         self.processed_input_data = None
         self.targets = None
@@ -487,22 +485,6 @@ class Extract:
                                                                  self.frames2integ)
 
     def downsample_labels(self):
-        # num2skip = int(self.frames2integ / 10)
-        # # standardize, and keep the scalar for future data
-        # self.scalar = StandardScaler()
-        # self.scalar.fit(self.features)
-        # # downsample labels to match binned features
-        # for i in range(len(self.processed_input_data)):
-        #     targets_mode_temp = np.hstack(
-        #         [stats.mode(self.targets[i][num2skip * n:num2skip * n + num2skip])[
-        #              0] for n in range(len(self.targets[i]))])
-        #     targets_fitted = self.targets[i][:int(self.targets[i].shape[0] / num2skip) * num2skip:num2skip]
-        #     if i == 0:
-        #         self.targets_mode = targets_mode_temp[:targets_fitted.shape[0]].copy()
-        #     else:
-        #         self.targets_mode = np.hstack((self.targets_mode,
-        #                                        targets_mode_temp[:targets_fitted.shape[0]]))
-
         num2skip = int(self.frames2integ / 10)  # 12
         targets_ls = []
         for i in range(len(self.targets)):
@@ -514,50 +496,17 @@ class Extract:
             targets_ls.append(targets_not_matching[:targets_matching_features.shape[0]])
         self.targets_mode = np.hstack(targets_ls)
 
-    def shuffle_data(self):
-        # partitioning into 20 randomly selected train/test splits
-        seeds = np.arange(self.shuffled_splits)
-        for seed in stqdm(seeds, desc="Randomly partitioning into 70/30..."):
-            X_train, X_test, y_train, y_test = train_test_split(self.scaled_features, self.targets_mode,
-                                                                test_size=0.30, random_state=seed)
-            self.features_train.append(X_train)
-            self.targets_train.append(y_train)
-            self.features_heldout.append(X_test)
-            self.targets_heldout.append(y_test)
-
-        # initialize shuffled features and targets
-        # for seed in seeds:
-        #     scaled_features_train_shuf, targets_mode_shuf = unison_shuffled_copies(self.scaled_features_train,
-        #                                                                            self.targets_mode,
-        #                                                                            seed)
-        #     self.features_runlist.append(scaled_features_train_shuf)
-        #     self.targets_runlist.append(targets_mode_shuf)
-
     def save_features_targets(self):
-        # save partitioned datasets, useful for cross-validation
-        # save_data(self.working_dir, self.prefix, 'feats_targets.sav',
-        #           [self.features_train,
-        #            self.targets_train,
-        #            self.scalar,
-        #            self.frames2integ])
-
-        # save_data(self.working_dir, self.prefix, 'heldout_feats_targets.sav',
-        #           [self.features_heldout,
-        #            self.targets_heldout])
-
         save_data(self.project_dir, self.iteration_0, 'feats_targets.sav',
-                  [self.features,
-                   self.targets_mode,
-                   # self.scalar,
-                   self.shuffled_splits,
-                   self.frames2integ])
+                  [
+                      self.features,
+                      self.targets_mode,
+                      self.frames2integ
+                  ])
 
-
-        
     def main(self):
         self.extract_features()
         self.downsample_labels()
-        # self.shuffle_data()
         self.save_features_targets()
         col_left, _, col_right = st.columns([1, 1, 1])
         col_right.success("Continue on with next module".upper())

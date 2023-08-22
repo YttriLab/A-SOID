@@ -27,25 +27,25 @@ def prompt_setup(prompt_container, software, framerate, annotation_classes,
                                      )
     frames2integ, num_splits = None, None
     if not show_only:
-        col_left, col_right = prompt_container.columns(2)
-        left_exp = col_left.expander('Minimum Duration', expanded=True)
-        right_exp = col_right.expander('Number of splits', expanded=True)
+        # col_left, col_right = prompt_container.columns(2)
+        prompt_exp = prompt_container.expander('Minimum Duration', expanded=True)
+        # right_exp = col_right.expander('Number of splits', expanded=True)
         if not software == 'CALMS21 (PAPER)':
-            duration_min = left_exp.number_input('Minimum duration (s) of behavior before transition:',
+            duration_min = prompt_exp.number_input('Minimum duration (s) of behavior before transition:',
                                                  min_value=0.05, max_value=None,
                                                  value=0.1, key='fr',
                                                  help = MIN_DURATION_HELP)
-            num_splits = right_exp.number_input('number of shuffled splits:', min_value=1, max_value=20,
-                                                value=10, key='ns',
-                                                help = NUM_SPLITS_HELP)
+            # num_splits = right_exp.number_input('number of shuffled splits:', min_value=1, max_value=20,
+            #                                     value=10, key='ns',
+            #                                     help = NUM_SPLITS_HELP)
         else:
-            duration_min = left_exp.number_input('Minimum duration (s) of behavior before transition:',
+            duration_min = prompt_exp.number_input('Minimum duration (s) of behavior before transition:',
                                                  min_value=0.05, max_value=None,
                                                  value=0.4, key='fr',
                                                  help = MIN_DURATION_HELP+ CALM_HELP)
-            num_splits = right_exp.number_input('number of shuffled splits:', min_value=1, max_value=20,
-                                                value=10, key='ns',
-                                                help = NUM_SPLITS_HELP+ CALM_HELP)
+            # num_splits = right_exp.number_input('number of shuffled splits:', min_value=1, max_value=20,
+            #                                     value=10, key='ns',
+            #                                     help = NUM_SPLITS_HELP+ CALM_HELP)
         frames2integ = round(framerate * (duration_min / 0.1))
         parameters_dict = {
             "Processing": dict(
@@ -55,7 +55,7 @@ def prompt_setup(prompt_container, software, framerate, annotation_classes,
         }
         st.session_state['config']= update_config(os.path.join(working_dir, prefix), updated_params=parameters_dict)
 
-    return frames2integ, num_splits
+    return frames2integ
 
 
 def main(config=None):
@@ -73,29 +73,29 @@ def main(config=None):
         os.makedirs(os.path.join(project_dir, iter_folder), exist_ok=True)
 
         try:
-            [_, _, _, _] = load_features(project_dir, iter_folder)
+            [_, _, _] = load_features(project_dir, iter_folder)
             prompt_container = st.container()
             message_container = st.container()
             redo_container = st.container()
             if not redo_container.checkbox('Re-extract features', help = RE_EXTRACT_HELP):
-                frames2integ, num_splits = \
+                frames2integ = \
                     prompt_setup(prompt_container, software, framerate, annotation_classes,
                                  working_dir, prefix, show_only=True)
                 message_container.success(f'This prefix had been extracted.')
             else:
-                frames2integ, num_splits = \
+                frames2integ = \
                     prompt_setup(prompt_container, software, framerate, annotation_classes,
                                  working_dir, prefix)
                 if st.button('Extract Features', help = EXTRACT_FEATURES_HELP):
-                    extractor = Extract(working_dir, prefix, frames2integ, num_splits)
+                    extractor = Extract(working_dir, prefix, frames2integ)
                     extractor.main()
         except FileNotFoundError:
             prompt_container = st.container()
-            frames2integ, num_splits = \
+            frames2integ = \
                 prompt_setup(prompt_container, software, framerate,
                              annotation_classes, working_dir, prefix)
             if st.button('Extract Features'):
-                extractor = Extract(working_dir, prefix, frames2integ, num_splits)
+                extractor = Extract(working_dir, prefix, frames2integ)
                 extractor.main()
         st.session_state['page'] = 'Step 3'
 

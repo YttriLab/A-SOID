@@ -413,6 +413,7 @@ class Preprocess:
                         f.seek(0)
                         self.input_datafiles.append(f.name)
                         self.input_labelfiles.append(self.label_csvs[i].name)
+                        st.write(f.name, self.label_csvs[i].name)
                     else:
                         # we used the folder import, which results in a string
                         self.input_datafiles.append(os.path.basename(f))
@@ -431,6 +432,7 @@ class Preprocess:
 
                     # train_portion = int(np.array(current_pose.shape[0]) * 0.7)
                     self.processed_input_data.append(np.array(current_pose.iloc[:, idx_selected]))
+                    # st.write(self.processed_input_data[-1].shape)
 
                     # self.processed_input_data.append(np.array(current_pose.iloc[:train_portion, idx_selected]))
                     # self.processed_input_data_test.append(np.array(current_pose.iloc[train_portion:, idx_selected]))
@@ -442,6 +444,7 @@ class Preprocess:
                     targets = label_vector[-current_pose.shape[0]:].copy()
                     # train_portion_labels = int(targets.shape[0] * 0.7)
                     self.targets.append(targets)
+                    # st.write(self.targets[-1].shape)
 
                     # self.targets.append(targets[:train_portion_labels])
                     # self.targets_test.append(targets[train_portion_labels:])

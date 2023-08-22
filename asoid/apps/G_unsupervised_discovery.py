@@ -12,6 +12,12 @@ from utils.load_workspace import load_new_pose, load_iterX, save_data, load_feat
 from utils.view_results import Viewer
 from sklearn.preprocessing import LabelEncoder
 from utils.import_data import load_labels_auto
+from datetime import date
+from utils.project_utils import create_new_project, update_config, copy_config
+from config.help_messages import POSE_ORIGIN_SELECT_HELP, FPS_HELP, MULTI_ANIMAL_HELP, MULTI_ANIMAL_SELECT_HELP, \
+    BODYPART_SELECT, WORKING_DIR_HELP, PREFIX_HELP, DATA_DIR_IMPORT_HELP, POSE_DIR_IMPORT_HELP, POSE_ORIGIN_HELP, \
+    POSE_SELECT_HELP, LABEL_DIR_IMPORT_HELP, LABEL_ORIGIN_HELP, LABEL_SELECT_HELP, PREPROCESS_HELP, EXCLUDE_OTHER_HELP, \
+    INIT_CLASS_SELECT_HELP, SAMPLE_RATE_HELP
 import numpy as np
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
@@ -71,6 +77,7 @@ def get_features_labels(X, y, iterX_model, frames2integ, project_dir, iter_folde
     processed_input_data = st.session_state['uploaded_pose']
     old_feats = X.copy()
     old_labels = y.copy()
+    all_feats, all_labels = None, None
     if placeholder.button('preprocess files'):
         # st.session_state['disabled'] = True
         if len(processed_input_data) > 0:
@@ -100,6 +107,7 @@ def get_features_labels(X, y, iterX_model, frames2integ, project_dir, iter_folde
                       [all_feats, all_labels])
         st.session_state['input_sav'] = os.path.join(project_dir, iter_folder, 'embedding_input.sav')
         st.success('Done. Type "R" to Refresh.')
+    return all_feats, all_labels
 
 
 UMAP_PARAMS = {
@@ -152,8 +160,9 @@ def pca_umap_hdbscan(target_behavior, annotation_classes, input_sav, cluster_ran
                 with st.spinner(f'Embedding into {n_dim} dimensions...'):
                     umap_embeddings = reducer.fit_transform(selected_feats_scaled)
                 with st.spinner('Clustering...'):
-                    retained_hierarchy, assignments, assign_prob, soft_assignments = hdbscan_classification(umap_embeddings,
-                                                                                                            cluster_range)
+                    retained_hierarchy, assignments, assign_prob, soft_assignments = hdbscan_classification(
+                        umap_embeddings,
+                        cluster_range)
                 save_data(project_dir, iter_folder, 'embedding_output.sav',
                           [umap_embeddings, assignments, soft_assignments])
                 st.session_state['output_sav'] = os.path.join(project_dir, iter_folder, 'embedding_output.sav')
@@ -205,6 +214,37 @@ def plot_hdbscan_embedding(output_sav):
         return fig, group_types
 
 
+def save_update_info(config, behavior_names_split):
+    input_container = st.container()
+    # create new project folder with prefix as name:
+    working_dir = config["Project"].get("PROJECT_PATH")
+    prefix_old = config["Project"].get("PROJECT_NAME")
+    project_folder = os.path.join(working_dir, prefix_old)
+    iteration = config["Processing"].getint("ITERATION")
+    iter_folder = str.join('', ('iteration-', str(iteration)))
+    today = date.today()
+    d4 = today.strftime("%b-%d-%Y")
+    prefix_new = input_container.text_input('Enter filename prefix', d4,
+                                            help=PREFIX_HELP)
+    if prefix_new:
+        st.success(f'Entered **{prefix_new}** as the prefix.')
+    else:
+        st.error('Please enter a prefix.')
+    if st.button('create new project'):
+        parameters_dict = {
+            "Project": dict(
+                PROJECT_PATH=working_dir,
+                PROJECT_NAME=prefix_new,
+                CLASSES=behavior_names_split,
+            )
+        }
+
+        copy_config(project_folder, os.path.join(working_dir, prefix_new), iter_folder,
+                    updated_params=parameters_dict)
+        st.info(f'Created. Please delete the config, and reupload the new config from: {prefix_new}.')
+    return working_dir, iter_folder, prefix_new
+
+
 def main(ri=None, config=None):
     st.markdown("""---""")
 
@@ -228,7 +268,7 @@ def main(ri=None, config=None):
         os.makedirs(os.path.join(project_dir, iter_folder), exist_ok=True)
         videos_dir = os.path.join(project_dir, 'videos')
         os.makedirs(videos_dir, exist_ok=True)
-        frames2integ = round(float(framerate) * (duration_min / 0.1))
+        # frames2integ = round(float(framerate) * (duration_min / 0.1))
 
         if 'disabled' not in st.session_state:
             st.session_state['disabled'] = False
@@ -242,7 +282,7 @@ def main(ri=None, config=None):
         pose_expander = left_col.expander('pose'.upper(), expanded=True)
         prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                      framerate, videos_dir, project_dir, iter_folder, pose_expander, left_checkbox)
-        [features, targets, _, frames2integ] = load_features(project_dir, iter_folder)
+        [features, targets, frames2integ] = load_features(project_dir, iter_folder)
         if features.shape[0] > targets.shape[0]:
             X = features[:targets.shape[0]].copy()
             y = targets.copy()
@@ -261,8 +301,9 @@ def main(ri=None, config=None):
         if 'output_sav' not in st.session_state:
             st.session_state['output_sav'] = None
         if st.session_state['input_sav'] is None:
-            get_features_labels(X, y, iterX_model, frames2integ, project_dir, iter_folder, left_col
-                                )
+            all_feats, all_labels = get_features_labels(X, y, iterX_model, frames2integ, project_dir, iter_folder,
+                                                        left_col
+                                                        )
 
         target_behavior = ri.multiselect('Select Behavior to Split', annotation_classes, annotation_classes[3])
         if st.session_state['input_sav'] is not None:
@@ -286,8 +327,48 @@ def main(ri=None, config=None):
                 if st.session_state['output_sav'] is not None:
                     fig, group_types = plot_hdbscan_embedding(st.session_state['output_sav'])
                     right_col_top.plotly_chart(fig, use_container_width=True)
+
+                    with open(st.session_state['input_sav'], 'rb') as fr:
+                        [all_feats, all_labels] = joblib.load(fr)
+                    with open(st.session_state['output_sav'], 'rb') as fr:
+                        [_, assignments, soft_assignments] = joblib.load(fr)
+                    annotation_classes_ex = annotation_classes.copy()
+                    if exclude_other:
+                        other_id = annotation_classes.index('other')
+                        annotation_classes_ex.pop(other_id)
+                        idx_other = np.where(all_labels == other_id)[0]
+
+                    target_beh_id = annotation_classes_ex.index(target_behavior[0])
+                    idx_target_beh = np.where(all_labels == target_beh_id)[0]
+                    all_labels_split = all_labels.copy()
+                    all_labels_split[idx_target_beh] = soft_assignments + np.max(all_labels) + 1
+                    if exclude_other:
+                        all_labels_split[idx_other] = np.max(all_labels_split[idx_target_beh]) + 1
+                    encoder = LabelEncoder()
+                    all_labels_split_reorg = encoder.fit_transform(all_labels_split)
+                    annot_array = np.array(annotation_classes_ex)
+
+                    behavior_names_split = list(annot_array[annot_array != target_behavior[0]])
+                    behavior_names_split.extend([f'{target_behavior[0]}_{i}'
+                                                 for i in range(len(np.unique(soft_assignments)))])
+                    if exclude_other:
+                        behavior_names_split.extend(['other'])
+
+                    working_dir, iter_folder, prefix_new = save_update_info(config, behavior_names_split)
+
+                    if os.path.isdir(os.path.join(working_dir, prefix_new, iter_folder)):
+                        save_data(os.path.join(working_dir, prefix_new), iter_folder,
+                                  'feats_targets.sav',
+                                  [
+                                      all_feats,
+                                      all_labels_split_reorg,
+                                      frames2integ
+                                  ])
+
         else:
             st.session_state['disabled'] = False
+
+
 
 
     else:
