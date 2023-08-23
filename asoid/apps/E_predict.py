@@ -363,7 +363,7 @@ def create_annotated_videos(vidpath_out,
         video.release()
 
 
-def predict_annotate_video(iterX_model, framerate, frames2integ,
+def predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
                            annotation_classes,
                            frame_dir, videos_dir, iter_folder,
                            video_checkbox, colL):
@@ -393,8 +393,8 @@ def predict_annotate_video(iterX_model, framerate, frames2integ,
                 predict_arr = np.array(predict).flatten()
 
             predictions_match = np.pad(predict_arr.repeat(repeat_n), (repeat_n, 0), 'edge')[:total_n_frames[i]]
-            pose_type = str.join('', ('.', st.session_state['pose'][i].type.rpartition('text/')[2]))
-            pose_prefix = st.session_state['pose'][i].name.rpartition(pose_type)[0]
+
+            pose_prefix = st.session_state['pose'][i].name.rpartition(ftype)[0]
             annotated_str = str.join('', ('_annotated_', iter_folder))
             annotated_vid_name = str.join('', (pose_prefix, annotated_str, '.mp4'))
 
@@ -630,14 +630,17 @@ def main(ri=None, config=None):
             st.session_state['disabled'] = False
 
             if annot_vid_path == 'Add New Data':
-                prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
-                                         framerate, videos_dir, project_dir, iter_folder)
 
+                try:
+                    [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
+                    ri.info(f'loaded {iter_folder} model')
+                    prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
+                                 framerate, videos_dir, project_dir, iter_folder)
+                except:
+                    ri.info(f'Please train a {iter_folder} model in :orange[Active Learning] step.')
                 if len(st.session_state['uploaded_pose']) > 0:
                     placeholder = st.empty()
-                    [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
-                    st.info(f'loaded {iter_folder} model')
-                    predict_annotate_video(iterX_model, framerate, frames2integ,
+                    predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
                                            annotation_classes,
                                            None, videos_dir, iter_folder,
                                            None, placeholder)
