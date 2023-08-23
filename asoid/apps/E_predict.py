@@ -376,6 +376,7 @@ def predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
     # total_n_frames = processed_input_data[0].shape[0]
     repeat_n = int(frames2integ / 10)
     total_n_frames = []
+    # st.write(ftype)
     if action_button:
         st.session_state['disabled'] = True
         message_box.info('Predicting labels... ')
@@ -394,7 +395,7 @@ def predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
 
             predictions_match = np.pad(predict_arr.repeat(repeat_n), (repeat_n, 0), 'edge')[:total_n_frames[i]]
 
-            pose_prefix = st.session_state['pose'][i].name.rpartition(ftype)[0]
+            pose_prefix = st.session_state['pose'][i].name.rpartition(str.join('', ('.', ftype)))[0]
             annotated_str = str.join('', ('_annotated_', iter_folder))
             annotated_vid_name = str.join('', (pose_prefix, annotated_str, '.mp4'))
 
@@ -556,7 +557,7 @@ def describe_labels_single(df_label, framerate, placeholder):
     # heatmap already shows this information
     # count_df["percentage"] = count_df["frame count"] / count_df["frame count"].sum() *100
     if framerate is not None:
-        count_df["total duration"] = count_df["count"] / framerate
+        count_df["total duration"] = count_df["frame count"] / framerate
         count_df["total duration"] = count_df["total duration"].apply(lambda x: str(datetime.timedelta(seconds=x)))
 
     count_df["bouts"] = event_counter["events"]
