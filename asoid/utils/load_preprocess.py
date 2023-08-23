@@ -413,7 +413,7 @@ class Preprocess:
                         f.seek(0)
                         self.input_datafiles.append(f.name)
                         self.input_labelfiles.append(self.label_csvs[i].name)
-                        st.write(f.name, self.label_csvs[i].name)
+
                     else:
                         # we used the folder import, which results in a string
                         self.input_datafiles.append(os.path.basename(f))

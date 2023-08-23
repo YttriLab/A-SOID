@@ -17,7 +17,7 @@ from sklearn.preprocessing import LabelEncoder
 from stqdm import stqdm
 from utils.extract_features import feature_extraction, \
     bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
-from utils.import_data import load_labels_auto
+from utils.import_data import load_labels_auto, load_pose_ftype
 from utils.load_workspace import load_new_pose, load_iterX
 
 TITLE = "Predict behaviors"
@@ -256,6 +256,14 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
         new_pose_list = load_new_pose(new_pose_sav)
     else:
         # try:
+        pose_origin = pose_exapnder.selectbox('Select pose origin', ['DeepLabCut', 'SLEAP'])
+        if pose_origin == 'DeepLabCut':
+            ftype = 'csv'
+        elif pose_origin == 'SLEAP':
+            ftype = 'h5'
+        else:
+            st.error('Pose origin not recognized.')
+            st.stop()
         new_pose_csvs = pose_exapnder.file_uploader('Upload Corresponding Pose Files',
                                                    accept_multiple_files=True,
                                                    type=ftype, key='pose')
@@ -264,10 +272,15 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
             # st.session_state['uploaded_vid'] = new_videos
             new_pose_list = []
             for i, f in enumerate(new_pose_csvs):
-                current_pose = pd.read_csv(f,
-                                           header=[0, 1, 2], sep=",", index_col=0)
+
+                #current_pose = pd.read_csv(f,
+                #                           header=[0, 1, 2], sep=",", index_col=0)
+                #todo: adapt to multi animal by reading from config
+                current_pose = load_pose_ftype(f, ftype)
+
                 bp_level = 1
                 bp_index_list = []
+
                 if i == 0:
                     st.info("Selected keypoints/bodyparts (from config): " + ", ".join(selected_bodyparts))
                     st.info("Available keypoints/bodyparts in pose file: " + ", ".join(
@@ -542,9 +555,8 @@ def describe_labels_single(df_label, framerate, placeholder):
     count_df = df_label.value_counts().to_frame().reset_index().rename(columns={0: "frame count"})
     # heatmap already shows this information
     # count_df["percentage"] = count_df["frame count"] / count_df["frame count"].sum() *100
-
     if framerate is not None:
-        count_df["total duration"] = count_df["frame count"] / framerate
+        count_df["total duration"] = count_df["count"] / framerate
         count_df["total duration"] = count_df["total duration"].apply(lambda x: str(datetime.timedelta(seconds=x)))
 
     count_df["bouts"] = event_counter["events"]

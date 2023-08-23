@@ -163,8 +163,6 @@ def resample_labels(labels: pd.DataFrame, fps: int, sample_rate:int):
     resample_rate = label_sample_rate / pose_sample_rate
     #check if resample rate is divisible by fps
     if sample_rate % fps != 0 and fps % sample_rate != 0:
-        st.write(sample_rate % fps)
-        st.write(fps % sample_rate)
         raise st.error(f"Annotations cannot be resampled to fit pose estimation sampling. The annotation sample rate {sample_rate} is not divisible by FPS {fps} or vice versa.")
 
     if resample_rate > 1:
@@ -175,7 +173,6 @@ def resample_labels(labels: pd.DataFrame, fps: int, sample_rate:int):
     elif resample_rate < 1:
         #downsample
         downsample_rate = 1/resample_rate
-        st.write(resample_rate)
         re_labels = labels.iloc[::int(downsample_rate),:]
 
     else:
