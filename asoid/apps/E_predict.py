@@ -415,11 +415,14 @@ def predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
 def annotate_video(video_path, framerate, annotation_classes,
                    frame_dir, videos_dir, iter_folder,
                    predictions_match):
-    video_type = str.join('', ('.', video_path.rpartition('.')[2]))
-    video_prefix = video_path.rpartition('/')[2].replace('.mp4', '')
+    # video_type = str.join('', ('.', video_path.rpartition('.mp4')[2]))
+
+    video_prefix = video_path.replace('.mp4', '')
     annotated_vid_str = str.join('', ('_annotated_', iter_folder))
-    annotated_vid_name = str.join('', (video_prefix, annotated_vid_str, video_type))
-    vidpath_out = os.path.join(videos_dir, annotated_vid_name)
+    annotated_vid_name = str.join('', (video_prefix, annotated_vid_str, '.mp4'))
+    vidpath_out = os.path.join(annotated_vid_name)
+
+    # st.write(video_type, video_prefix, annotated_vid_str, annotated_vid_name, vidpath_out)
     font = cv2.FONT_HERSHEY_SIMPLEX
     fontScale = 1.25
     fontColor = (0, 0, 255)
