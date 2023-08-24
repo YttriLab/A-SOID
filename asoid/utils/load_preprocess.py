@@ -151,16 +151,21 @@ class Preprocess:
                                                      sample_rate=self.sample_rate))
                 # go through all label files to make sure to catch all optional classes
                 # There is probably a faster solution...
-                optional_classes = []
+                optional_classes_dict = {}
                 for l_df in self.label_df:
                     # get all optional classes for this file
                     temp_optional_classes = list(l_df.drop(columns=["time"], errors="ignore").columns)
                     # go through all classes
                     for temp_optional_class in temp_optional_classes:
                         # check if it's already in
-                        if temp_optional_class not in optional_classes:
-                            # if not append
-                            optional_classes.append(temp_optional_class)
+                        if temp_optional_class not in optional_classes_dict.keys():
+                            # if not add new class and number of labels
+                            optional_classes_dict[temp_optional_class] = l_df[temp_optional_class].sum()
+                        else:
+                            # if yes, add number of labels
+                            optional_classes_dict[temp_optional_class] += l_df[temp_optional_class].sum()
+
+                optional_classes = list(optional_classes_dict.keys())
 
                 self.classes = input_container.multiselect(
                     "Deselect classes that should not be included in training."
@@ -199,6 +204,16 @@ class Preprocess:
         if self.classes is not None:
             st.success(
                 'Selected classes:* **{}**.'.format(', '.join(self.classes)))
+
+            st.write("Samples per class (across all files):")
+            st.write(pd.DataFrame(optional_classes_dict, index=["samples"]))
+            # if any class has no labels across all files, inform user
+            if any([optional_classes_dict[x] == 0 for x in self.classes]):
+                st.error("Some of the selected classes have no labels in the uploaded annotation files. "
+                           "Please make sure that you selected the correct files.")
+            elif any([optional_classes_dict[x] < 100 for x in self.classes]):
+                st.warning("Some of the selected classes have almost no labels in the uploaded annotation files. This can lead to issues "
+                           "Please make sure that you selected the correct files.")
         if self.selected_bodyparts:
             st.success("**Selected keypoints/bodyparts**: " + ", ".join(self.selected_bodyparts))
         if self.selected_animals:
@@ -406,7 +421,11 @@ class Preprocess:
             else:
                 # if it's deeplabcut or sleap
                 # go through all pose files
+                if self.pose_csvs is None:
+                    st.warning("Please select pose files first.")
+                    return
                 for i, f in enumerate(self.pose_csvs):
+
                     if self.pose_data_directories is None:
                         # because we cannot be sure whether the file was already used by read_csv,
                         # we need to refresh the buffer!
