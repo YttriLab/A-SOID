@@ -204,16 +204,17 @@ class Preprocess:
         if self.classes is not None:
             st.success(
                 'Selected classes:* **{}**.'.format(', '.join(self.classes)))
+            if not self.software == 'CALMS21 (PAPER)':
+                st.write("Samples per class (across all files):")
+                st.write(pd.DataFrame(optional_classes_dict, index=["samples"]))
+                # if any class has no labels across all files, inform user
+                if any([optional_classes_dict[x] == 0 for x in self.classes]):
+                    st.error("Some of the selected classes have no labels in the uploaded annotation files. "
+                               "Please make sure that you selected the correct files.")
+                elif any([optional_classes_dict[x] < 100 for x in self.classes]):
+                    st.warning("Some of the selected classes have almost no labels in the uploaded annotation files. This can lead to issues "
+                               "Please make sure that you selected the correct files.")
 
-            st.write("Samples per class (across all files):")
-            st.write(pd.DataFrame(optional_classes_dict, index=["samples"]))
-            # if any class has no labels across all files, inform user
-            if any([optional_classes_dict[x] == 0 for x in self.classes]):
-                st.error("Some of the selected classes have no labels in the uploaded annotation files. "
-                           "Please make sure that you selected the correct files.")
-            elif any([optional_classes_dict[x] < 100 for x in self.classes]):
-                st.warning("Some of the selected classes have almost no labels in the uploaded annotation files. This can lead to issues "
-                           "Please make sure that you selected the correct files.")
         if self.selected_bodyparts:
             st.success("**Selected keypoints/bodyparts**: " + ", ".join(self.selected_bodyparts))
         if self.selected_animals:
