@@ -42,6 +42,7 @@ def show_classifier_results(behavior_classes, all_score,
     perf_by_class = {k: [] for k in behavior_classes}
     # st.write(base_score, learn_score)
     scores = np.vstack((np.hstack(base_score), np.vstack(learn_score)))
+    # st.write(scores)
     mean_scores = [100 * round(np.mean(scores[j], axis=0), 2) for j in range(len(scores))]
     mean_scores2beat = np.mean(all_score, axis=0)
     scores2beat_byclass = all_score.copy()
@@ -174,18 +175,11 @@ class RF_Classify:
         self.perf2beat_by_class = {k: [] for k in annotation_classes}
 
     def split_data(self):
-        [features, targets, self.frames2integ] = \
+        [X, y, self.frames2integ] = \
             load_features(self.project_dir, self.iter_dir)
+        # st.write(features.shape, targets.shape)
         # partitioning into N randomly selected train/test splits
-        if features.shape[0] > targets.shape[0]:
-            X = features[:targets.shape[0]].copy()
-            y = targets.copy()
-        elif features.shape[0] < targets.shape[0]:
-            X = features.copy()
-            y = targets[:features.shape[0]].copy()
-        else:
-            X = features.copy()
-            y = targets.copy()
+
         self.features_train, self.features_heldout, \
             self.targets_train, self.targets_heldout = train_test_split(X, y, test_size=0.20, random_state=42)
 
@@ -702,7 +696,7 @@ class RF_Classify:
             selected_idx = np.random.choice(np.arange(len(all_c_options)), len(self.annotation_classes), replace=False)
             default_colors = [all_c_options[s] for s in selected_idx]
 
-        mean_scores = np.hstack([100 * round(self.iter0_f1_scores[0], 2),
+        mean_scores = np.hstack([100 * round(np.mean(self.iter0_f1_scores), 2),
                                  np.hstack([100 * round(np.mean(self.iterX_f1_scores_list[j], axis=0), 2)
                                             for j in range(len(self.iterX_f1_scores_list))])])
         mean_scores2beat = np.mean(self.all_f1_scores, axis=0)

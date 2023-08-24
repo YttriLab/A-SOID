@@ -243,6 +243,7 @@ def create_labeled_vid(labels, proba,
     lineType = 2
 
     # compute bout start/end and lengths
+
     bout_end_idx = np.where(np.diff(labels) != 0)[0]
     bout_start_idx = np.hstack((0, bout_end_idx + 1))
     bout_len = np.hstack((np.diff(bout_start_idx), len(labels) - bout_start_idx[-1]))
@@ -253,6 +254,8 @@ def create_labeled_vid(labels, proba,
 
             # get bout starts and their lengths for label b
             idx_b = np.where(labels[bout_start_idx] == b)[0]
+            example_indices = []
+            idx_start_ls = []
             examples_b = []
             if idx_b is not None:
                 len_b = bout_len[labels[bout_start_idx] == b]
@@ -273,26 +276,26 @@ def create_labeled_vid(labels, proba,
                         count = 0
                 elif outlier_method == 'Random':
                     behav_ex_idx = []
+
+                    for i, idx_start in enumerate(indices_start):
+                        # find index greater than duration
+                        if indices_end[i] - idx_start >= min_ex_bins:
+                            idx_start_ls.append(i)
+
                     try:
-                        # indices_start
-                        example_indices = np.random.choice(len(indices_start),
-                                                           counts, replace=False)
-
-                        for example_idx in example_indices:
-                            # st.write(indices_start[example_idx])
-                            # st.write(indices_end[example_idx])
-                            if indices_end[example_idx] - indices_start[example_idx] >= min_ex_bins:
-                                examples_b.append([indices_start[example_idx], indices_end[example_idx]])
-
-                        # examples_b = np.random.choice(idx_b, counts, replace=False)
+                        # subsample to user choice
+                        chosen_starts = np.random.choice(idx_start_ls,
+                                                         counts, replace=False)
                     except:
-                        example_indices = np.random.choice(len(indices_start),
-                                                           len(indices_start), replace=False)
-                        for example_idx in example_indices:
-                            if indices_end[example_idx] - indices_start[example_idx] >= min_ex_bins:
-                                examples_b.append([indices_start[example_idx], indices_end[example_idx]])
+                        chosen_starts = np.random.choice(idx_start_ls,
+                                                         len(idx_start_ls), replace=False)
 
-                        # examples_b = np.random.choice(idx_b, len(idx_b), replace=False)
+                    # get start stop for user choice
+                    for j in chosen_starts:
+                        examples_b.append([indices_start[j], indices_end[j]])
+                    # st.write(examples_b)
+
+
                     count = 0
                 for ex, example_b in enumerate(stqdm(examples_b, desc="creating videos")):
                     # just in case if future frames are not present
@@ -495,7 +498,7 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                                                   disabled=st.session_state.disabled)
 
             num_outliers = col1_exp.number_input('Number of examples to refine',
-                                                 min_value=10, max_value=None, value=20,
+                                                 min_value=3, max_value=None, value=20,
                                                  disabled=st.session_state.disabled)
             st.session_state['refinements'] = {key:
                                                    {k: {'choice': None, 'submitted': False}
@@ -514,8 +517,8 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
             col3_exp.success(f'Entered **{frame_dir}** as the frame directory.')
 
             shortvid_dir = os.path.join(project_dir, iter_dir,
-                                     str.join('', (st.session_state['uploaded_vid'].name.rpartition('.mp4')[0],
-                                                   '_refine_vids')))
+                                        str.join('', (st.session_state['uploaded_vid'].name.rpartition('.mp4')[0],
+                                                      '_refine_vids')))
             os.makedirs(shortvid_dir, exist_ok=True)
             col3_exp.success(f'Entered **{shortvid_dir}** as the refined video directory.')
 
@@ -548,7 +551,7 @@ def prompt_setup_existing(outlier_methods, framerate, videos_dir, project_dir, i
                                           disabled=st.session_state.disabled)
 
     num_outliers = col1_exp.number_input('Number of examples to refine',
-                                         min_value=10, max_value=None, value=st.session_state['num_outliers'],
+                                         min_value=3, max_value=None, value=st.session_state['num_outliers'],
                                          disabled=st.session_state.disabled)
 
     output_fps = col1_exp.number_input('Video playback fps',
@@ -795,7 +798,7 @@ def main(ri=None, config=None):
                                         index=int(0), horizontal=True,
                                         key="behavior_choice")
                 st.info('Make sure you :orange[Save/Update Refinements] before moving to another behavior! '
-                           'Or else it will clear your modification.')
+                        'Or else it will clear your modification.')
 
                 existing_outliers = [d for d in os.listdir(shortvid_dir)
                                      if d.endswith('.mp4') and behav_choice in d]

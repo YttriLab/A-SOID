@@ -64,7 +64,8 @@ def main(ri=None, config=None):
                  examples_idx,
                  refinements] = load_refinement(
                     os.path.join(project_dir, iter_folder), selected_refine_dir)
-                st.write(refinements)
+                # st.write(examples_idx)
+                # st.write(refinements)
                 new_feats_byclass = []
                 new_targets_byclass = []
                 for i, annotation_cls in enumerate(annotation_classes):
@@ -83,6 +84,7 @@ def main(ri=None, config=None):
                     try:
                         new_feats_byclass.append(np.vstack(submitted_feats))
                         new_targets_byclass.append(np.hstack(submitted_targets))
+                        # st.write(np.vstack(submitted_feats).shape, np.hstack(submitted_targets).shape)
                     except:
                         pass
                 new_features_dir.append(np.vstack(new_feats_byclass))
