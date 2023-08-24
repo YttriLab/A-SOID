@@ -28,19 +28,21 @@ def prompt_setup(software, train_fx, working_dir, prefix, iteration_dir, exclude
     min_ratio_ = np.round(min_samples / smallest_class_num, 2)
     max_samps_iter = np.ceil(len(data_samples_per) * 10).astype(int)
 
-    if not np.all(data_samples_per):
+    if not np.all(data_samples_per) or smallest_class_num < min_samples:
         # if any selected class has no labels in the dataset, throw an error (very rare cases).
         st.error(
-            "Some of selected classes have not enough available labels! "
-            "Return back to the data upload and deselect any annotation classes that have no label."
+            "Some of selected classes have not enough available labels! Min. samples per class: " + str(min_samples) +". "
+            "Return back to the data upload and deselect any annotation classes that have not enough labels."
             )
         st.warning("Samples per class:" + str([*zip(annotation_classes, data_samples_per)]))
         if not exclude_other:
             st.warning(
                 "If this is a problem with 'other', you can exclude 'other' in the config or by recreating the project.")
+        st.stop()
     col1_exp = col1.expander('Initial sampling ratio'.upper(), expanded=True)
     col2_exp = col2.expander('Max number of iterations'.upper(), expanded=True)
     col2_bot_exp = col2.expander('Samples per iteration'.upper(), expanded=True)
+
     if 'init_ratio' not in st.session_state:
         st.session_state.init_ratio = min_ratio_
         init_ratio = col1_exp.number_input("Select an initial sampling ratio",
