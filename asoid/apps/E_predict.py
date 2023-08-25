@@ -23,7 +23,7 @@ from utils.load_workspace import load_new_pose, load_iterX
 TITLE = "Predict behaviors"
 
 
-def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder, top_most_container):
+def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder, top_most_container, vidname):
     plot_col_top = placeholder.empty()
     behavior_colors = {k: [] for k in annotation_classes}
     all_c_options = list(mcolors.CSS4_COLORS.keys())
@@ -86,7 +86,7 @@ def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder, top_m
         st.plotly_chart(fig, use_container_width=True, config={
             'toImageButtonOptions': {
                 'format': 'png',  # one of png, svg, jpeg, webp
-                'filename': f'{predict_npy.rpartition("/")[2].replace(".npy", "_duration_pie")}',
+                'filename': f"{str.join('', (vidname, '_', iter_folder, '_duration_pie'))}",
                 'height': 600,
                 'width': 600,
                 'scale': 3  # Multiply title/legend/axis/canvas sizes by this factor
@@ -97,7 +97,7 @@ def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder, top_m
 
 
 def ethogram_plot(predict_npy, iter_folder, annotation_classes, exclude_other,
-                  behavior_colors, framerate, placeholder2):
+                  behavior_colors, framerate, placeholder2, vidname):
     plot_col_top = placeholder2.empty()
     predict = np.load(predict_npy, allow_pickle=True)
     annotation_classes_ex = annotation_classes.copy()
@@ -142,7 +142,7 @@ def ethogram_plot(predict_npy, iter_folder, annotation_classes, exclude_other,
     plot_col_top.plotly_chart(fig, use_container_width=True, config={
         'toImageButtonOptions': {
             'format': 'png',  # one of png, svg, jpeg, webp
-            'filename': f'{predict_npy.rpartition("/")[2].replace(".npy", "_ethogram")}',
+            'filename': f"{str.join('', (vidname, '_', iter_folder, '_ethogram'))}",
             'height': 720,
             'width': 1280,
             'scale': 3  # Multiply title/legend/axis/canvas sizes by this factor
@@ -174,7 +174,7 @@ def boolean_indexing(v, fillval=np.nan):
 
 def ridge_predict(predict_npy, iter_folder, annotation_classes, exclude_other,
                   behavior_colors, framerate,
-                  placeholder):
+                  placeholder, vidname):
     predict = np.load(predict_npy, allow_pickle=True)
     annotation_classes_ex = annotation_classes.copy()
     colors_classes = list(behavior_colors.values()).copy()
@@ -205,7 +205,17 @@ def ridge_predict(predict_npy, iter_folder, annotation_classes, exclude_other,
                           xaxis_range=[0, np.nanpercentile(np.array(duration_matrix), 99)],
                           )
         fig['layout']['yaxis']['autorange'] = "reversed"
-        st.plotly_chart(fig, use_container_width=True)
+
+        st.plotly_chart(fig, use_container_width=True, config={
+            'toImageButtonOptions': {
+                'format': 'png',  # one of png, svg, jpeg, webp
+                'filename': f"{str.join('', (vidname, '_', iter_folder, '_bout_durations'))}",
+                'height': 720,
+                'width': 1280,
+                'scale': 3  # Multiply title/legend/axis/canvas sizes by this factor
+            }
+        })
+        # st.plotly_chart(fig, use_container_width=True)
 
 
 def disable():
@@ -699,7 +709,9 @@ def main(ri=None, config=None):
                 behavior_colors = pie_predict(annot_vid_path.replace('mp4', 'npy'),
                                               iter_folder,
                                               annotation_classes,
-                                              summary_col, top_most_container)
+                                              summary_col,
+                                              top_most_container,
+                                              selection)
                 ethogram_plot(annot_vid_path.replace('mp4', 'npy'),
                               iter_folder,
                               annotation_classes,
@@ -707,7 +719,7 @@ def main(ri=None, config=None):
                               behavior_colors,
                               framerate,
                               video_col,
-                              )
+                              selection)
                 labels = save_predictions(annot_vid_path.replace('mp4', 'npy'),
                                           annot_vid_path.replace('mp4', 'csv'),
                                           annotation_classes,
@@ -720,7 +732,8 @@ def main(ri=None, config=None):
                               exclude_other,
                               behavior_colors,
                               framerate,
-                              summary_col)
+                              summary_col,
+                              selection)
                 # display video from video path
                 if os.path.isfile(annot_vid_path):
                     video_col.video(annot_vid_path)
