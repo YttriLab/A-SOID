@@ -433,6 +433,30 @@ def create_videos(processed_input_data, iterX_model, framerate, frames2integ,
     return features[0], predict_arr, examples_idx
 
 
+def adp_filt(pose, idx_selected, idx_llh):
+    datax = np.array(pose.iloc[:, idx_selected[::2]])
+    datay = np.array(pose.iloc[:, idx_selected[1::2]])
+    data_lh = np.array(pose.iloc[:, idx_llh])
+    currdf_filt = np.zeros((datax.shape[0], (datax.shape[1]) * 2))
+    perc_rect = []
+    for i in range(data_lh.shape[1]):
+        perc_rect.append(0)
+    for x in range(data_lh.shape[1]):
+        # TODO: load from config.ini the llh threshold
+        llh = 0.6
+        data_lh_float = data_lh[:, x].astype(np.float)
+        perc_rect[x] = np.sum(data_lh_float < llh) / data_lh.shape[0]
+        currdf_filt[0, (2 * x):(2 * x + 2)] = np.hstack([datax[0, x], datay[0, x]])
+        for i in range(1, data_lh.shape[0]):
+            if data_lh_float[i] < llh:
+                currdf_filt[i, (2 * x):(2 * x + 2)] = currdf_filt[i - 1, (2 * x):(2 * x + 2)]
+            else:
+                currdf_filt[i, (2 * x):(2 * x + 2)] = np.hstack([datax[i, x], datay[i, x]])
+    currdf_filt = np.array(currdf_filt)
+    currdf_filt = currdf_filt.astype(np.float)
+    return currdf_filt, perc_rect
+
+
 def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                  outlier_methods, threshold, min_duration,
                  framerate, videos_dir, project_dir, iter_dir):
@@ -478,8 +502,9 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                 idx_llh = selected_pose_idx[2::3]
                 # the loaded sleap file has them too, so exclude for both
                 idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
-                # idx_selected = np.array([0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16])
-                new_pose_list.append(np.array(current_pose.iloc[:, idx_selected]))
+                filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh)
+
+                new_pose_list.append(filt_pose)
 
             st.session_state['uploaded_pose'] = new_pose_list
             col1, col3 = st.columns(2)
@@ -494,11 +519,11 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                                                  min_value=0.0, max_value=1.0, value=threshold,
                                                  disabled=st.session_state.disabled)
             min_n_seconds = col1_exp.number_input('Minimum number of seconds for example',
-                                                  min_value=min_duration, max_value=10.0, value=min_duration * 5,
+                                                  min_value=min_duration, max_value=10.0, value=min_duration * 10,
                                                   disabled=st.session_state.disabled)
 
             num_outliers = col1_exp.number_input('Number of examples to refine',
-                                                 min_value=3, max_value=None, value=20,
+                                                 min_value=3, max_value=None, value=5,
                                                  disabled=st.session_state.disabled)
             st.session_state['refinements'] = {key:
                                                    {k: {'choice': None, 'submitted': False}

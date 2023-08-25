@@ -86,6 +86,30 @@ def select_software():
     return software, ftype
 
 
+def adp_filt(pose, idx_selected, idx_llh):
+    datax = np.array(pose.iloc[:, idx_selected[::2]])
+    datay = np.array(pose.iloc[:, idx_selected[1::2]])
+    data_lh = np.array(pose.iloc[:, idx_llh])
+    currdf_filt = np.zeros((datax.shape[0], (datax.shape[1]) * 2))
+    perc_rect = []
+    for i in range(data_lh.shape[1]):
+        perc_rect.append(0)
+    for x in range(data_lh.shape[1]):
+        # TODO: load from config.ini the llh threshold
+        llh = 0.6
+        data_lh_float = data_lh[:, x].astype(np.float)
+        perc_rect[x] = np.sum(data_lh_float < llh) / data_lh.shape[0]
+        currdf_filt[0, (2 * x):(2 * x + 2)] = np.hstack([datax[0, x], datay[0, x]])
+        for i in range(1, data_lh.shape[0]):
+            if data_lh_float[i] < llh:
+                currdf_filt[i, (2 * x):(2 * x + 2)] = currdf_filt[i - 1, (2 * x):(2 * x + 2)]
+            else:
+                currdf_filt[i, (2 * x):(2 * x + 2)] = np.hstack([datax[i, x], datay[i, x]])
+    currdf_filt = np.array(currdf_filt)
+    currdf_filt = currdf_filt.astype(np.float)
+    return currdf_filt, perc_rect
+
+
 class Preprocess:
 
     def __init__(self):
@@ -419,10 +443,7 @@ class Preprocess:
                         self.input_datafiles.append(os.path.basename(f))
                         self.input_labelfiles.append(os.path.basename(self.label_csvs[i]))
 
-                    # current_pose = pd.read_csv(self.pose_csvs[i],
-                    #                            header=[0, 1, 2], sep=",", index_col=0)
                     current_pose = load_pose(f, origin=self.software.lower(), multi_animal=self.multi_animal)
-                    # idx_selected = np.array([0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16])
                     # take user selected bodyparts
                     idx_selected = self.selected_pose_idx
                     # get rid of likelihood columns for deeplabcut
@@ -430,24 +451,15 @@ class Preprocess:
                     # the loaded sleap file has them too, so exclude for both
                     idx_selected = [i for i in idx_selected if i not in idx_llh]
 
-                    # train_portion = int(np.array(current_pose.shape[0]) * 0.7)
-                    self.processed_input_data.append(np.array(current_pose.iloc[:, idx_selected]))
-                    # st.write(self.processed_input_data[-1].shape)
+                    filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh)
 
-                    # self.processed_input_data.append(np.array(current_pose.iloc[:train_portion, idx_selected]))
-                    # self.processed_input_data_test.append(np.array(current_pose.iloc[train_portion:, idx_selected]))
-
+                    # self.processed_input_data.append(np.array(current_pose.iloc[:, idx_selected]))
+                    self.processed_input_data.append(filt_pose)
                     # convert dummie encoding to numbers but keep also identify of classes not represented in this file
                     label_vector = self._convert_labels(i)
-                    # st.write(self.label_df, label_vector.shape, current_pose.shape)
                     # continue with partioning
                     targets = label_vector[-current_pose.shape[0]:].copy()
-                    # train_portion_labels = int(targets.shape[0] * 0.7)
                     self.targets.append(targets)
-                    # st.write(self.targets[-1].shape)
-
-                    # self.targets.append(targets[:train_portion_labels])
-                    # self.targets_test.append(targets[train_portion_labels:])
 
             self.save_update_info()
 
