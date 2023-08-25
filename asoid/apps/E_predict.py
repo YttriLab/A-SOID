@@ -128,12 +128,13 @@ def ethogram_plot(predict_npy, iter_folder, annotation_classes, exclude_other,
 
     fig.update_layout(
         xaxis=dict(
-            title='Time (s)',
+            title='Frame Number',
             tickmode='array',
-            tickvals=np.arange(0, prefill_array.shape[0] + 1, (prefill_array.shape[0] + 1) / 20),
-            ticktext=np.round(np.arange(0,
-                                        np.round(prefill_array.shape[0] + 1 / framerate, 1),
-                                        np.round(((prefill_array.shape[0] + 1) / framerate) / 20, 1)), 1)
+            # tickvals=[*range(0, prefill_array.shape[0] + 1, framerate)]
+            # tickvals=np.arange(0, prefill_array.shape[0] + 1, (prefill_array.shape[0] + 1) / 20),
+            # ticktext=np.round(np.arange(0,
+            #                             np.round(prefill_array.shape[0] + 1 / framerate, 1),
+            #                             np.round(((prefill_array.shape[0] + 1) / framerate) / 20, 1)), 1)
         )
     )
     fig['layout']['yaxis']['autorange'] = "reversed"
@@ -419,7 +420,8 @@ def predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
                 pred_proba = bsoid_predict_proba_numba_noscale([features[i]], iterX_model)
                 predict_arr = np.array(predict).flatten()
 
-            predictions_match = np.pad(predict_arr.repeat(repeat_n), (repeat_n, 0), 'edge')[:total_n_frames[i]]
+            predictions_raw = np.pad(predict_arr.repeat(repeat_n), (repeat_n, 0), 'edge')[:total_n_frames[i]]
+            predictions_match = weighted_smoothing(predictions_raw, size=12)
 
             pose_prefix = st.session_state['pose'][i].name.rpartition(str.join('', ('.', ftype)))[0]
             annotated_str = str.join('', ('_annotated_', iter_folder))
@@ -603,6 +605,22 @@ def describe_labels_single(df_label, framerate, placeholder):
                     inplace=True)
     # TODO: autosize columns with newer streamlit versions (e.g., using use_container_width=True)
     placeholder.dataframe(count_df, hide_index=True)
+
+
+def weighted_smoothing(predictions, size):
+    predictions_new = predictions.copy()
+    group_start = [0]
+    group_start = np.hstack((group_start, np.where(np.diff(predictions) != 0)[0] + 1))
+    for i in range(len(group_start) - 3):
+        if group_start[i + 2] - group_start[i + 1] < size:
+            if predictions_new[group_start[i + 2]] == predictions_new[group_start[i]] and \
+                    predictions_new[group_start[i]:group_start[i + 1]].shape[0] >= size and \
+                    predictions_new[group_start[i + 2]:group_start[i + 3]].shape[0] >= size:
+                predictions_new[group_start[i]:group_start[i + 2]] = predictions_new[group_start[i]]
+    for i in range(len(group_start) - 3):
+        if group_start[i + 1] - group_start[i] < size:
+            predictions_new[group_start[i]:group_start[i + 1]] = predictions_new[group_start[i] - 1]
+    return predictions_new
 
 
 def main(ri=None, config=None):
