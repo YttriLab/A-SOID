@@ -130,10 +130,10 @@ def ethogram_plot(predict_npy, iter_folder, annotation_classes, exclude_other,
         xaxis=dict(
             title='Time (s)',
             tickmode='array',
-            tickvals=np.arange(0, prefill_array.shape[0] + 1, (prefill_array.shape[0] + 1) / 5),
+            tickvals=np.arange(0, prefill_array.shape[0] + 1, (prefill_array.shape[0] + 1) / 20),
             ticktext=np.round(np.arange(0,
                                         np.round(prefill_array.shape[0] + 1 / framerate, 1),
-                                        np.round(((prefill_array.shape[0] + 1) / framerate) / 5, 1)), 1)
+                                        np.round(((prefill_array.shape[0] + 1) / framerate) / 20, 1)), 1)
         )
     )
     fig['layout']['yaxis']['autorange'] = "reversed"
