@@ -117,6 +117,7 @@ def main(ri=None, config=None):
                 init_ratio, max_iter, max_samples_iter = \
                     prompt_setup(software, train_fx, working_dir, prefix, iter_folder, exclude_other,
                                  annotation_classes)
+                # st.write(conf_threshold)
                 if st.button('Train Classifier'):
                     rf_classifier = RF_Classify(working_dir, prefix, iter_folder, software,
                                                 init_ratio, max_iter, max_samples_iter,

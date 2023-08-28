@@ -62,6 +62,8 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                 # the loaded sleap file has them too, so exclude for both
                 idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
                 # idx_selected = np.array([0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16])
+
+
                 new_pose_list.append(np.array(current_pose.iloc[:, idx_selected]))
                 pose_names_list.append(f.name)
             st.session_state['uploaded_pose'] = new_pose_list
@@ -95,7 +97,7 @@ def get_features_labels(iterX_model, frames2integ, project_dir, iter_folder, pla
 
         input_features = np.vstack(features)
         input_targets = np.hstack(predict_arr)
-        st.write(input_targets.shape, input_features.shape)
+        # st.write(input_targets.shape, input_features.shape)
         with st.spinner('Saving...'):
             save_data(project_dir, iter_folder, 'embedding_input.sav',
                       [input_features, input_targets])

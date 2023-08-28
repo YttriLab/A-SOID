@@ -303,7 +303,8 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
         new_pose_csvs = pose_expander.file_uploader('Upload Corresponding Pose Files',
                                                    accept_multiple_files=True,
                                                    type=ftype, key='pose')
-        smooth_size = param_expander.number_input('Minimum frame per behavior', min_value=0, max_value=None, value=12)
+        st.session_state['smooth_size'] = param_expander.number_input('Minimum frames per behavior',
+                                                                      min_value=0, max_value=None, value=12)
         if len(new_pose_csvs) > 0:
 
             # st.session_state['uploaded_vid'] = new_videos
@@ -403,7 +404,7 @@ def create_annotated_videos(vidpath_out,
 
 
 def predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
-                           annotation_classes, smooth_size,
+                           annotation_classes,
                            frame_dir, videos_dir, iter_folder,
                            video_checkbox, colL):
     features = [None]
@@ -433,7 +434,7 @@ def predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
                 predict_arr = np.array(predict).flatten()
 
             predictions_raw = np.pad(predict_arr.repeat(repeat_n), (repeat_n, 0), 'edge')[:total_n_frames[i]]
-            predictions_match = weighted_smoothing(predictions_raw, size=smooth_size)
+            predictions_match = weighted_smoothing(predictions_raw, size=st.session_state['smooth_size'])
 
             pose_prefix = st.session_state['pose'][i].name.rpartition(str.join('', ('.', ftype)))[0]
             annotated_str = str.join('', ('_annotated_', iter_folder))
@@ -689,6 +690,8 @@ def main(ri=None, config=None):
                 st.session_state['disabled'] = False
             if 'uploaded_pose' not in st.session_state:
                 st.session_state['uploaded_pose'] = []
+            if 'smooth_size' not in st.session_state:
+                st.session_state['smooth_size'] = None
 
             st.session_state['disabled'] = False
 
@@ -704,7 +707,7 @@ def main(ri=None, config=None):
                 if len(st.session_state['uploaded_pose']) > 0:
                     placeholder = st.empty()
                     predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
-                                           annotation_classes, smooth_size,
+                                           annotation_classes,
                                            None, videos_dir, iter_folder,
                                            None, placeholder)
             else:
