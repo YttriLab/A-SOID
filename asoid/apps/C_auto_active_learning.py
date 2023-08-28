@@ -128,7 +128,8 @@ def main(ri=None, config=None):
                 if st.button('Train Classifier'):
                     rf_classifier = RF_Classify(working_dir, prefix, iter_folder, software,
                                                 init_ratio, max_iter, max_samples_iter,
-                                                annotation_classes, exclude_other, conf_threshold)
+                                                annotation_classes, exclude_other,
+                                                st.session_state['conf_threshold'])
                     rf_classifier.main()
         except FileNotFoundError:
             # make sure the features were extracted:
@@ -140,7 +141,8 @@ def main(ri=None, config=None):
                 if st.button('Train Classifier'):
                     rf_classifier = RF_Classify(working_dir, prefix, iter_folder, software,
                                                 init_ratio, max_iter, max_samples_iter,
-                                                annotation_classes, exclude_other, conf_threshold)
+                                                annotation_classes, exclude_other,
+                                                st.session_state['conf_threshold'])
                     rf_classifier.main()
             except FileNotFoundError:
                 st.error(NO_FEATURES_HELP)
