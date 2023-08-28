@@ -596,8 +596,7 @@ def describe_labels_single(df_label, framerate, placeholder):
     """ This function describes the labels in a table"""
 
     event_counter = count_events(df_label)
-
-    count_df = df_label.value_counts().to_frame().reset_index().rename(columns={0: "frame count"})
+    count_df = df_label.value_counts().to_frame().reset_index().rename(columns={"count": "frame count"})
     # heatmap already shows this information
     # count_df["percentage"] = count_df["frame count"] / count_df["frame count"].sum() *100
     if framerate is not None:
