@@ -376,7 +376,6 @@ def predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
     # total_n_frames = processed_input_data[0].shape[0]
     repeat_n = int(frames2integ / 10)
     total_n_frames = []
-    # st.write(ftype)
     if action_button:
         st.session_state['disabled'] = True
         message_box.info('Predicting labels... ')
@@ -394,7 +393,6 @@ def predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
                 predict_arr = np.array(predict).flatten()
 
             predictions_match = np.pad(predict_arr.repeat(repeat_n), (repeat_n, 0), 'edge')[:total_n_frames[i]]
-
             pose_prefix = st.session_state['pose'][i].name.rpartition(str.join('', ('.', ftype)))[0]
             annotated_str = str.join('', ('_annotated_', iter_folder))
             annotated_vid_name = str.join('', (pose_prefix, annotated_str, '.mp4'))
@@ -619,10 +617,13 @@ def main(ri=None, config=None):
 
         if software == 'CALMS21 (PAPER)':
             #TODO: CHANGE THIS TO THE CORRECT PATH or remove it
-            ROOT = Path(__file__).parent.parent.parent.resolve()
-            targets_test_csv = os.path.join(ROOT.joinpath("test"), './test_labels.csv')
-            targets_test_df = pd.read_csv(targets_test_csv, header=0)
-            targets_test = np.array(targets_test_df['annotation'])
+            try:
+                ROOT = Path(__file__).parent.parent.parent.resolve()
+                targets_test_csv = os.path.join(ROOT.joinpath("test"), './test_labels.csv')
+                targets_test_df = pd.read_csv(targets_test_csv, header=0)
+                targets_test = np.array(targets_test_df['annotation'])
+            except FileNotFoundError:
+                st.error("The CALMS21 data set is only available for testing.")
         else:
             if 'disabled' not in st.session_state:
                 st.session_state['disabled'] = False
