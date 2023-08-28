@@ -11,7 +11,7 @@ from io import StringIO
 
 from apps import *
 from config.help_messages import UPLOAD_CONFIG_HELP, IMPRESS_TEXT
-from utils.load_workspace import load_features, load_iterX, load_refinement
+from utils.load_workspace import load_features, load_iterX, load_refinement, load_data
 
 
 def img_to_bytes(img_path):
@@ -224,17 +224,36 @@ def main():
 
         mid_im.image(logo_im_)
         st.write('---')
-        menu_options = ['Menu', 'Upload Data', 'Extract Features', 'Active Learning',
-                        'Refine Behaviors', 'Create New Dataset', 'Predict', 'Discover']
-        icon_options = ['window-desktop',
-                        'upload',
-                        'bar-chart-line',
-                        'diagram-2',
-                        'images',
-                        'file-earmark-plus',
-                        'robot',
-                        "signpost-split",
-                        ]
+        try:
+            working_dir = st.session_state['config']["Project"].get("PROJECT_PATH")
+            prefix = st.session_state['config']["Project"].get("PROJECT_NAME")
+            data, config = load_data(working_dir,
+                                     prefix)
+            menu_options = ['Menu', 'Upload Data', 'Extract Features', 'Active Learning',
+                            'Refine Behaviors', 'Create New Dataset', 'Predict', 'Discover']
+            icon_options = ['window-desktop',
+                            'upload',
+                            'bar-chart-line',
+                            'diagram-2',
+                            'images',
+                            'file-earmark-plus',
+                            'robot',
+                            "signpost-split",
+                            ]
+
+        except:
+            menu_options = ['Menu', 'Upload Data', 'Active Learning',
+                            'Refine Behaviors', 'Create New Dataset', 'Predict', 'Discover']
+            icon_options = ['window-desktop',
+                            'upload',
+
+                            'diagram-2',
+                            'images',
+                            'file-earmark-plus',
+                            'robot',
+                            "signpost-split",
+                            ]
+
         nav_options = option_menu(None, menu_options,
                                   icons=icon_options,
                                   menu_icon="",

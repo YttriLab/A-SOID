@@ -16,6 +16,7 @@ TITLE = "Active learning"
 def prompt_setup(software, train_fx, working_dir, prefix, iteration_dir, exclude_other, annotation_classes):
     project_dir = os.path.join(working_dir, prefix)
     [_, targets, _] = load_features(project_dir, iteration_dir)
+
     col1, col2 = st.columns(2)
     if exclude_other:
         selected_class_num = np.arange((len(annotation_classes)))[:-1]

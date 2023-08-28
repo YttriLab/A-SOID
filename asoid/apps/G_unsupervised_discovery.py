@@ -47,6 +47,7 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
 
         if len(new_pose_csvs) > 0:
             new_pose_list = []
+            pose_names_list = []
             for i, f in enumerate(new_pose_csvs):
                 current_pose = pd.read_csv(f,
                                            header=[0, 1, 2], sep=",", index_col=0)
@@ -62,9 +63,12 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                 idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
                 # idx_selected = np.array([0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16])
                 new_pose_list.append(np.array(current_pose.iloc[:, idx_selected]))
+                pose_names_list.append(f.name)
             st.session_state['uploaded_pose'] = new_pose_list
+            st.session_state['uploaded_fnames'] = pose_names_list
         else:
             st.session_state['uploaded_pose'] = []
+            st.session_state['uploaded_fnames'] = []
 
 
 def get_features_labels(iterX_model, frames2integ, project_dir, iter_folder, placeholder,
@@ -244,6 +248,10 @@ def save_update_info(config, behavior_names_split):
         st.error('Please enter a prefix.')
     if st.button('create new project'):
         parameters_dict = {
+            'Data': dict(
+                DATA_INPUT_FILES=st.session_state['uploaded_fnames'],
+                LABEL_INPUT_FILES=None),
+
             "Project": dict(
                 PROJECT_PATH=working_dir,
                 PROJECT_NAME=prefix_new,
@@ -286,25 +294,13 @@ def main(ri=None, config=None):
             st.session_state['disabled'] = False
         if 'uploaded_pose' not in st.session_state:
             st.session_state['uploaded_pose'] = []
+        if 'uploaded_fnames' not in st.session_state:
+            st.session_state['uploaded_fnames'] = []
 
         left_col, right_col = st.columns(2)
-        # left_checkbox = left_col.checkbox('Add Additional Pose Files?', disabled=st.session_state.disabled)
-
         pose_expander = left_col.expander('pose'.upper(), expanded=True)
         prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                      framerate, videos_dir, project_dir, iter_folder, pose_expander)
-
-
-        # [features, targets, frames2integ] = load_features(project_dir, iter_folder)
-        # if features.shape[0] > targets.shape[0]:
-        #     X = features[:targets.shape[0]].copy()
-        #     y = targets.copy()
-        # elif features.shape[0] < targets.shape[0]:
-        #     X = features.copy()
-        #     y = targets[:features.shape[0]].copy()
-        # else:
-        #     X = features.copy()
-        #     y = targets.copy()
 
         [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
 
@@ -339,25 +335,18 @@ def main(ri=None, config=None):
                 if buttonR.button(':red[Clear Embedding]'):
                     st.session_state['output_sav'] = None
                     st.success('Cleared. Type "R" to Refresh.')
-
                 if st.session_state['output_sav'] is not None:
                     behav_figs, behav_groups, behav_embeds = plot_hdbscan_embedding(st.session_state['output_sav'])
-
                     for behav_keys in list(behav_figs.keys()):
                         fig = behav_figs[behav_keys]
-
                         right_col_top.plotly_chart(fig, use_container_width=True)
-
                         right_col_top.info(f'minimum cluster: '
                                            f'{np.round((cluster_range*behav_embeds[behav_keys].shape[0])/framerate, 1)} '
                                            f'total seconds')
-
                     with open(st.session_state['input_sav'], 'rb') as fr:
                         [all_feats, all_labels] = joblib.load(fr)
                     with open(st.session_state['output_sav'], 'rb') as fr:
                         [_, assignments, soft_assignments] = joblib.load(fr)
-
-
                     # reorder and integrate new labels
                     annotation_classes_ex = annotation_classes.copy()
                     if exclude_other:
@@ -366,14 +355,30 @@ def main(ri=None, config=None):
                         idx_other = np.where(all_labels == other_id)[0]
                     for target_behav in target_behavior:
                         if target_behav == target_behavior[0]:
+                            selected_subgroup = left_col.multiselect(f'select the {target_behav} sub groups',
+                                                 behav_groups[target_behav][1:], behav_groups[target_behav][1:],
+                                                                     key=target_behav)
                             target_beh_id = annotation_classes_ex.index(target_behav)
                             # find where these target behavior is
                             idx_target_beh = np.where(all_labels == target_beh_id)[0]
                             # create a copy to perturb
                             all_labels_split = all_labels.copy()
+
+                            group_id = [behav_groups[target_behav][1:].index(sel) for sel in selected_subgroup]
+                            new_assigns = soft_assignments[target_behav].copy()
                             # for each behavior being split, change the index into last->last+n
-                            all_labels_split[idx_target_beh] = soft_assignments[target_behav] + np.max(all_labels) + 1
-                            # st.write(np.unique(all_labels_split))
+                            count = 1
+                            for id_ in [behav_groups[target_behav][1:].index(sel)
+                                        for sel in behav_groups[target_behav][1:]]:
+                                if id_ in group_id:
+                                    max_id = np.max(all_labels_split) + 1
+                                    new_assigns[soft_assignments[target_behav]==id_] = max_id + count
+                                    count += 1
+                                else:
+                                    max_id = np.max(all_labels_split) + 1
+                                    new_assigns[soft_assignments[target_behav] == id_] = max_id
+                            all_labels_split[idx_target_beh] = new_assigns
+
                             # put other in last if exclude, for active learning to ignore
                             # has to put prior to label encoder
                             if exclude_other:
@@ -385,23 +390,38 @@ def main(ri=None, config=None):
                             annot_array = np.array(annotation_classes_ex)
                             # rename these groups into label_n
                             behavior_names_split = list(annot_array[annot_array != target_behav])
-                            behavior_names_split.extend([f'{target_behav}_{i}'
-                                                         for i in range(len(np.unique(soft_assignments[target_behav])))])
+                            behavior_names_split.extend([f'{target_behav}_{i}' if i > 0 else f'{target_behav}'
+                                                         for i in
+                                                         range(len(np.unique(new_assigns)))])
 
                             # has to be placed after new split names to maintain last order
                             if exclude_other:
                                 behavior_names_split.extend(['other'])
-                            # st.write(behavior_names_split)
+
                         else:
+                            selected_subgroup = left_col.multiselect(f'select the {target_behav} sub groups',
+                                                 behav_groups[target_behav][1:], behav_groups[target_behav][1:],
+                                                                     key=target_behav)
                             target_beh_id = annotation_classes_ex.index(target_behav)
                             # find where these target behavior is
                             idx_target_beh = np.where(all_labels == target_beh_id)[0]
                             # create a copy to perturb
                             all_labels_split = all_labels_split_reorg.copy()
+
+                            group_id = [behav_groups[target_behav][1:].index(sel) for sel in selected_subgroup]
+                            new_assigns = soft_assignments[target_behav].copy()
                             # for each behavior being split, change the index into last->last+n
-                            all_labels_split[idx_target_beh] = soft_assignments[target_behav] + \
-                                                               np.max(all_labels_split_reorg) + 1
-                            # st.write(np.unique(all_labels_split))
+                            count = 1
+                            for id_ in [behav_groups[target_behav][1:].index(sel)
+                                        for sel in behav_groups[target_behav][1:]]:
+                                if id_ in group_id:
+                                    max_id = np.max(all_labels_split) + 1
+                                    new_assigns[soft_assignments[target_behav]==id_] = max_id + count
+                                    count += 1
+                                else:
+                                    max_id = np.max(all_labels_split) + 1
+                                    new_assigns[soft_assignments[target_behav] == id_] = max_id
+                            all_labels_split[idx_target_beh] = new_assigns
                             # put other in last if exclude, for active learning to ignore
                             # has to put prior to label encoder
                             if exclude_other:
@@ -414,17 +434,13 @@ def main(ri=None, config=None):
                             annot_array = np.array(behavior_names_split)
                             # rename these groups into label_n
                             behavior_names_split = list(annot_array[annot_array != target_behav])
-                            behavior_names_split.extend([f'{target_behav}_{i}'
+                            behavior_names_split.extend([f'{target_behav}_{i}' if i > 0 else f'{target_behav}'
                                                          for i in
-                                                         range(len(np.unique(soft_assignments[target_behav])))])
-
+                                                         range(len(np.unique(new_assigns)))])
                             # has to be placed after new split names to maintain last order
                             if exclude_other:
                                 behavior_names_split.extend(['other'])
-                            # st.write(behavior_names_split)
-
                     working_dir, iter_folder, prefix_new = save_update_info(config, behavior_names_split)
-
                     if os.path.isdir(os.path.join(working_dir, prefix_new, iter_folder)):
                         save_data(os.path.join(working_dir, prefix_new), iter_folder,
                                   'feats_targets.sav',
