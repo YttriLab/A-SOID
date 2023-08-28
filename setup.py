@@ -36,7 +36,7 @@ setup(
                     ,"opencv-python"
                     ,"tqdm"
                     ,"stqdm"
-                    ,"scikit-learn"
+                    ,"scikit-learn<1.3.0"
                     ,"h5py"
                     ,"plotly"
                     ,"pillow"
