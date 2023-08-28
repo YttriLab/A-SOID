@@ -280,8 +280,9 @@ def adp_filt(pose, idx_selected, idx_llh):
 
 def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                  framerate, videos_dir, project_dir, iter_dir):
-    # left_col, right_col = st.columns(2)
-    pose_exapnder = st.expander('pose'.upper(), expanded=True)
+    left_col, right_col = st.columns([3, 1])
+    pose_expander = left_col.expander('pose'.upper(), expanded=True)
+    param_expander = right_col.expander('smoothing size'.upper(), expanded=True)
     # ri_exapnder = right_col.expander('video'.upper(), expanded=True)
     frame_dir = None
     shortvid_dir = None
@@ -291,7 +292,7 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
         new_pose_list = load_new_pose(new_pose_sav)
     else:
         # try:
-        pose_origin = pose_exapnder.selectbox('Select pose origin', ['DeepLabCut', 'SLEAP'])
+        pose_origin = pose_expander.selectbox('Select pose origin', ['DeepLabCut', 'SLEAP'])
         if pose_origin == 'DeepLabCut':
             ftype = 'csv'
         elif pose_origin == 'SLEAP':
@@ -299,9 +300,10 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
         else:
             st.error('Pose origin not recognized.')
             st.stop()
-        new_pose_csvs = pose_exapnder.file_uploader('Upload Corresponding Pose Files',
+        new_pose_csvs = pose_expander.file_uploader('Upload Corresponding Pose Files',
                                                    accept_multiple_files=True,
                                                    type=ftype, key='pose')
+        smooth_size = param_expander.number_input('Minimum frame per behavior', min_value=0, max_value=None, value=12)
         if len(new_pose_csvs) > 0:
 
             # st.session_state['uploaded_vid'] = new_videos
@@ -401,7 +403,7 @@ def create_annotated_videos(vidpath_out,
 
 
 def predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
-                           annotation_classes,
+                           annotation_classes, smooth_size,
                            frame_dir, videos_dir, iter_folder,
                            video_checkbox, colL):
     features = [None]
@@ -431,7 +433,7 @@ def predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
                 predict_arr = np.array(predict).flatten()
 
             predictions_raw = np.pad(predict_arr.repeat(repeat_n), (repeat_n, 0), 'edge')[:total_n_frames[i]]
-            predictions_match = weighted_smoothing(predictions_raw, size=12)
+            predictions_match = weighted_smoothing(predictions_raw, size=smooth_size)
 
             pose_prefix = st.session_state['pose'][i].name.rpartition(str.join('', ('.', ftype)))[0]
             annotated_str = str.join('', ('_annotated_', iter_folder))
@@ -622,12 +624,15 @@ def weighted_smoothing(predictions, size):
     group_start = [0]
     group_start = np.hstack((group_start, np.where(np.diff(predictions) != 0)[0] + 1))
     for i in range(len(group_start) - 3):
+        # sandwich jitters within a bout (jitter size defined by size)
         if group_start[i + 2] - group_start[i + 1] < size:
             if predictions_new[group_start[i + 2]] == predictions_new[group_start[i]] and \
                     predictions_new[group_start[i]:group_start[i + 1]].shape[0] >= size and \
                     predictions_new[group_start[i + 2]:group_start[i + 3]].shape[0] >= size:
                 predictions_new[group_start[i]:group_start[i + 2]] = predictions_new[group_start[i]]
+
     for i in range(len(group_start) - 3):
+        # replace jitter by previous behavior when it does not reach size
         if group_start[i + 1] - group_start[i] < size:
             predictions_new[group_start[i]:group_start[i + 1]] = predictions_new[group_start[i] - 1]
     return predictions_new
@@ -699,7 +704,7 @@ def main(ri=None, config=None):
                 if len(st.session_state['uploaded_pose']) > 0:
                     placeholder = st.empty()
                     predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
-                                           annotation_classes,
+                                           annotation_classes, smooth_size,
                                            None, videos_dir, iter_folder,
                                            None, placeholder)
             else:

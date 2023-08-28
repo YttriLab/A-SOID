@@ -10,15 +10,18 @@ TITLE = "Create new dataset"
 
 def create_new_training_features_targets(project_dir, selected_iter, new_features, new_targets):
     # load existing training
+    # st.write(new_features.shape, new_targets.shape)
     iter_folder = str.join('', ('iteration-', str(selected_iter)))
     [features, targets, frames2integ] = \
         load_features(project_dir, iter_folder)
+    # st.write(features.shape, targets.shape)
     # add iteration number
     new_iter_folder = str.join('', ('iteration-', str(selected_iter + 1)))
     os.makedirs(os.path.join(project_dir, new_iter_folder), exist_ok=True)
     # incorporate new features/targets into existing training
     appended_features = np.vstack((features, new_features))
     appended_targets = np.hstack((targets, new_targets))
+    # st.write(appended_features.shape, appended_targets.shape)
     # save into new iteration folder
     save_data(project_dir, new_iter_folder, 'feats_targets.sav',
               [
@@ -71,16 +74,19 @@ def main(ri=None, config=None):
                 for i, annotation_cls in enumerate(annotation_classes):
                     submitted_feats = []
                     submitted_targets = []
+                    # st.write(annotation_cls)
+                    # for each example
                     for j in range(len(examples_idx[annotation_cls])):
                         refined_behaviors = [refinements[annotation_cls][j]['Behavior'][k]
                                              for k in range(
                                 len(refinements[annotation_cls][j]['Behavior']))]
                         start_idx = examples_idx[annotation_cls][j][0]
                         stop_idx = examples_idx[annotation_cls][j][1]
-
+                        # st.write(features[start_idx:stop_idx, :].shape, len(refined_behaviors))
                         submitted_feats.append(features[start_idx:stop_idx, :])
                         submitted_targets.append([annotation_classes.index(refined_behaviors[k])
                                                   for k in range(len(refined_behaviors))])
+                        # st.write(len(refined_behaviors))
                     try:
                         new_feats_byclass.append(np.vstack(submitted_feats))
                         new_targets_byclass.append(np.hstack(submitted_targets))
