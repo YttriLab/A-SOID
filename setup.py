@@ -40,7 +40,7 @@ setup(
                     ,"h5py"
                     ,"plotly"
                     ,"pillow"
-                    ,"joblib"
+                    ,"joblib==1.1.0"
                     ,"scipy"
                     ,"ipython"
                     ,"psutil"

@@ -265,7 +265,7 @@ def adp_filt(pose, idx_selected, idx_llh):
     for x in range(data_lh.shape[1]):
         # TODO: load from config.ini the llh threshold
         llh = 0.6
-        data_lh_float = data_lh[:, x].astype(np.float)
+        data_lh_float = data_lh[:, x].astype(float)
         perc_rect[x] = np.sum(data_lh_float < llh) / data_lh.shape[0]
         currdf_filt[0, (2 * x):(2 * x + 2)] = np.hstack([datax[0, x], datay[0, x]])
         for i in range(1, data_lh.shape[0]):
@@ -274,7 +274,7 @@ def adp_filt(pose, idx_selected, idx_llh):
             else:
                 currdf_filt[i, (2 * x):(2 * x + 2)] = np.hstack([datax[i, x], datay[i, x]])
     currdf_filt = np.array(currdf_filt)
-    currdf_filt = currdf_filt.astype(np.float)
+    currdf_filt = currdf_filt.astype(float)
     return currdf_filt, perc_rect
 
 
