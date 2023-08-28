@@ -2,6 +2,7 @@ name: asoid
 
 dependencies:
   - python=3.8
+  - ffmpeg
   - pip
   - pip:
     - "--editable=.[dev]"
