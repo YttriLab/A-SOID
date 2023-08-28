@@ -33,7 +33,7 @@ def main_streamlit():
     config = load_streamlit_config(dirname)
     #convert config to dict
     args = conv_config_to_args(config)
-    
+
     filename = os.path.join(dirname, 'app.py')
     # run streamlit app using the hideous way and pass args
     # because streamlit has no native support for this
