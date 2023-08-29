@@ -397,7 +397,8 @@ def create_videos(new_pose_csvs, selected_bodyparts, iterX_model, framerate, fra
         # extract features, bin them
         features = []
         # filter here
-        for i, f in enumerate([new_pose_csvs]):
+        for i, f in enumerate(stqdm([new_pose_csvs], desc="Extracting spatiotemporal features from pose")):
+        # for i, f in enumerate([new_pose_csvs]):
             current_pose = pd.read_csv(f,
                                        header=[0, 1, 2], sep=",", index_col=0
                                        )

@@ -383,7 +383,8 @@ def predict_annotate_video(ftype, selected_bodyparts, iterX_model, framerate, fr
         # extract features, bin them
         features = []
         # for i, data in enumerate(processed_input_data):
-        for i, f in enumerate(new_pose_csvs):
+        for i, f in enumerate(stqdm(new_pose_csvs, desc="Extracting spatiotemporal features from pose")):
+        # for i, f in enumerate(new_pose_csvs):
 
             #current_pose = pd.read_csv(f,
             #                           header=[0, 1, 2], sep=",", index_col=0)

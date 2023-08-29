@@ -190,7 +190,8 @@ def bsoid_extract_numba(data, fps):
 
 def feature_extraction(train_datalist, num_train, framerate):
     f_integrated = []
-    for i in stqdm(range(num_train), desc="Extracting spatiotemporal features from pose"):
+    # for i in stqdm(range(num_train), desc="Extracting spatiotemporal features from pose"):
+    for i in range(num_train):
         with st.spinner('Extracting features from pose...'):
             binned_features = bsoid_extract_numba([train_datalist[i]], framerate)
             f_integrated.append(binned_features[0])  # getting only the non-shifted

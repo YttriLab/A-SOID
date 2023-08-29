@@ -20,7 +20,6 @@ import joblib
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.decomposition import PCA
 
-
 TITLE = "Unsupervised discovery"
 
 
@@ -28,7 +27,7 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                  framerate, videos_dir, project_dir, iter_dir, pose_expander):
     if software == 'CALMS21 (PAPER)':
         try:
-            #TODO: deprecate
+            # TODO: deprecate
             ROOT = Path(__file__).parent.parent.parent.resolve()
             new_pose_sav = os.path.join(ROOT.joinpath("new_test"), './new_pose.sav')
             new_pose_list = load_new_pose(new_pose_sav)
@@ -80,7 +79,8 @@ def get_features_labels(selected_bodyparts, iterX_model, frames2integ, project_d
         pose_names_list = []
         features = []
         # filter here
-        for i, f in enumerate(new_pose_csvs):
+        # for i, f in enumerate(new_pose_csvs):
+        for i, f in enumerate(stqdm(new_pose_csvs, desc="Extracting spatiotemporal features from pose")):
             current_pose = pd.read_csv(f,
                                        header=[0, 1, 2], sep=",", index_col=0
                                        )
@@ -181,7 +181,7 @@ def pca_umap_hdbscan(target_behavior, annotation_classes, input_sav, cluster_ran
                             assignments[target_behav], assign_prob[target_behav], \
                             soft_assignments[target_behav] = hdbscan_classification(
                             umap_embeddings[target_behav],
-                            cluster_range)
+                            [cluster_range[target_behav], cluster_range[target_behav] + 0.5])
 
             save_data(project_dir, iter_folder, 'embedding_output.sav',
                       [umap_embeddings, assignments, soft_assignments])
@@ -260,7 +260,7 @@ def save_update_info(config, behavior_names_split):
         st.success(f'Entered **{prefix_new}** as the prefix.')
     else:
         st.error('Please enter a prefix.')
-    if st.button('Create new project', help= SAVE_NEW_HELP):
+    if st.button('Create new project', help=SAVE_NEW_HELP):
         parameters_dict = {
             'Data': dict(
                 DATA_INPUT_FILES=sort_nicely(st.session_state['uploaded_fnames']),
@@ -326,9 +326,15 @@ def main(ri=None, config=None):
                                                         project_dir, iter_folder,
                                                         left_col
                                                         )
-
-        target_behavior = ri.multiselect('Select Behavior to Split', annotation_classes, annotation_classes[3])
-        cluster_range = ri.slider('Minimum % for a cluster', min_value=0.1, max_value=10.0, value=3.0)
+        annotation_classes_ex = annotation_classes.copy()
+        if exclude_other:
+            annotation_classes_ex.pop(annotation_classes_ex.index('other'))
+        target_behavior = ri.multiselect('Select Behavior to Split', annotation_classes_ex, annotation_classes_ex)
+        cluster_range = {key: [] for key in target_behavior}
+        for target_behav in target_behavior:
+            cluster_range[target_behav] = ri.slider(f'Minimum % for a cluster within {target_behav}',
+                                                    min_value=0.1, max_value=10.0, value=3.0,
+                                                    key=f'slider_{target_behav}')
 
         if st.session_state['input_sav'] is not None:
             st.session_state['disabled'] = True
@@ -340,7 +346,7 @@ def main(ri=None, config=None):
 
             if st.session_state['output_sav'] is None:
                 pca_umap_hdbscan(target_behavior, annotation_classes, st.session_state['input_sav'],
-                                 [cluster_range, cluster_range+0.5],
+                                 cluster_range,
                                  project_dir, iter_folder, left_col, ri)
 
             else:
@@ -355,7 +361,7 @@ def main(ri=None, config=None):
                         fig = behav_figs[behav_keys]
                         right_col_top.plotly_chart(fig, use_container_width=True)
                         right_col_top.info(f'Minimum cluster duration: '
-                                           f'{np.round((cluster_range*behav_embeds[behav_keys].shape[0])/framerate, 1)} '
+                                           f'{np.round((cluster_range[target_behav] * behav_embeds[behav_keys].shape[0]) / framerate, 1)} '
                                            f'total seconds')
                     with open(st.session_state['input_sav'], 'rb') as fr:
                         [all_feats, all_labels] = joblib.load(fr)
@@ -371,9 +377,10 @@ def main(ri=None, config=None):
                     for target_behav in target_behavior:
                         if target_behav == target_behavior[0]:
                             selected_subgroup = left_col.multiselect(f'Select the {target_behav} sub groups',
-                                                 behav_groups[target_behav][1:], behav_groups[target_behav][1:],
-                                                                     key=target_behav
-                                                                     ,help = SUBCLASS_SELECT_HELP)
+                                                                     behav_groups[target_behav][1:],
+                                                                     behav_groups[target_behav][1:],
+                                                                     key=target_behav,
+                                                                     help=SUBCLASS_SELECT_HELP)
                             target_beh_id = annotation_classes_ex.index(target_behav)
                             # find where these target behavior is
                             idx_target_beh = np.where(all_labels == target_beh_id)[0]
@@ -388,7 +395,7 @@ def main(ri=None, config=None):
                                         for sel in behav_groups[target_behav][1:]]:
                                 if id_ in group_id:
                                     max_id = np.max(all_labels_split) + 1
-                                    new_assigns[soft_assignments[target_behav]==id_] = max_id + count
+                                    new_assigns[soft_assignments[target_behav] == id_] = max_id + count
                                     count += 1
                                 else:
                                     max_id = np.max(all_labels_split) + 1
@@ -416,9 +423,10 @@ def main(ri=None, config=None):
 
                         else:
                             selected_subgroup = left_col.multiselect(f'Select the {target_behav} sub groups',
-                                                 behav_groups[target_behav][1:], behav_groups[target_behav][1:],
+                                                                     behav_groups[target_behav][1:],
+                                                                     behav_groups[target_behav][1:],
                                                                      key=target_behav,
-                                                                     help = SUBCLASS_SELECT_HELP)
+                                                                     help=SUBCLASS_SELECT_HELP)
                             target_beh_id = annotation_classes_ex.index(target_behav)
                             # find where these target behavior is
                             idx_target_beh = np.where(all_labels == target_beh_id)[0]
@@ -433,7 +441,7 @@ def main(ri=None, config=None):
                                         for sel in behav_groups[target_behav][1:]]:
                                 if id_ in group_id:
                                     max_id = np.max(all_labels_split) + 1
-                                    new_assigns[soft_assignments[target_behav]==id_] = max_id + count
+                                    new_assigns[soft_assignments[target_behav] == id_] = max_id + count
                                     count += 1
                                 else:
                                     max_id = np.max(all_labels_split) + 1
