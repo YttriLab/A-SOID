@@ -13,9 +13,11 @@ from utils.project_utils import update_config
 TITLE = "Active learning"
 
 
-def prompt_setup(software, train_fx, working_dir, prefix, iteration_dir, exclude_other, annotation_classes):
+def prompt_setup(software, train_fx, conf,
+                 working_dir, prefix, iteration_dir, exclude_other, annotation_classes):
     project_dir = os.path.join(working_dir, prefix)
     [_, targets, _] = load_features(project_dir, iteration_dir)
+
     col1, col2 = st.columns(2)
     if exclude_other:
         selected_class_num = np.arange((len(annotation_classes)))[:-1]
@@ -65,11 +67,15 @@ def prompt_setup(software, train_fx, working_dir, prefix, iteration_dir, exclude
                                                  min_value=max_samps_iter, max_value=None,
                                                  value=max_samps_iter,
                                                  key='maxs3', help=MAX_SAMPLES_HELP)
+    st.session_state['conf_threshold'] = col2_bot_exp.number_input('Confidence threshold',
+                                               min_value=0.05, max_value=0.95,
+                                               value=conf)
     parameters_dict = {
         "Processing": dict(
             TRAIN_FRACTION=init_ratio,
             MAX_ITER=max_iter,
             MAX_SAMPLES_ITER=max_samples_iter,
+            CONF_THRESHOLD=st.session_state['conf_threshold']
         )
     }
     st.session_state['config'] = update_config(os.path.join(working_dir, prefix), updated_params=parameters_dict)
@@ -88,16 +94,18 @@ def main(ri=None, config=None):
         software = config["Project"].get("PROJECT_TYPE")
         exclude_other = config["Project"].getboolean("EXCLUDE_OTHER")
         train_fx = config["Processing"].getfloat("TRAIN_FRACTION")
-        conf_threshold = config["Processing"].getfloat("CONF_THRESHOLD")
+        conf = config["Processing"].getfloat("CONF_THRESHOLD")
         iteration = config["Processing"].getint("ITERATION")
         selected_iter = ri.selectbox('Select Iteration #', np.arange(iteration + 1), iteration)
         project_dir = os.path.join(working_dir, prefix)
         iter_folder = str.join('', ('iteration-', str(selected_iter)))
         os.makedirs(os.path.join(project_dir, iter_folder), exist_ok=True)
 
-        if conf_threshold is None:
-            # backwards compatability
-            conf_threshold = 0.5
+        if conf is None:
+        #     # backwards compatability
+            conf = 0.5
+        if 'conf_threshold' not in st.session_state:
+            st.session_state['conf_threshold'] = None
 
         try:
             [all_f1_scores] = \
@@ -116,24 +124,27 @@ def main(ri=None, config=None):
                 message_container.success(f'This prefix had been classified.')
             else:
                 init_ratio, max_iter, max_samples_iter = \
-                    prompt_setup(software, train_fx, working_dir, prefix, iter_folder, exclude_other,
+                    prompt_setup(software, train_fx, conf, working_dir, prefix, iter_folder, exclude_other,
                                  annotation_classes)
+                # st.write(conf_threshold)
                 if st.button('Train Classifier'):
                     rf_classifier = RF_Classify(working_dir, prefix, iter_folder, software,
                                                 init_ratio, max_iter, max_samples_iter,
-                                                annotation_classes, exclude_other, conf_threshold)
+                                                annotation_classes, exclude_other,
+                                                st.session_state['conf_threshold'])
                     rf_classifier.main()
         except FileNotFoundError:
             # make sure the features were extracted:
 
             try:
                 init_ratio, max_iter, max_samples_iter = \
-                    prompt_setup(software, train_fx, working_dir, prefix, iter_folder, exclude_other,
+                    prompt_setup(software, train_fx, conf, working_dir, prefix, iter_folder, exclude_other,
                                  annotation_classes)
                 if st.button('Train Classifier'):
                     rf_classifier = RF_Classify(working_dir, prefix, iter_folder, software,
                                                 init_ratio, max_iter, max_samples_iter,
-                                                annotation_classes, exclude_other, conf_threshold)
+                                                annotation_classes, exclude_other,
+                                                st.session_state['conf_threshold'])
                     rf_classifier.main()
             except FileNotFoundError:
                 st.error(NO_FEATURES_HELP)
