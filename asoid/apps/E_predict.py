@@ -23,7 +23,7 @@ from utils.load_workspace import load_new_pose, load_iterX
 TITLE = "Predict behaviors"
 
 
-def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder, top_most_container):
+def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder, top_most_container, vidname):
     plot_col_top = placeholder.empty()
     behavior_colors = {k: [] for k in annotation_classes}
     all_c_options = list(mcolors.CSS4_COLORS.keys())
@@ -86,7 +86,7 @@ def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder, top_m
         st.plotly_chart(fig, use_container_width=True, config={
             'toImageButtonOptions': {
                 'format': 'png',  # one of png, svg, jpeg, webp
-                'filename': f'{predict_npy.rpartition("/")[2].replace(".npy", "_duration_pie")}',
+                'filename': f"{str.join('', (vidname, '_', iter_folder, '_duration_pie'))}",
                 'height': 600,
                 'width': 600,
                 'scale': 3  # Multiply title/legend/axis/canvas sizes by this factor
@@ -97,7 +97,7 @@ def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder, top_m
 
 
 def ethogram_plot(predict_npy, iter_folder, annotation_classes, exclude_other,
-                  behavior_colors, framerate, placeholder2):
+                  behavior_colors, framerate, placeholder2, vidname):
     plot_col_top = placeholder2.empty()
     predict = np.load(predict_npy, allow_pickle=True)
     annotation_classes_ex = annotation_classes.copy()
@@ -128,12 +128,13 @@ def ethogram_plot(predict_npy, iter_folder, annotation_classes, exclude_other,
 
     fig.update_layout(
         xaxis=dict(
-            title='Time (s)',
+            title='Frame Number',
             tickmode='array',
-            tickvals=np.arange(0, prefill_array.shape[0] + 1, (prefill_array.shape[0] + 1) / 5),
-            ticktext=np.round(np.arange(0,
-                                        np.round(prefill_array.shape[0] + 1 / framerate, 1),
-                                        np.round(((prefill_array.shape[0] + 1) / framerate) / 5, 1)), 1)
+            # tickvals=[*range(0, prefill_array.shape[0] + 1, framerate)]
+            # tickvals=np.arange(0, prefill_array.shape[0] + 1, (prefill_array.shape[0] + 1) / 20),
+            # ticktext=np.round(np.arange(0,
+            #                             np.round(prefill_array.shape[0] + 1 / framerate, 1),
+            #                             np.round(((prefill_array.shape[0] + 1) / framerate) / 20, 1)), 1)
         )
     )
     fig['layout']['yaxis']['autorange'] = "reversed"
@@ -141,7 +142,7 @@ def ethogram_plot(predict_npy, iter_folder, annotation_classes, exclude_other,
     plot_col_top.plotly_chart(fig, use_container_width=True, config={
         'toImageButtonOptions': {
             'format': 'png',  # one of png, svg, jpeg, webp
-            'filename': f'{predict_npy.rpartition("/")[2].replace(".npy", "_ethogram")}',
+            'filename': f"{str.join('', (vidname, '_', iter_folder, '_ethogram'))}",
             'height': 720,
             'width': 1280,
             'scale': 3  # Multiply title/legend/axis/canvas sizes by this factor
@@ -173,7 +174,7 @@ def boolean_indexing(v, fillval=np.nan):
 
 def ridge_predict(predict_npy, iter_folder, annotation_classes, exclude_other,
                   behavior_colors, framerate,
-                  placeholder):
+                  placeholder, vidname):
     predict = np.load(predict_npy, allow_pickle=True)
     annotation_classes_ex = annotation_classes.copy()
     colors_classes = list(behavior_colors.values()).copy()
@@ -204,7 +205,17 @@ def ridge_predict(predict_npy, iter_folder, annotation_classes, exclude_other,
                           xaxis_range=[0, np.nanpercentile(np.array(duration_matrix), 99)],
                           )
         fig['layout']['yaxis']['autorange'] = "reversed"
-        st.plotly_chart(fig, use_container_width=True)
+
+        st.plotly_chart(fig, use_container_width=True, config={
+            'toImageButtonOptions': {
+                'format': 'png',  # one of png, svg, jpeg, webp
+                'filename': f"{str.join('', (vidname, '_', iter_folder, '_bout_durations'))}",
+                'height': 720,
+                'width': 1280,
+                'scale': 3  # Multiply title/legend/axis/canvas sizes by this factor
+            }
+        })
+        # st.plotly_chart(fig, use_container_width=True)
 
 
 def disable():
@@ -243,10 +254,35 @@ def frame_extraction(video_file, frame_dir, placeholder=None):
         placeholder.success('Done. Type "R" to refresh.')
 
 
+def adp_filt(pose, idx_selected, idx_llh):
+    datax = np.array(pose.iloc[:, idx_selected[::2]])
+    datay = np.array(pose.iloc[:, idx_selected[1::2]])
+    data_lh = np.array(pose.iloc[:, idx_llh])
+    currdf_filt = np.zeros((datax.shape[0], (datax.shape[1]) * 2))
+    perc_rect = []
+    for i in range(data_lh.shape[1]):
+        perc_rect.append(0)
+    for x in range(data_lh.shape[1]):
+        # TODO: load from config.ini the llh threshold
+        llh = 0.6
+        data_lh_float = data_lh[:, x].astype(np.float)
+        perc_rect[x] = np.sum(data_lh_float < llh) / data_lh.shape[0]
+        currdf_filt[0, (2 * x):(2 * x + 2)] = np.hstack([datax[0, x], datay[0, x]])
+        for i in range(1, data_lh.shape[0]):
+            if data_lh_float[i] < llh:
+                currdf_filt[i, (2 * x):(2 * x + 2)] = currdf_filt[i - 1, (2 * x):(2 * x + 2)]
+            else:
+                currdf_filt[i, (2 * x):(2 * x + 2)] = np.hstack([datax[i, x], datay[i, x]])
+    currdf_filt = np.array(currdf_filt)
+    currdf_filt = currdf_filt.astype(np.float)
+    return currdf_filt, perc_rect
+
+
 def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                  framerate, videos_dir, project_dir, iter_dir):
-    # left_col, right_col = st.columns(2)
-    pose_exapnder = st.expander('pose'.upper(), expanded=True)
+    left_col, right_col = st.columns([3, 1])
+    pose_expander = left_col.expander('pose'.upper(), expanded=True)
+    param_expander = right_col.expander('smoothing size'.upper(), expanded=True)
     # ri_exapnder = right_col.expander('video'.upper(), expanded=True)
     frame_dir = None
     shortvid_dir = None
@@ -256,7 +292,7 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
         new_pose_list = load_new_pose(new_pose_sav)
     else:
         # try:
-        pose_origin = pose_exapnder.selectbox('Select pose origin', ['DeepLabCut', 'SLEAP'])
+        pose_origin = pose_expander.selectbox('Select pose origin', ['DeepLabCut', 'SLEAP'])
         if pose_origin == 'DeepLabCut':
             ftype = 'csv'
         elif pose_origin == 'SLEAP':
@@ -264,9 +300,10 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
         else:
             st.error('Pose origin not recognized.')
             st.stop()
-        new_pose_csvs = pose_exapnder.file_uploader('Upload Corresponding Pose Files',
+        new_pose_csvs = pose_expander.file_uploader('Upload Corresponding Pose Files',
                                                    accept_multiple_files=True,
                                                    type=ftype, key='pose')
+        smooth_size = param_expander.number_input('Minimum frame per behavior', min_value=0, max_value=None, value=12)
         if len(new_pose_csvs) > 0:
 
             # st.session_state['uploaded_vid'] = new_videos
@@ -302,9 +339,11 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                     selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
                     # get rid of likelihood columns for deeplabcut
                     idx_llh = selected_pose_idx[2::3]
+
                     # the loaded sleap file has them too, so exclude for both
                     idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
-                new_pose_list.append(np.array(current_pose.iloc[:, idx_selected]))
+                filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh)
+                new_pose_list.append(filt_pose)
             st.session_state['uploaded_pose'] = new_pose_list
         else:
             st.session_state['uploaded_pose'] = []
@@ -364,7 +403,7 @@ def create_annotated_videos(vidpath_out,
 
 
 def predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
-                           annotation_classes,
+                           annotation_classes, smooth_size,
                            frame_dir, videos_dir, iter_folder,
                            video_checkbox, colL):
     features = [None]
@@ -376,6 +415,7 @@ def predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
     # total_n_frames = processed_input_data[0].shape[0]
     repeat_n = int(frames2integ / 10)
     total_n_frames = []
+    # st.write(ftype)
     if action_button:
         st.session_state['disabled'] = True
         message_box.info('Predicting labels... ')
@@ -392,7 +432,9 @@ def predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
                 pred_proba = bsoid_predict_proba_numba_noscale([features[i]], iterX_model)
                 predict_arr = np.array(predict).flatten()
 
-            predictions_match = np.pad(predict_arr.repeat(repeat_n), (repeat_n, 0), 'edge')[:total_n_frames[i]]
+            predictions_raw = np.pad(predict_arr.repeat(repeat_n), (repeat_n, 0), 'edge')[:total_n_frames[i]]
+            predictions_match = weighted_smoothing(predictions_raw, size=smooth_size)
+
             pose_prefix = st.session_state['pose'][i].name.rpartition(str.join('', ('.', ftype)))[0]
             annotated_str = str.join('', ('_annotated_', iter_folder))
             annotated_vid_name = str.join('', (pose_prefix, annotated_str, '.mp4'))
@@ -413,11 +455,14 @@ def predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
 def annotate_video(video_path, framerate, annotation_classes,
                    frame_dir, videos_dir, iter_folder,
                    predictions_match):
-    video_type = str.join('', ('.', video_path.rpartition('.')[2]))
-    video_prefix = video_path.rpartition('/')[2].replace('.mp4', '')
+    # video_type = str.join('', ('.', video_path.rpartition('.mp4')[2]))
+
+    video_prefix = video_path.replace('.mp4', '')
     annotated_vid_str = str.join('', ('_annotated_', iter_folder))
-    annotated_vid_name = str.join('', (video_prefix, annotated_vid_str, video_type))
-    vidpath_out = os.path.join(videos_dir, annotated_vid_name)
+    annotated_vid_name = str.join('', (video_prefix, annotated_vid_str, '.mp4'))
+    vidpath_out = os.path.join(annotated_vid_name)
+
+    # st.write(video_type, video_prefix, annotated_vid_str, annotated_vid_name, vidpath_out)
     font = cv2.FONT_HERSHEY_SIMPLEX
     fontScale = 1.25
     fontColor = (0, 0, 255)
@@ -551,8 +596,7 @@ def describe_labels_single(df_label, framerate, placeholder):
 
     event_counter = count_events(df_label)
 
-    count_df = df_label.value_counts().to_frame().reset_index()
-    count_df.rename(columns={"count": "frame count"}, inplace=True, errors="ignore")
+    count_df = df_label.value_counts().to_frame().reset_index().rename(columns={0: "frame count"})
     # heatmap already shows this information
     # count_df["percentage"] = count_df["frame count"] / count_df["frame count"].sum() *100
     if framerate is not None:
@@ -573,6 +617,25 @@ def describe_labels_single(df_label, framerate, placeholder):
                     inplace=True)
     # TODO: autosize columns with newer streamlit versions (e.g., using use_container_width=True)
     placeholder.dataframe(count_df, hide_index=True)
+
+
+def weighted_smoothing(predictions, size):
+    predictions_new = predictions.copy()
+    group_start = [0]
+    group_start = np.hstack((group_start, np.where(np.diff(predictions) != 0)[0] + 1))
+    for i in range(len(group_start) - 3):
+        # sandwich jitters within a bout (jitter size defined by size)
+        if group_start[i + 2] - group_start[i + 1] < size:
+            if predictions_new[group_start[i + 2]] == predictions_new[group_start[i]] and \
+                    predictions_new[group_start[i]:group_start[i + 1]].shape[0] >= size and \
+                    predictions_new[group_start[i + 2]:group_start[i + 3]].shape[0] >= size:
+                predictions_new[group_start[i]:group_start[i + 2]] = predictions_new[group_start[i]]
+
+    for i in range(len(group_start) - 3):
+        # replace jitter by previous behavior when it does not reach size
+        if group_start[i + 1] - group_start[i] < size:
+            predictions_new[group_start[i]:group_start[i + 1]] = predictions_new[group_start[i] - 1]
+    return predictions_new
 
 
 def main(ri=None, config=None):
@@ -617,13 +680,10 @@ def main(ri=None, config=None):
 
         if software == 'CALMS21 (PAPER)':
             #TODO: CHANGE THIS TO THE CORRECT PATH or remove it
-            try:
-                ROOT = Path(__file__).parent.parent.parent.resolve()
-                targets_test_csv = os.path.join(ROOT.joinpath("test"), './test_labels.csv')
-                targets_test_df = pd.read_csv(targets_test_csv, header=0)
-                targets_test = np.array(targets_test_df['annotation'])
-            except FileNotFoundError:
-                st.error("The CALMS21 data set is only available for testing.")
+            ROOT = Path(__file__).parent.parent.parent.resolve()
+            targets_test_csv = os.path.join(ROOT.joinpath("test"), './test_labels.csv')
+            targets_test_df = pd.read_csv(targets_test_csv, header=0)
+            targets_test = np.array(targets_test_df['annotation'])
         else:
             if 'disabled' not in st.session_state:
                 st.session_state['disabled'] = False
@@ -644,7 +704,7 @@ def main(ri=None, config=None):
                 if len(st.session_state['uploaded_pose']) > 0:
                     placeholder = st.empty()
                     predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
-                                           annotation_classes,
+                                           annotation_classes, smooth_size,
                                            None, videos_dir, iter_folder,
                                            None, placeholder)
             else:
@@ -654,7 +714,9 @@ def main(ri=None, config=None):
                 behavior_colors = pie_predict(annot_vid_path.replace('mp4', 'npy'),
                                               iter_folder,
                                               annotation_classes,
-                                              summary_col, top_most_container)
+                                              summary_col,
+                                              top_most_container,
+                                              selection)
                 ethogram_plot(annot_vid_path.replace('mp4', 'npy'),
                               iter_folder,
                               annotation_classes,
@@ -662,7 +724,7 @@ def main(ri=None, config=None):
                               behavior_colors,
                               framerate,
                               video_col,
-                              )
+                              selection)
                 labels = save_predictions(annot_vid_path.replace('mp4', 'npy'),
                                           annot_vid_path.replace('mp4', 'csv'),
                                           annotation_classes,
@@ -675,7 +737,8 @@ def main(ri=None, config=None):
                               exclude_other,
                               behavior_colors,
                               framerate,
-                              summary_col)
+                              summary_col,
+                              selection)
                 # display video from video path
                 if os.path.isfile(annot_vid_path):
                     video_col.video(annot_vid_path)

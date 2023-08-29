@@ -495,6 +495,15 @@ class Extract:
             targets_matching_features = self.targets[i][(num2skip - 1):-1:num2skip]
             targets_ls.append(targets_not_matching[:targets_matching_features.shape[0]])
         self.targets_mode = np.hstack(targets_ls)
+        if self.features.shape[0] > self.targets_mode.shape[0]:
+            self.features = self.features[:self.targets_mode.shape[0]]
+            # y = self.targets_mode.copy()
+        elif self.features.shape[0] < self.features.shape[0]:
+            # X = self.features.copy()
+            self.targets_mode = self.targets_mode[:self.features.shape[0]]
+        # else:
+        #     X = self.features.copy()
+        #     y = self.targets_mode.copy()
 
     def save_features_targets(self):
         save_data(self.project_dir, self.iteration_0, 'feats_targets.sav',

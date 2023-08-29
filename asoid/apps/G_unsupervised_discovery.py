@@ -35,51 +35,45 @@ TITLE = "Unsupervised discovery"
 
 
 def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
-                 framerate, videos_dir, project_dir, iter_dir, pose_expander, left_checkbox):
+                 framerate, videos_dir, project_dir, iter_dir, pose_expander):
     if software == 'CALMS21 (PAPER)':
         ROOT = Path(__file__).parent.parent.parent.resolve()
         new_pose_sav = os.path.join(ROOT.joinpath("new_test"), './new_pose.sav')
         new_pose_list = load_new_pose(new_pose_sav)
     else:
-        if left_checkbox:
-            new_pose_csvs = pose_expander.file_uploader('Upload Corresponding Pose Files',
-                                                        accept_multiple_files=True,
-                                                        type=ftype, key='pose')
+        new_pose_csvs = pose_expander.file_uploader('Upload Corresponding Pose Files',
+                                                    accept_multiple_files=True,
+                                                    type=ftype, key='pose')
 
-            if len(new_pose_csvs) > 0:
-                new_pose_list = []
-                for i, f in enumerate(new_pose_csvs):
-                    current_pose = pd.read_csv(f,
-                                               header=[0, 1, 2], sep=",", index_col=0)
-                    bp_level = 1
-                    bp_index_list = []
-                    for bp in selected_bodyparts:
-                        bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
-                        bp_index_list.append(bp_index)
-                    selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
-                    # get rid of likelihood columns for deeplabcut
-                    idx_llh = selected_pose_idx[2::3]
-                    # the loaded sleap file has them too, so exclude for both
-                    idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
-                    # idx_selected = np.array([0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16])
-                    new_pose_list.append(np.array(current_pose.iloc[:, idx_selected]))
-                st.session_state['uploaded_pose'] = new_pose_list
-            else:
-                st.session_state['uploaded_pose'] = []
+        if len(new_pose_csvs) > 0:
+            new_pose_list = []
+            for i, f in enumerate(new_pose_csvs):
+                current_pose = pd.read_csv(f,
+                                           header=[0, 1, 2], sep=",", index_col=0)
+                bp_level = 1
+                bp_index_list = []
+                for bp in selected_bodyparts:
+                    bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
+                    bp_index_list.append(bp_index)
+                selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
+                # get rid of likelihood columns for deeplabcut
+                idx_llh = selected_pose_idx[2::3]
+                # the loaded sleap file has them too, so exclude for both
+                idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
+                # idx_selected = np.array([0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16])
+                new_pose_list.append(np.array(current_pose.iloc[:, idx_selected]))
+            st.session_state['uploaded_pose'] = new_pose_list
         else:
             st.session_state['uploaded_pose'] = []
 
 
-def get_features_labels(X, y, iterX_model, frames2integ, project_dir, iter_folder, placeholder,
+def get_features_labels(iterX_model, frames2integ, project_dir, iter_folder, placeholder,
                         ):
     features = [None]
     predict_arr = [None]
     processed_input_data = st.session_state['uploaded_pose']
-    old_feats = X.copy()
-    old_labels = y.copy()
-    all_feats, all_labels = None, None
+    input_features, input_targets = None, None
     if placeholder.button('preprocess files'):
-        # st.session_state['disabled'] = True
         if len(processed_input_data) > 0:
             st.session_state['disabled'] = True
             # extract features, bin them
@@ -94,20 +88,16 @@ def get_features_labels(X, y, iterX_model, frames2integ, project_dir, iter_folde
                     predict = bsoid_predict_numba_noscale([features[i]], iterX_model)
                     pred_proba = bsoid_predict_proba_numba_noscale([features[i]], iterX_model)
                     predict_arr.append(np.array(predict).flatten())
-            new_feats = np.vstack(features)
-            new_labels = np.hstack(predict_arr)
-            all_feats = np.vstack((old_feats, new_feats))
-            all_labels = np.hstack((old_labels, new_labels))
-        else:
-            all_feats = old_feats
-            all_labels = old_labels
 
+        input_features = np.vstack(features)
+        input_targets = np.hstack(predict_arr)
+        st.write(input_targets.shape, input_features.shape)
         with st.spinner('Saving...'):
             save_data(project_dir, iter_folder, 'embedding_input.sav',
-                      [all_feats, all_labels])
+                      [input_features, input_targets])
         st.session_state['input_sav'] = os.path.join(project_dir, iter_folder, 'embedding_input.sav')
         st.success('Done. Type "R" to Refresh.')
-    return all_feats, all_labels
+    return input_features, input_targets
 
 
 UMAP_PARAMS = {
@@ -144,29 +134,41 @@ def pca_umap_hdbscan(target_behavior, annotation_classes, input_sav, cluster_ran
     if input_sav is not None:
         with open(input_sav, 'rb') as fr:
             [features, predictions] = joblib.load(fr)
+        umap_embeddings = {key: [] for key in target_behavior}
+        retained_hierarchy = {key: [] for key in target_behavior}
+        assignments = {key: [] for key in target_behavior}
+        assign_prob = {key: [] for key in target_behavior}
+        soft_assignments = {key: [] for key in target_behavior}
 
         if right_col.button('Embed and Cluster Targeted Behavior'):
+            # for each target behavior, scale the features
             for target_behav in target_behavior:
-                target_beh_id = annotation_classes.index(target_behav)
-                selected_features = features[predictions == target_beh_id]
-                scalar = StandardScaler()
-                selected_feats_scaled = scalar.fit_transform(selected_features)
-                pca = PCA(random_state=42)
-                pca.fit(selected_feats_scaled)
-                n_dim = np.where(np.cumsum(pca.explained_variance_ratio_) >= 0.7)[0][0]
-                st.info(f'{n_dim} latent dimension achieves 70% variacne')
-                reducer = umap.UMAP(**UMAP_PARAMS, n_components=n_dim)
+                with st.spinner(f'working on splitting {target_behav}...'):
+                    target_beh_id = annotation_classes.index(target_behav)
+                    selected_features = features[predictions == target_beh_id]
+                    scalar = StandardScaler()
+                    selected_feats_scaled = scalar.fit_transform(selected_features)
+                    pca = PCA(random_state=42)
+                    # define manifold dim to variance explained at 70%
+                    pca.fit(selected_feats_scaled)
+                    n_dim = np.where(np.cumsum(pca.explained_variance_ratio_) >= 0.7)[0][0]
+                    # st.info(f'{n_dim} latent dimension achieves 70% variacne')
+                    reducer = umap.UMAP(**UMAP_PARAMS, n_components=n_dim)
 
-                with st.spinner(f'Embedding into {n_dim} dimensions...'):
-                    umap_embeddings = reducer.fit_transform(selected_feats_scaled)
-                with st.spinner('Clustering...'):
-                    retained_hierarchy, assignments, assign_prob, soft_assignments = hdbscan_classification(
-                        umap_embeddings,
-                        cluster_range)
-                save_data(project_dir, iter_folder, 'embedding_output.sav',
-                          [umap_embeddings, assignments, soft_assignments])
-                st.session_state['output_sav'] = os.path.join(project_dir, iter_folder, 'embedding_output.sav')
-                st.success('Done. Type "R" to Refresh.')
+                    with st.spinner(f'Embedding into {n_dim} dimensions...'):
+                        umap_embeddings[target_behav] = reducer.fit_transform(selected_feats_scaled)
+
+                    with st.spinner('Clustering...'):
+                        retained_hierarchy[target_behav], \
+                            assignments[target_behav], assign_prob[target_behav], \
+                            soft_assignments[target_behav] = hdbscan_classification(
+                            umap_embeddings[target_behav],
+                            cluster_range)
+
+            save_data(project_dir, iter_folder, 'embedding_output.sav',
+                      [umap_embeddings, assignments, soft_assignments])
+            st.session_state['output_sav'] = os.path.join(project_dir, iter_folder, 'embedding_output.sav')
+            st.success('Done. Type "R" to Refresh.')
 
 
 def plot_hdbscan_embedding(output_sav):
@@ -174,44 +176,54 @@ def plot_hdbscan_embedding(output_sav):
         with open(output_sav, 'rb') as fr:
             [umap_embeddings, assignments, soft_assignments] = joblib.load(fr)
         # some plotting parameters
-        unique_classes = np.unique(assignments)
-        group_types = ['Noise']
-        group_types.extend(['Group{}'.format(i) for i in unique_classes if i >= 0])
+        behav_figs = {key: [] for key in list(assignments.keys())}
+        behav_groups = {key: [] for key in list(assignments.keys())}
+        # behav_embeds = {key: [] for key in list(assignments.keys())}
+        for behav in list(assignments.keys()):
+            assign = assignments[behav]
+            embeds = umap_embeddings[behav]
+            unique_classes = np.unique(assign)
+            group_types = ['Noise']
+            group_types.extend(['Group{}'.format(i) for i in unique_classes if i >= 0])
 
-        trace_list = []
+            trace_list = []
 
-        for num, g in enumerate(unique_classes):
-            if g < 0:
-                idx = np.where(assignments == g)[0]
-                trace_list.append(go.Scatter(x=umap_embeddings[idx, 0],
-                                             y=umap_embeddings[idx, 1],
-                                             name="Noise",
-                                             mode='markers'
-                                             )
-                                  )
-            else:
-                idx = np.where(assignments == g)[0]
-                trace_list.append(go.Scatter(x=umap_embeddings[idx, 0],
-                                             y=umap_embeddings[idx, 1],
-                                             name=group_types[num],
-                                             mode='markers'
-                                             ))
+            for num, g in enumerate(unique_classes):
+                if g < 0:
+                    idx = np.where(assign == g)[0]
+                    trace_list.append(go.Scatter(x=embeds[idx, 0],
+                                                 y=embeds[idx, 1],
+                                                 name="Noise",
+                                                 mode='markers'
+                                                 )
+                                      )
+                else:
+                    idx = np.where(assign == g)[0]
+                    trace_list.append(go.Scatter(x=embeds[idx, 0],
+                                                 y=embeds[idx, 1],
+                                                 name=group_types[num],
+                                                 mode='markers'
+                                                 ))
 
-        fig = make_subplots()
-        for trace in trace_list:
-            fig.add_trace(trace)
+            fig = make_subplots()
+            for trace in trace_list:
+                fig.add_trace(trace)
+            fig.update_traces(marker_size=3)
+            fig.update_layout(
+                autosize=True,
+                # width=800,
+                # height=400,
+                # title=f'{behav}',
+                xaxis_title=dict(text=f'{behav.capitalize()} (Dim. 1)', font=dict(size=16, color='#EEEEEE')),
+                yaxis_title=dict(text=f'{behav.capitalize()} (Dim. 2)', font=dict(size=16, color='#EEEEEE')),
+                xaxis=dict(tickfont=dict(size=14, color='#EEEEEE')),
+                yaxis=dict(tickfont=dict(size=14, color='#EEEEEE')),
+                legend=dict(x=0.0, y=1.2, orientation='h', font=dict(color='#EEEEEE')),
+            )
+            behav_figs[behav] = fig
+            behav_groups[behav] = group_types
 
-        fig.update_layout(
-            autosize=True,
-            # width=800,
-            # height=400,
-            xaxis_title=dict(text='Dim. 1', font=dict(size=16, color='#EEEEEE')),
-            yaxis_title=dict(text='Dim. 2', font=dict(size=16, color='#EEEEEE')),
-            xaxis=dict(tickfont=dict(size=14, color='#EEEEEE')),
-            yaxis=dict(tickfont=dict(size=14, color='#EEEEEE')),
-            legend=dict(x=0.0, y=1.2, orientation='h', font=dict(color='#EEEEEE')),
-        )
-        return fig, group_types
+        return behav_figs, behav_groups, umap_embeddings
 
 
 def save_update_info(config, behavior_names_split):
@@ -268,30 +280,31 @@ def main(ri=None, config=None):
         os.makedirs(os.path.join(project_dir, iter_folder), exist_ok=True)
         videos_dir = os.path.join(project_dir, 'videos')
         os.makedirs(videos_dir, exist_ok=True)
-        # frames2integ = round(float(framerate) * (duration_min / 0.1))
+        frames2integ = round(float(framerate) * (duration_min / 0.1))
 
         if 'disabled' not in st.session_state:
             st.session_state['disabled'] = False
         if 'uploaded_pose' not in st.session_state:
             st.session_state['uploaded_pose'] = []
 
-        # st.session_state['disabled'] = False
         left_col, right_col = st.columns(2)
-        left_checkbox = left_col.checkbox('Add Additional Pose Files?', disabled=st.session_state.disabled)
+        # left_checkbox = left_col.checkbox('Add Additional Pose Files?', disabled=st.session_state.disabled)
 
         pose_expander = left_col.expander('pose'.upper(), expanded=True)
         prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
-                     framerate, videos_dir, project_dir, iter_folder, pose_expander, left_checkbox)
-        [features, targets, frames2integ] = load_features(project_dir, iter_folder)
-        if features.shape[0] > targets.shape[0]:
-            X = features[:targets.shape[0]].copy()
-            y = targets.copy()
-        elif features.shape[0] < targets.shape[0]:
-            X = features.copy()
-            y = targets[:features.shape[0]].copy()
-        else:
-            X = features.copy()
-            y = targets.copy()
+                     framerate, videos_dir, project_dir, iter_folder, pose_expander)
+
+
+        # [features, targets, frames2integ] = load_features(project_dir, iter_folder)
+        # if features.shape[0] > targets.shape[0]:
+        #     X = features[:targets.shape[0]].copy()
+        #     y = targets.copy()
+        # elif features.shape[0] < targets.shape[0]:
+        #     X = features.copy()
+        #     y = targets[:features.shape[0]].copy()
+        # else:
+        #     X = features.copy()
+        #     y = targets.copy()
 
         [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
 
@@ -301,11 +314,13 @@ def main(ri=None, config=None):
         if 'output_sav' not in st.session_state:
             st.session_state['output_sav'] = None
         if st.session_state['input_sav'] is None:
-            all_feats, all_labels = get_features_labels(X, y, iterX_model, frames2integ, project_dir, iter_folder,
+            all_feats, all_labels = get_features_labels(iterX_model, frames2integ, project_dir, iter_folder,
                                                         left_col
                                                         )
 
         target_behavior = ri.multiselect('Select Behavior to Split', annotation_classes, annotation_classes[3])
+        cluster_range = ri.slider('Minimum % for a cluster', min_value=0.1, max_value=10.0, value=3.0)
+
         if st.session_state['input_sav'] is not None:
             st.session_state['disabled'] = True
 
@@ -315,44 +330,98 @@ def main(ri=None, config=None):
                 st.session_state['disabled'] = False
 
             if st.session_state['output_sav'] is None:
-                pca_umap_hdbscan(target_behavior, annotation_classes, st.session_state['input_sav'], [5, 5.5],
+                pca_umap_hdbscan(target_behavior, annotation_classes, st.session_state['input_sav'],
+                                 [cluster_range, cluster_range+0.5],
                                  project_dir, iter_folder, left_col, ri)
 
             else:
-                right_col_top = right_col.empty()
+                right_col_top = right_col.container()
                 if buttonR.button(':red[Clear Embedding]'):
                     st.session_state['output_sav'] = None
                     st.success('Cleared. Type "R" to Refresh.')
 
                 if st.session_state['output_sav'] is not None:
-                    fig, group_types = plot_hdbscan_embedding(st.session_state['output_sav'])
-                    right_col_top.plotly_chart(fig, use_container_width=True)
+                    behav_figs, behav_groups, behav_embeds = plot_hdbscan_embedding(st.session_state['output_sav'])
+
+                    for behav_keys in list(behav_figs.keys()):
+                        fig = behav_figs[behav_keys]
+
+                        right_col_top.plotly_chart(fig, use_container_width=True)
+
+                        right_col_top.info(f'minimum cluster: '
+                                           f'{np.round((cluster_range*behav_embeds[behav_keys].shape[0])/framerate, 1)} '
+                                           f'total seconds')
 
                     with open(st.session_state['input_sav'], 'rb') as fr:
                         [all_feats, all_labels] = joblib.load(fr)
                     with open(st.session_state['output_sav'], 'rb') as fr:
                         [_, assignments, soft_assignments] = joblib.load(fr)
+
+
+                    # reorder and integrate new labels
                     annotation_classes_ex = annotation_classes.copy()
                     if exclude_other:
                         other_id = annotation_classes.index('other')
                         annotation_classes_ex.pop(other_id)
                         idx_other = np.where(all_labels == other_id)[0]
+                    for target_behav in target_behavior:
+                        if target_behav == target_behavior[0]:
+                            target_beh_id = annotation_classes_ex.index(target_behav)
+                            # find where these target behavior is
+                            idx_target_beh = np.where(all_labels == target_beh_id)[0]
+                            # create a copy to perturb
+                            all_labels_split = all_labels.copy()
+                            # for each behavior being split, change the index into last->last+n
+                            all_labels_split[idx_target_beh] = soft_assignments[target_behav] + np.max(all_labels) + 1
+                            # st.write(np.unique(all_labels_split))
+                            # put other in last if exclude, for active learning to ignore
+                            # has to put prior to label encoder
+                            if exclude_other:
+                                all_labels_split[idx_other] = np.max(all_labels_split[idx_target_beh]) + 1
 
-                    target_beh_id = annotation_classes_ex.index(target_behavior[0])
-                    idx_target_beh = np.where(all_labels == target_beh_id)[0]
-                    all_labels_split = all_labels.copy()
-                    all_labels_split[idx_target_beh] = soft_assignments + np.max(all_labels) + 1
-                    if exclude_other:
-                        all_labels_split[idx_other] = np.max(all_labels_split[idx_target_beh]) + 1
-                    encoder = LabelEncoder()
-                    all_labels_split_reorg = encoder.fit_transform(all_labels_split)
-                    annot_array = np.array(annotation_classes_ex)
+                            # reorder using labelencoder
+                            encoder = LabelEncoder()
+                            all_labels_split_reorg = encoder.fit_transform(all_labels_split)
+                            annot_array = np.array(annotation_classes_ex)
+                            # rename these groups into label_n
+                            behavior_names_split = list(annot_array[annot_array != target_behav])
+                            behavior_names_split.extend([f'{target_behav}_{i}'
+                                                         for i in range(len(np.unique(soft_assignments[target_behav])))])
 
-                    behavior_names_split = list(annot_array[annot_array != target_behavior[0]])
-                    behavior_names_split.extend([f'{target_behavior[0]}_{i}'
-                                                 for i in range(len(np.unique(soft_assignments)))])
-                    if exclude_other:
-                        behavior_names_split.extend(['other'])
+                            # has to be placed after new split names to maintain last order
+                            if exclude_other:
+                                behavior_names_split.extend(['other'])
+                            # st.write(behavior_names_split)
+                        else:
+                            target_beh_id = annotation_classes_ex.index(target_behav)
+                            # find where these target behavior is
+                            idx_target_beh = np.where(all_labels == target_beh_id)[0]
+                            # create a copy to perturb
+                            all_labels_split = all_labels_split_reorg.copy()
+                            # for each behavior being split, change the index into last->last+n
+                            all_labels_split[idx_target_beh] = soft_assignments[target_behav] + \
+                                                               np.max(all_labels_split_reorg) + 1
+                            # st.write(np.unique(all_labels_split))
+                            # put other in last if exclude, for active learning to ignore
+                            # has to put prior to label encoder
+                            if exclude_other:
+                                all_labels_split[idx_other] = np.max(all_labels_split[idx_target_beh]) + 1
+                                other_id = behavior_names_split.index('other')
+                                behavior_names_split.pop(other_id)
+                            # reorder using labelencoder
+                            encoder = LabelEncoder()
+                            all_labels_split_reorg = encoder.fit_transform(all_labels_split)
+                            annot_array = np.array(behavior_names_split)
+                            # rename these groups into label_n
+                            behavior_names_split = list(annot_array[annot_array != target_behav])
+                            behavior_names_split.extend([f'{target_behav}_{i}'
+                                                         for i in
+                                                         range(len(np.unique(soft_assignments[target_behav])))])
+
+                            # has to be placed after new split names to maintain last order
+                            if exclude_other:
+                                behavior_names_split.extend(['other'])
+                            # st.write(behavior_names_split)
 
                     working_dir, iter_folder, prefix_new = save_update_info(config, behavior_names_split)
 
