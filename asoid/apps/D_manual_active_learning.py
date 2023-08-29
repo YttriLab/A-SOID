@@ -396,7 +396,7 @@ def create_labeled_vid(labels, proba,
     return all_ex_idx
 
 
-def create_videos(processed_input_data, iterX_model, framerate, frames2integ,
+def create_videos(new_pose_csvs, selected_bodyparts, iterX_model, framerate, frames2integ,
                   outlier_method, p_cutoff, num_outliers, output_fps, min_n_seconds, annotation_classes,
                   frame_dir, shortvid_dir):
     examples_idx = None
@@ -410,9 +410,24 @@ def create_videos(processed_input_data, iterX_model, framerate, frames2integ,
         message_box.info('Predicting labels... ')
         # extract features, bin them
         features = []
-        for i, data in enumerate(processed_input_data):
+        # filter here
+        for i, f in enumerate([new_pose_csvs]):
+            current_pose = pd.read_csv(f,
+                                       header=[0, 1, 2], sep=",", index_col=0
+                                       )
+            bp_level = 1
+            bp_index_list = []
+            for bp in selected_bodyparts:
+                bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
+                bp_index_list.append(bp_index)
+            selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
+            # get rid of likelihood columns for deeplabcut
+            idx_llh = selected_pose_idx[2::3]
+            # the loaded sleap file has them too, so exclude for both
+            idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
+            filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh)
             # using feature scaling from training set
-            feats, _ = feature_extraction([data], 1, frames2integ)
+            feats, _ = feature_extraction([filt_pose], 1, frames2integ)
             features.append(feats)
         for i in stqdm(range(len(features)), desc="Behavior prediction from spatiotemporal features"):
             with st.spinner('Predicting behavior from features...'):
@@ -487,27 +502,29 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
 
         if new_videos is not None and new_pose_csvs[0] is not None:
             st.session_state['uploaded_vid'] = new_videos
-            new_pose_list = []
-            for i, f in enumerate(new_pose_csvs):
-                current_pose = pd.read_csv(f,
-                                           header=[0, 1, 2], sep=",", index_col=0
-                                           )
-                bp_level = 1
-                bp_index_list = []
-                for bp in selected_bodyparts:
-                    bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
-                    bp_index_list.append(bp_index)
-                selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
-
-                # get rid of likelihood columns for deeplabcut
-                idx_llh = selected_pose_idx[2::3]
-                # the loaded sleap file has them too, so exclude for both
-                idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
-                filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh)
-
-                new_pose_list.append(filt_pose)
-
-            st.session_state['uploaded_pose'] = new_pose_list
+            # new_pose_list = []
+            # for i, f in enumerate(new_pose_csvs):
+            #     current_pose = pd.read_csv(f,
+            #                                header=[0, 1, 2], sep=",", index_col=0
+            #                                )
+            #     bp_level = 1
+            #     bp_index_list = []
+            #     for bp in selected_bodyparts:
+            #         bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
+            #         bp_index_list.append(bp_index)
+            #     selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
+            #
+            #     # get rid of likelihood columns for deeplabcut
+            #     idx_llh = selected_pose_idx[2::3]
+            #     # the loaded sleap file has them too, so exclude for both
+            #     idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
+            #     filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh)
+            #     # new_pose_list.append(filt_pose)
+            #     # new_pose_list.append(np.array(current_pose.iloc[:, idx_selected]))
+            #     new_pose_list.append(current_pose)
+            #
+            #
+            # st.session_state['uploaded_pose'] = new_pose_list
             col1, col3 = st.columns(2)
             col1_exp = col1.expander('Parameters'.upper(), expanded=True)
             col3_exp = col3.expander('Output folders'.upper(), expanded=True)
@@ -553,7 +570,7 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
             col3_exp.success(f'Entered **{shortvid_dir}** as the refined video directory.')
 
         else:
-            st.session_state['uploaded_pose'] = []
+            # st.session_state['uploaded_pose'] = []
             st.session_state['uploaded_vid'] = None
 
     return outlier_method, p_cutoff, num_outliers, output_fps, min_n_seconds, frame_dir, shortvid_dir
@@ -673,8 +690,6 @@ def main(ri=None, config=None):
         else:
             if 'disabled' not in st.session_state:
                 st.session_state['disabled'] = False
-            if 'uploaded_pose' not in st.session_state:
-                st.session_state['uploaded_pose'] = []
 
             # if 'refinements' not in st.session_state or 'refined' not in st.session_state:
             if 'refined' not in st.session_state:
@@ -739,7 +754,7 @@ def main(ri=None, config=None):
                 except:
                     pass
 
-                if st.session_state['video'] is not None and len(st.session_state['uploaded_pose']) > 0:
+                if st.session_state['video'] is not None and st.session_state['pose'] is not None:
                     if os.path.exists(os.path.join(videos_dir, st.session_state['video'].name)):
                         temporary_location = str(os.path.join(videos_dir, st.session_state['video'].name))
                     else:
@@ -764,7 +779,8 @@ def main(ri=None, config=None):
                                     st.session_state['features'], st.session_state['predict'], \
                                         st.session_state['examples_idx'] = \
                                         create_videos(
-                                            st.session_state['uploaded_pose'],
+                                            st.session_state['pose'],
+                                            selected_bodyparts,
                                             iterX_model,
                                             framerate,
                                             frames2integ,

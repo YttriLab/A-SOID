@@ -304,49 +304,49 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                                                    type=ftype, key='pose')
         st.session_state['smooth_size'] = param_expander.number_input('Minimum frames per behavior',
                                                                       min_value=0, max_value=None, value=12)
-        if len(new_pose_csvs) > 0:
-
-            # st.session_state['uploaded_vid'] = new_videos
-            new_pose_list = []
-            for i, f in enumerate(new_pose_csvs):
-
-                #current_pose = pd.read_csv(f,
-                #                           header=[0, 1, 2], sep=",", index_col=0)
-                #todo: adapt to multi animal by reading from config
-                current_pose = load_pose_ftype(f, ftype)
-
-                bp_level = 1
-                bp_index_list = []
-
-                if i == 0:
-                    st.info("Selected keypoints/bodyparts (from config): " + ", ".join(selected_bodyparts))
-                    st.info("Available keypoints/bodyparts in pose file: " + ", ".join(
-                        current_pose.columns.get_level_values(bp_level).unique()))
-                    # check if all bodyparts are in the pose file
-
-                    if len(selected_bodyparts) > len(current_pose.columns.get_level_values(bp_level).unique()):
-                        st.error(f'Not all selected keypoints/bodyparts are in the pose file: {f.name}')
-                        st.stop()
-                    elif len(selected_bodyparts) < len(current_pose.columns.get_level_values(bp_level).unique()):
-                        # subselection would take care of this, so we need to make sure that they all exist
-                        for bp in selected_bodyparts:
-                            if bp not in current_pose.columns.get_level_values(bp_level).unique():
-                                st.error(f'At least one keypoint "{bp}" is missing in pose file: {f.name}')
-                                st.stop()
-                    for bp in selected_bodyparts:
-                        bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
-                        bp_index_list.append(bp_index)
-                    selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
-                    # get rid of likelihood columns for deeplabcut
-                    idx_llh = selected_pose_idx[2::3]
-
-                    # the loaded sleap file has them too, so exclude for both
-                    idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
-                filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh)
-                new_pose_list.append(filt_pose)
-            st.session_state['uploaded_pose'] = new_pose_list
-        else:
-            st.session_state['uploaded_pose'] = []
+        # if len(new_pose_csvs) > 0:
+        #
+        #     # st.session_state['uploaded_vid'] = new_videos
+        #     new_pose_list = []
+        #     for i, f in enumerate(new_pose_csvs):
+        #
+        #         #current_pose = pd.read_csv(f,
+        #         #                           header=[0, 1, 2], sep=",", index_col=0)
+        #         #todo: adapt to multi animal by reading from config
+        #         current_pose = load_pose_ftype(f, ftype)
+        #
+        #         bp_level = 1
+        #         bp_index_list = []
+        #
+        #         if i == 0:
+        #             st.info("Selected keypoints/bodyparts (from config): " + ", ".join(selected_bodyparts))
+        #             st.info("Available keypoints/bodyparts in pose file: " + ", ".join(
+        #                 current_pose.columns.get_level_values(bp_level).unique()))
+        #             # check if all bodyparts are in the pose file
+        #
+        #             if len(selected_bodyparts) > len(current_pose.columns.get_level_values(bp_level).unique()):
+        #                 st.error(f'Not all selected keypoints/bodyparts are in the pose file: {f.name}')
+        #                 st.stop()
+        #             elif len(selected_bodyparts) < len(current_pose.columns.get_level_values(bp_level).unique()):
+        #                 # subselection would take care of this, so we need to make sure that they all exist
+        #                 for bp in selected_bodyparts:
+        #                     if bp not in current_pose.columns.get_level_values(bp_level).unique():
+        #                         st.error(f'At least one keypoint "{bp}" is missing in pose file: {f.name}')
+        #                         st.stop()
+        #             for bp in selected_bodyparts:
+        #                 bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
+        #                 bp_index_list.append(bp_index)
+        #             selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
+        #             # get rid of likelihood columns for deeplabcut
+        #             idx_llh = selected_pose_idx[2::3]
+        #
+        #             # the loaded sleap file has them too, so exclude for both
+        #             idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
+        #         filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh)
+        #         new_pose_list.append(filt_pose)
+        #     st.session_state['uploaded_pose'] = new_pose_list
+        # else:
+            # st.session_state['uploaded_pose'] = []
 
 
 def convert_int(s):
@@ -402,7 +402,7 @@ def create_annotated_videos(vidpath_out,
         video.release()
 
 
-def predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
+def predict_annotate_video(ftype, selected_bodyparts, iterX_model, framerate, frames2integ,
                            annotation_classes,
                            frame_dir, videos_dir, iter_folder,
                            video_checkbox, colL):
@@ -411,20 +411,54 @@ def predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
     predictions_match = None
     action_button = colL.button('Predict and Generate Summary Statistics')
     message_box = st.empty()
-    processed_input_data = st.session_state['uploaded_pose']
-    # total_n_frames = processed_input_data[0].shape[0]
+    new_pose_csvs = st.session_state['pose']
     repeat_n = int(frames2integ / 10)
     total_n_frames = []
-    # st.write(ftype)
+
     if action_button:
         st.session_state['disabled'] = True
         message_box.info('Predicting labels... ')
         # extract features, bin them
         features = []
-        for i, data in enumerate(processed_input_data):
-            # using feature scaling from training set
-            total_n_frames.append(data.shape[0])
-            feats, _ = feature_extraction([data], 1, frames2integ)
+        # for i, data in enumerate(processed_input_data):
+        for i, f in enumerate(new_pose_csvs):
+
+            #current_pose = pd.read_csv(f,
+            #                           header=[0, 1, 2], sep=",", index_col=0)
+            #todo: adapt to multi animal by reading from config
+            current_pose = load_pose_ftype(f, ftype)
+
+            bp_level = 1
+            bp_index_list = []
+
+            if i == 0:
+                st.info("Selected keypoints/bodyparts (from config): " + ", ".join(selected_bodyparts))
+                st.info("Available keypoints/bodyparts in pose file: " + ", ".join(
+                    current_pose.columns.get_level_values(bp_level).unique()))
+                # check if all bodyparts are in the pose file
+
+                if len(selected_bodyparts) > len(current_pose.columns.get_level_values(bp_level).unique()):
+                    st.error(f'Not all selected keypoints/bodyparts are in the pose file: {f.name}')
+                    st.stop()
+                elif len(selected_bodyparts) < len(current_pose.columns.get_level_values(bp_level).unique()):
+                    # subselection would take care of this, so we need to make sure that they all exist
+                    for bp in selected_bodyparts:
+                        if bp not in current_pose.columns.get_level_values(bp_level).unique():
+                            st.error(f'At least one keypoint "{bp}" is missing in pose file: {f.name}')
+                            st.stop()
+                for bp in selected_bodyparts:
+                    bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
+                    bp_index_list.append(bp_index)
+                selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
+                # get rid of likelihood columns for deeplabcut
+                idx_llh = selected_pose_idx[2::3]
+
+                # the loaded sleap file has them too, so exclude for both
+                idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
+            filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh)
+
+            total_n_frames.append(filt_pose.shape[0])
+            feats, _ = feature_extraction([filt_pose], 1, frames2integ)
             features.append(feats)
         for i in stqdm(range(len(features)), desc="Behavior prediction from spatiotemporal features"):
             with st.spinner('Predicting behavior from features...'):
@@ -525,7 +559,7 @@ def save_predictions(predict_npy, source_file_name, annotation_classes, framerat
         df["classes"].iloc[df["labels"] == cl_idx] = cl_name
 
     # for simplicity let's convert this back into BORIS type file
-    dummy_df = pd.get_dummies(df["classes"])
+    dummy_df = pd.get_dummies(df["classes"]).astype(int)
     # add 0 columns for each class that wasn't predicted in the file
     not_predicted_classes = [x for x in annotation_classes if x not in np.unique(df["classes"].values)]
     for not_predicted_class in not_predicted_classes:
@@ -569,16 +603,18 @@ def prep_labels_single(labels, annotation_classes):
     return labels
 
 
-def count_events(df_label):
+def count_events(df_label, annotation_classes):
     """ This function counts the number of events for each label in a dataframe"""
     df_label_cp = df_label.copy()
     # prepare event counter
-    event_counter = pd.DataFrame(df_label_cp["labels"].unique(), columns=["labels"])
+    # event_counter = pd.DataFrame(df_label_cp["labels"].unique(), columns=["labels"])
+    event_counter = pd.DataFrame(annotation_classes, columns=["labels"])
     event_counter["events"] = 0
 
     # Count the number of isolated blocks of labels for each unique label
     # go through each unique label and create a binary column
-    for label in df_label_cp["labels"].unique():
+    for label in annotation_classes:
+
         df_label_cp[label] = (df_label_cp["labels"] == label)
         df_label_cp[label].iloc[df_label_cp[label] == False] = np.NaN
         # go through each unique label and count the number of isolated blocks
@@ -591,10 +627,9 @@ def count_events(df_label):
     return event_counter
 
 
-def describe_labels_single(df_label, framerate, placeholder):
+def describe_labels_single(df_label, annotation_classes, framerate, placeholder):
     """ This function describes the labels in a table"""
-
-    event_counter = count_events(df_label)
+    event_counter = count_events(df_label, annotation_classes)
     count_df = df_label.value_counts().to_frame().reset_index()
     #in some cases the column is called "count" in others it is called 0
     count_df.rename(columns={"count": "frame count"}, inplace=True, errors="ignore")
@@ -604,11 +639,11 @@ def describe_labels_single(df_label, framerate, placeholder):
     if framerate is not None:
         count_df["total duration"] = count_df["frame count"] / framerate
         count_df["total duration"] = count_df["total duration"].apply(lambda x: str(datetime.timedelta(seconds=x)))
-
-    count_df["bouts"] = event_counter["events"]
-
+    # event counter goes sequential order, but frame count is sorted already...
     count_df.set_index("codes", inplace=True)
     count_df.sort_index(inplace=True)
+    count_df["bouts"] = event_counter["events"]
+
     # rename all columns to include their units
     count_df.rename(columns={"bouts": "bouts [-]",
                              "frame count": "frame count [-]",
@@ -693,8 +728,8 @@ def main(ri=None, config=None):
         else:
             if 'disabled' not in st.session_state:
                 st.session_state['disabled'] = False
-            if 'uploaded_pose' not in st.session_state:
-                st.session_state['uploaded_pose'] = []
+            # if 'uploaded_pose' not in st.session_state:
+            #     st.session_state['uploaded_pose'] = []
             if 'smooth_size' not in st.session_state:
                 st.session_state['smooth_size'] = None
 
@@ -703,15 +738,16 @@ def main(ri=None, config=None):
             if annot_vid_path == 'Add New Data':
 
                 try:
+                    st.write(project_dir, iter_folder)
                     [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
                     ri.info(f'loaded {iter_folder} model')
                     prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                                  framerate, videos_dir, project_dir, iter_folder)
                 except:
                     ri.info(f'Please train a {iter_folder} model in :orange[Active Learning] step.')
-                if len(st.session_state['uploaded_pose']) > 0:
+                if st.session_state['pose'] is not None:
                     placeholder = st.empty()
-                    predict_annotate_video(ftype, iterX_model, framerate, frames2integ,
+                    predict_annotate_video(ftype, selected_bodyparts, iterX_model, framerate, frames2integ,
                                            annotation_classes,
                                            None, videos_dir, iter_folder,
                                            None, placeholder)
@@ -733,12 +769,15 @@ def main(ri=None, config=None):
                               framerate,
                               video_col,
                               selection)
+                annotation_classes_ex = annotation_classes.copy()
+                if exclude_other:
+                    annotation_classes_ex.pop(annotation_classes_ex.index('other'))
                 labels = save_predictions(annot_vid_path.replace('mp4', 'npy'),
                                           annot_vid_path.replace('mp4', 'csv'),
-                                          annotation_classes,
+                                          annotation_classes_ex,
                                           framerate)
-                single_label = prep_labels_single(labels, annotation_classes)
-                describe_labels_single(single_label, framerate, summary_col)
+                single_label = prep_labels_single(labels, annotation_classes_ex)
+                describe_labels_single(single_label, annotation_classes_ex, framerate, summary_col)
                 ridge_predict(annot_vid_path.replace('mp4', 'npy'),
                               iter_folder,
                               annotation_classes,
