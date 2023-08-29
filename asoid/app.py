@@ -241,7 +241,7 @@ def main():
                             "signpost-split",
                             ]
 
-        except FileNotFoundError:
+        except:
             menu_options = ['Menu', 'Upload Data', 'Active Learning',
                             'Refine Behaviors', 'Create New Dataset', 'Predict', 'Discover']
             icon_options = ['window-desktop',
