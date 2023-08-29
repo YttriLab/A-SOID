@@ -303,9 +303,9 @@ def main():
             E_create_new_training.main(ri=ri, config=None)
     elif 'Predict' in nav_options:
         if "config" in st.session_state.keys():
-            E_predict.main(ri=ri, config=st.session_state['config'])
+            F_predict.main(ri=ri, config=st.session_state['config'])
         else:
-            E_predict.main(ri=ri, config=None)
+            F_predict.main(ri=ri, config=None)
     elif 'Discover' in nav_options:
         if "config" in st.session_state.keys():
             G_unsupervised_discovery.main(ri=ri, config=st.session_state['config'])
