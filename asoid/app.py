@@ -61,7 +61,7 @@ def index():
                 f"font-family:Avenir; font-weight:normal'>Get Started by Selecting a Step</h1> "
                 , unsafe_allow_html=True)
 
-    selected_step = st.select_slider('',
+    selected_step = st.select_slider('Steps',
                                      options=['Step 1',
                                               'Step 2',
                                               'Step 3',
