@@ -16,7 +16,7 @@ from stqdm import stqdm
 from config.help_messages import *
 from utils.load_workspace import load_data, load_motion_energy, save_data
 
-
+#TODO: adapt to work with new iterations
 
 """ Egocentric alignment"""
 def set_to_origin(mouse, ref_idx2: list):
