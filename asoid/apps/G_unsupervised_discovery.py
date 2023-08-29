@@ -1,35 +1,24 @@
 import streamlit as st
 import os
-import numpy as np
 import pandas as pd
 from pathlib import Path
 from config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP
-from utils.unsupervised_discovery import Explorer
 from stqdm import stqdm
 from utils.extract_features import feature_extraction, \
     bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
 from utils.load_workspace import load_new_pose, load_iterX, save_data, load_features
-from utils.view_results import Viewer
-from sklearn.preprocessing import LabelEncoder
-from utils.import_data import load_labels_auto
 from datetime import date
 from utils.project_utils import create_new_project, update_config, copy_config
-from config.help_messages import POSE_ORIGIN_SELECT_HELP, FPS_HELP, MULTI_ANIMAL_HELP, MULTI_ANIMAL_SELECT_HELP, \
-    BODYPART_SELECT, WORKING_DIR_HELP, PREFIX_HELP, DATA_DIR_IMPORT_HELP, POSE_DIR_IMPORT_HELP, POSE_ORIGIN_HELP, \
-    POSE_SELECT_HELP, LABEL_DIR_IMPORT_HELP, LABEL_ORIGIN_HELP, LABEL_SELECT_HELP, PREPROCESS_HELP, EXCLUDE_OTHER_HELP, \
-    INIT_CLASS_SELECT_HELP, SAMPLE_RATE_HELP, SUBCLASS_SELECT_HELP, SAVE_NEW_HELP
+from config.help_messages import *
 import numpy as np
-import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import umap
 import hdbscan
 import joblib
-import pickle
-from tqdm import notebook
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.decomposition import PCA
-import seaborn as sns
+
 
 TITLE = "Unsupervised discovery"
 

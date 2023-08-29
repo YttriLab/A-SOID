@@ -21,8 +21,7 @@ from utils.extract_features import feature_extraction, \
     bsoid_predict_numba, bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
 from config.help_messages import *
 
-from config.help_messages import NO_CONFIG_HELP, IMPRESS_TEXT, DATAEDITOR_HELP, OUTLIER_HELP, MINIMUM_SECONDS_HELP, REFINMEMENT_SAMPLE_HELP\
-    , PLAYBACK_SPEED_HELP, OUTPUT_FOLDER_HELP, REFINEMENT_SELECT_HELP
+
 
 TITLE = "Refine behaviors"
 

@@ -8,11 +8,10 @@ import streamlit as st
 from numba import jit
 from scipy import stats
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 from stqdm import stqdm
 
 from utils.load_workspace import load_data, save_data
-from config.help_messages import BEHAVIOR_COLOR_SELECT_HELP
+from config.help_messages import *
 
 
 @jit(nopython=True)

@@ -1,8 +1,5 @@
 import configparser as cfg
-import tempfile
 from pathlib import Path
-import os
-import numpy as np
 import streamlit as st
 from PIL import Image
 from streamlit_option_menu import option_menu
@@ -11,7 +8,7 @@ from io import StringIO
 
 from apps import *
 from config.help_messages import UPLOAD_CONFIG_HELP, IMPRESS_TEXT
-from utils.load_workspace import load_features, load_iterX, load_refinement, load_data
+from utils.load_workspace import load_data
 
 
 def img_to_bytes(img_path):

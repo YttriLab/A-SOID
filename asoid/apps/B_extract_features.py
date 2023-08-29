@@ -4,8 +4,7 @@ import os
 from utils.project_utils import update_config
 from utils.load_workspace import load_data, load_features
 from utils.extract_features import Extract, interactive_durations_dist
-from config.help_messages import SPLIT_CLASSES_HELP, BINS_SLIDER_HELP, MIN_DURATION_HELP, CALM_HELP, NUM_SPLITS_HELP,\
-                                RE_EXTRACT_HELP, EXTRACT_FEATURES_HELP, IMPRESS_TEXT, NO_CONFIG_HELP
+from config.help_messages import *
 
 TITLE = "Extract features"
 

@@ -1,7 +1,7 @@
 import streamlit as st
 import numpy as np
 import os
-from config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP, NEW_DATA_SELECT_HELP
+from config.help_messages import *
 from utils.load_workspace import load_refinement, load_features, load_iterX, save_data
 from utils.project_utils import update_config
 

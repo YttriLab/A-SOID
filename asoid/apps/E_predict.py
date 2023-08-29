@@ -12,7 +12,6 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from config.help_messages import *
-from config.help_messages import NO_CONFIG_HELP, IMPRESS_TEXT
 from sklearn.preprocessing import LabelEncoder
 from stqdm import stqdm
 from utils.extract_features import feature_extraction, \
