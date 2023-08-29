@@ -9,6 +9,7 @@ from utils.extract_features import feature_extraction, \
 from utils.load_workspace import load_new_pose, load_iterX, save_data, load_features
 from datetime import date
 from utils.project_utils import create_new_project, update_config, copy_config
+from utils.preprocessing import adp_filt, sort_nicely
 from config.help_messages import *
 import numpy as np
 import plotly.graph_objects as go
@@ -40,55 +41,71 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                                                     accept_multiple_files=True,
                                                     type=ftype, key='pose')
 
-        if len(new_pose_csvs) > 0:
-            new_pose_list = []
-            pose_names_list = []
-            for i, f in enumerate(new_pose_csvs):
-                current_pose = pd.read_csv(f,
-                                           header=[0, 1, 2], sep=",", index_col=0)
-                bp_level = 1
-                bp_index_list = []
-                for bp in selected_bodyparts:
-                    bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
-                    bp_index_list.append(bp_index)
-                selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
-                # get rid of likelihood columns for deeplabcut
-                idx_llh = selected_pose_idx[2::3]
-                # the loaded sleap file has them too, so exclude for both
-                idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
-                # idx_selected = np.array([0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16])
+        # if len(new_pose_csvs) > 0:
+        #     new_pose_list = []
+        #     pose_names_list = []
+        #     for i, f in enumerate(new_pose_csvs):
+        #         current_pose = pd.read_csv(f,
+        #                                    header=[0, 1, 2], sep=",", index_col=0)
+        #         bp_level = 1
+        #         bp_index_list = []
+        #         for bp in selected_bodyparts:
+        #             bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
+        #             bp_index_list.append(bp_index)
+        #         selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
+        #         # get rid of likelihood columns for deeplabcut
+        #         idx_llh = selected_pose_idx[2::3]
+        #         # the loaded sleap file has them too, so exclude for both
+        #         idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
+        #         # idx_selected = np.array([0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16])
+        #
+        #
+        #         new_pose_list.append(np.array(current_pose.iloc[:, idx_selected]))
+        #         pose_names_list.append(f.name)
+        #     st.session_state['uploaded_pose'] = new_pose_list
+        #     st.session_state['uploaded_fnames'] = pose_names_list
+        # else:
+        #     st.session_state['uploaded_pose'] = []
+        #     st.session_state['uploaded_fnames'] = []
 
 
-                new_pose_list.append(np.array(current_pose.iloc[:, idx_selected]))
-                pose_names_list.append(f.name)
-            st.session_state['uploaded_pose'] = new_pose_list
-            st.session_state['uploaded_fnames'] = pose_names_list
-        else:
-            st.session_state['uploaded_pose'] = []
-            st.session_state['uploaded_fnames'] = []
-
-
-def get_features_labels(iterX_model, frames2integ, project_dir, iter_folder, placeholder,
+def get_features_labels(selected_bodyparts, iterX_model, frames2integ, project_dir, iter_folder, placeholder,
                         ):
     features = [None]
     predict_arr = [None]
-    processed_input_data = st.session_state['uploaded_pose']
+    new_pose_csvs = st.session_state['pose']
     input_features, input_targets = None, None
     if placeholder.button('preprocess files'):
-        if len(processed_input_data) > 0:
-            st.session_state['disabled'] = True
-            # extract features, bin them
-            features = []
-            for i, data in enumerate(processed_input_data):
-                # using feature scaling from training set
-                feats, _ = feature_extraction([data], 1, frames2integ)
-                features.append(feats)
-            predict_arr = []
-            for i in stqdm(range(len(features)), desc="Behavior prediction from spatiotemporal features"):
-                with st.spinner('Predicting behavior from features...'):
-                    predict = bsoid_predict_numba_noscale([features[i]], iterX_model)
-                    pred_proba = bsoid_predict_proba_numba_noscale([features[i]], iterX_model)
-                    predict_arr.append(np.array(predict).flatten())
+        st.session_state['disabled'] = True
+        pose_names_list = []
+        features = []
+        # filter here
+        for i, f in enumerate(new_pose_csvs):
+            current_pose = pd.read_csv(f,
+                                       header=[0, 1, 2], sep=",", index_col=0
+                                       )
+            pose_names_list.append(f.name)
+            bp_level = 1
+            bp_index_list = []
+            for bp in selected_bodyparts:
+                bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
+                bp_index_list.append(bp_index)
+            selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
+            # get rid of likelihood columns for deeplabcut
+            idx_llh = selected_pose_idx[2::3]
+            # the loaded sleap file has them too, so exclude for both
+            idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
+            filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh)
+            # using feature scaling from training set
+            feats, _ = feature_extraction([filt_pose], 1, frames2integ)
+            features.append(feats)
+        st.session_state['uploaded_fnames'] = pose_names_list
+        predict_arr = []
+        for i in stqdm(range(len(features)), desc="Behavior prediction from spatiotemporal features"):
+            with st.spinner('Predicting behavior from features...'):
+                predict = bsoid_predict_numba_noscale([features[i]], iterX_model)
+                pred_proba = bsoid_predict_proba_numba_noscale([features[i]], iterX_model)
+                predict_arr.append(np.array(predict).flatten())
 
         input_features = np.vstack(features)
         input_targets = np.hstack(predict_arr)
@@ -246,7 +263,7 @@ def save_update_info(config, behavior_names_split):
     if st.button('Create new project', help= SAVE_NEW_HELP):
         parameters_dict = {
             'Data': dict(
-                DATA_INPUT_FILES=st.session_state['uploaded_fnames'],
+                DATA_INPUT_FILES=sort_nicely(st.session_state['uploaded_fnames']),
                 LABEL_INPUT_FILES=None),
 
             "Project": dict(
@@ -289,8 +306,6 @@ def main(ri=None, config=None):
 
         if 'disabled' not in st.session_state:
             st.session_state['disabled'] = False
-        if 'uploaded_pose' not in st.session_state:
-            st.session_state['uploaded_pose'] = []
         if 'uploaded_fnames' not in st.session_state:
             st.session_state['uploaded_fnames'] = []
 
@@ -307,7 +322,8 @@ def main(ri=None, config=None):
         if 'output_sav' not in st.session_state:
             st.session_state['output_sav'] = None
         if st.session_state['input_sav'] is None:
-            all_feats, all_labels = get_features_labels(iterX_model, frames2integ, project_dir, iter_folder,
+            all_feats, all_labels = get_features_labels(selected_bodyparts, iterX_model, frames2integ,
+                                                        project_dir, iter_folder,
                                                         left_col
                                                         )
 

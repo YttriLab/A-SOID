@@ -18,6 +18,7 @@ from utils.extract_features import feature_extraction, \
     bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
 from utils.import_data import load_labels_auto, load_pose_ftype
 from utils.load_workspace import load_new_pose, load_iterX
+from utils.preprocessing import adp_filt, sort_nicely
 
 TITLE = "Predict behaviors"
 
@@ -253,30 +254,6 @@ def frame_extraction(video_file, frame_dir, placeholder=None):
         placeholder.success('Done. Type "R" to refresh.')
 
 
-def adp_filt(pose, idx_selected, idx_llh):
-    datax = np.array(pose.iloc[:, idx_selected[::2]])
-    datay = np.array(pose.iloc[:, idx_selected[1::2]])
-    data_lh = np.array(pose.iloc[:, idx_llh])
-    currdf_filt = np.zeros((datax.shape[0], (datax.shape[1]) * 2))
-    perc_rect = []
-    for i in range(data_lh.shape[1]):
-        perc_rect.append(0)
-    for x in range(data_lh.shape[1]):
-        # TODO: load from config.ini the llh threshold
-        llh = 0.6
-        data_lh_float = data_lh[:, x].astype(float)
-        perc_rect[x] = np.sum(data_lh_float < llh) / data_lh.shape[0]
-        currdf_filt[0, (2 * x):(2 * x + 2)] = np.hstack([datax[0, x], datay[0, x]])
-        for i in range(1, data_lh.shape[0]):
-            if data_lh_float[i] < llh:
-                currdf_filt[i, (2 * x):(2 * x + 2)] = currdf_filt[i - 1, (2 * x):(2 * x + 2)]
-            else:
-                currdf_filt[i, (2 * x):(2 * x + 2)] = np.hstack([datax[i, x], datay[i, x]])
-    currdf_filt = np.array(currdf_filt)
-    currdf_filt = currdf_filt.astype(float)
-    return currdf_filt, perc_rect
-
-
 def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                  framerate, videos_dir, project_dir, iter_dir):
     left_col, right_col = st.columns([3, 1])
@@ -347,21 +324,6 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
         #     st.session_state['uploaded_pose'] = new_pose_list
         # else:
             # st.session_state['uploaded_pose'] = []
-
-
-def convert_int(s):
-    if s.isdigit():
-        return int(s)
-    else:
-        return s
-
-
-def alphanum_key(s):
-    return [convert_int(c) for c in re.split('([0-9]+)', s)]
-
-
-def sort_nicely(l):
-    l.sort(key=alphanum_key)
 
 
 def create_annotated_videos(vidpath_out,
