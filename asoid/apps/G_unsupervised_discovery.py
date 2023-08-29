@@ -37,9 +37,15 @@ TITLE = "Unsupervised discovery"
 def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                  framerate, videos_dir, project_dir, iter_dir, pose_expander):
     if software == 'CALMS21 (PAPER)':
-        ROOT = Path(__file__).parent.parent.parent.resolve()
-        new_pose_sav = os.path.join(ROOT.joinpath("new_test"), './new_pose.sav')
-        new_pose_list = load_new_pose(new_pose_sav)
+        try:
+            #TODO: deprecate
+            ROOT = Path(__file__).parent.parent.parent.resolve()
+            new_pose_sav = os.path.join(ROOT.joinpath("new_test"), './new_pose.sav')
+            new_pose_list = load_new_pose(new_pose_sav)
+        except FileNotFoundError:
+            st.error("The CALMS21 data set is not designed to be used with the discovery step.")
+            st.stop()
+
     else:
         new_pose_csvs = pose_expander.file_uploader('Upload Corresponding Pose Files',
                                                     accept_multiple_files=True,

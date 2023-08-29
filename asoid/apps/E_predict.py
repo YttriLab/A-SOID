@@ -680,13 +680,14 @@ def main(ri=None, config=None):
 
         if software == 'CALMS21 (PAPER)':
             try:
-                #TODO: CHANGE THIS TO THE CORRECT PATH or remove it
+                #TODO: deprecate
                 ROOT = Path(__file__).parent.parent.parent.resolve()
                 targets_test_csv = os.path.join(ROOT.joinpath("test"), './test_labels.csv')
                 targets_test_df = pd.read_csv(targets_test_csv, header=0)
                 targets_test = np.array(targets_test_df['annotation'])
             except FileNotFoundError:
                 st.error("The CALMS21 data set is not designed to be used with the predict step.")
+                st.stop()
         else:
             if 'disabled' not in st.session_state:
                 st.session_state['disabled'] = False
