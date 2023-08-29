@@ -1,9 +1,8 @@
-name: asoid-test3
+name: asoid
 
 dependencies:
   - python=3.8
   - ffmpeg
   - pip
-  - conda-forge::ffmpeg
   - pip:
     - "--editable=.[dev]"
