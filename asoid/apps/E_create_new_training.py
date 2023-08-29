@@ -1,7 +1,7 @@
 import streamlit as st
 import numpy as np
 import os
-from config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP
+from config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP, NEW_DATA_SELECT_HELP
 from utils.load_workspace import load_refinement, load_features, load_iterX, save_data
 from utils.project_utils import update_config
 
@@ -55,7 +55,8 @@ def main(ri=None, config=None):
         os.makedirs(os.path.join(project_dir, iter_folder), exist_ok=True)
         refined_vid_dirs = [d for d in os.listdir(os.path.join(project_dir, iter_folder))
                             if os.path.isdir(os.path.join(project_dir, iter_folder, d))]
-        selected_refine_dirs = ri.multiselect('Select Refinement', refined_vid_dirs, refined_vid_dirs)
+        selected_refine_dirs = ri.multiselect('Select Refinement', refined_vid_dirs, refined_vid_dirs
+                                              , help=NEW_DATA_SELECT_HELP)
 
         try:
             new_features_dir = []

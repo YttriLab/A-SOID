@@ -124,6 +124,10 @@ DATAEDITOR_HELP = "The data editor is a tool that allows you to refine the annot
                                                                      "\n ### Default Filled: The set of annotations that are automatically filled in based on the predictions of the model. "\
                                                                      "\n ### Previously Saved: The set of annotations that you have saved previously. "
 
+"""NEW DATA SET"""
+
+NEW_DATA_SELECT_HELP = "Select a refined video to include in the new training set. You can select multiple refinements to include in the new training set."
+
 """Prediction"""
 DIFFERENT_POSE_ORIGIN = "Check if the designated pose estimation files do not originate from the same provider (DLC, SLEAP)."
 POSE_UPLOAD_HELP = "Upload pose estimation files to predict with the trained classifier. Default provider and file type is based on the project config."
