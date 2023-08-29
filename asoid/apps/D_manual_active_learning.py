@@ -21,7 +21,8 @@ from utils.extract_features import feature_extraction, \
     bsoid_predict_numba, bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
 from config.help_messages import *
 
-from config.help_messages import NO_CONFIG_HELP, IMPRESS_TEXT
+from config.help_messages import NO_CONFIG_HELP, IMPRESS_TEXT, DATAEDITOR_HELP, OUTLIER_HELP, MINIMUM_SECONDS_HELP, REFINMEMENT_SAMPLE_HELP\
+    , PLAYBACK_SPEED_HELP, OUTPUT_FOLDER_HELP, REFINEMENT_SELECT_HELP
 
 TITLE = "Refine behaviors"
 
@@ -472,6 +473,7 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
     shortvid_dir = None
 
     if software == 'CALMS21 (PAPER)':
+        #todo: deprecate
         ROOT = Path(__file__).parent.parent.parent.resolve()
         new_pose_sav = os.path.join(ROOT.joinpath("new_test"), './new_pose.sav')
         new_pose_list = load_new_pose(new_pose_sav)
@@ -513,18 +515,21 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
 
             outlier_method = col1_exp.selectbox('Outlier method',
                                                 outlier_methods, index=0,
-                                                disabled=st.session_state.disabled)
+                                                disabled=st.session_state.disabled
+                                                , help=OUTLIER_HELP)
             if outlier_method == 'Low Confidence':
                 p_cutoff = col1_exp.number_input('Threshold value to sample outliers from',
                                                  min_value=0.0, max_value=1.0, value=threshold,
                                                  disabled=st.session_state.disabled)
             min_n_seconds = col1_exp.number_input('Minimum number of seconds for example',
                                                   min_value=min_duration, max_value=10.0, value=min_duration * 10,
-                                                  disabled=st.session_state.disabled)
+                                                  disabled=st.session_state.disabled
+                                                  , help = MINIMUM_SECONDS_HELP)
 
             num_outliers = col1_exp.number_input('Number of examples to refine',
                                                  min_value=3, max_value=None, value=5,
-                                                 disabled=st.session_state.disabled)
+                                                 disabled=st.session_state.disabled
+                                                 , help = REFINMEMENT_SAMPLE_HELP)
             st.session_state['refinements'] = {key:
                                                    {k: {'choice': None, 'submitted': False}
                                                     for k in range(num_outliers)}
@@ -532,9 +537,10 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
 
             output_fps = col1_exp.number_input('Video playback fps',
                                                min_value=1, max_value=None, value=framerate,
-                                               disabled=st.session_state.disabled)
+                                               disabled=st.session_state.disabled
+                                               , help = PLAYBACK_SPEED_HELP)
 
-            col1_exp.write(f'equivalent to {round(output_fps / framerate, 2)} X speed')
+            col1_exp.write(f'Equivalent to {round(output_fps / framerate, 2)} X speed')
             frame_dir = os.path.join(videos_dir,
                                      str.join('', (st.session_state['uploaded_vid'].name.rpartition('.mp4')[0],
                                                    '_pngs')))
@@ -648,10 +654,12 @@ def main(ri=None, config=None):
             new_vid_name = str.join('', (st.session_state['uploaded_vid'].name.rpartition('.mp4')[0], '_refine_vids'))
             selected_refine_dir = ri.radio('Select Refinement', refined_vid_dirs,
                                            index=refined_vid_dirs.index(new_vid_name),
-                                           horizontal=True, key='selected_refine')
+                                           horizontal=True, key='selected_refine'
+                                           , help=REFINEMENT_SELECT_HELP)
         except:
             selected_refine_dir = ri.radio('Select Refinement', refined_vid_dirs,
-                                           horizontal=True, key='selected_refine')
+                                           horizontal=True, key='selected_refine'
+                                           ,help=REFINEMENT_SELECT_HELP)
 
         if software == 'CALMS21 (PAPER)':
             try:
@@ -826,7 +834,8 @@ def main(ri=None, config=None):
                 st.session_state['disabled'] = True
                 behav_choice = st.radio("Select the behavior: ", annotation_classes_ex,
                                         index=int(0), horizontal=True,
-                                        key="behavior_choice")
+                                        key="behavior_choice"
+                                        ,help = REFINEMENT_HELP)
                 st.info('Make sure you :orange[Save/Update Refinements] before moving to another behavior! '
                         'Or else it will clear your modification.')
 
@@ -865,11 +874,15 @@ def main(ri=None, config=None):
                                 colL.video(os.path.join(shortvid_dir,
                                                         f'behavior_{behav_choice}_example_{i}.mp4'))
                                 with colR:
+                                    tooltip_exp = st.expander(":green[How to use the data editor:]")
+                                    with tooltip_exp:
+                                        st.write()
 
                                     selected_set = st.radio('Select Refinement Set',
                                                             ('Default Filled', 'Previously Saved'),
                                                             horizontal=True, index=set_def_index,
-                                                            key=f'ref_set_{i}')
+                                                            key=f'ref_set_{i}'
+                                                            , help = DATAEDITOR_HELP)
 
                                     if selected_set == 'Default Filled':
                                         time_ = np.arange(0,
@@ -925,6 +938,7 @@ def main(ri=None, config=None):
                                     #     hide_index=True,
                                     # )
                                     # st.session_state['refined'][behav_choice][i] = edited_df
+
                     else:
                         st.warning('no video'.upper())
                     if save_button:

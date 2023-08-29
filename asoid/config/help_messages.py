@@ -99,6 +99,31 @@ RE_CLASSIFY_HELP = "Check to re-classify your data with a new set of configurati
 CONFIDENCE_THRESHOLD_HELP = 'Confidence threshold for the classifier to use for active learning.' \
                             ' Samples with a confidence below the threshold can be added to the training set.'
 
+"""Manuel refinement"""
+
+OUTLIER_HELP = "Select a method to extract new samples from the data for refinement. This can be based on low confidence predictions or random samples."
+
+MINIMUM_SECONDS_HELP = "The minimum duration a behavioral bout is shown. Higher values allow to get a sense of the context around an identified bout, but might result in behavioral transitions to occur within a sample." \
+
+REFINMEMENT_SAMPLE_HELP = "The number of samples to extract for refinement. This is the number of samples that will be shown to the user for refinement and used to generate a new training set in the next step." \
+
+PLAYBACK_SPEED_HELP = "The playback speed of the video during refinement. The default value is set to the video framerate, which is the original speed of the video. A higher value will increase the speed of the video, while a lower decreases the speed." \
+
+OUTPUT_FOLDER_HELP = "The folder where the extracted frames will be saved. Default: This will be created in the project folder."
+
+REFINEMENT_SELECT_HELP = "Upload a new video (incl. pose data) to begin the refinement process. You can return to uploaded videos by selecting them in the radio button menu."
+
+REFINEMENT_HELP = "To refine the annotations, select a behavior and go through each selected bout (Tab 0,1,2, etc.). This will show you a video of the selected bout and a spreadsheet with annotations to refine." \
+                  "\n\n Some behaviors might not have any bouts to refine." \
+                  "\n\n :blue[You can cycle through the tabs/bouts with the arrowkeys.]" \
+
+DATAEDITOR_HELP = "The data editor is a tool that allows you to refine the annotations of the current bout (each tab)." \
+                  " It functions like a spreadsheet, where you can edit the values in each cell."\
+                                                                     " Available annotations are listed in the dropdown menu of each cell."\
+                                                                     "\n ### :blue[Shortcuts: You can copy + paste entries (CTRL + C; CTRL + V) or copy entries by selecting a cell and dragging it down.] "\
+                                                                     "\n ### Default Filled: The set of annotations that are automatically filled in based on the predictions of the model. "\
+                                                                     "\n ### Previously Saved: The set of annotations that you have saved previously. "
+
 """Prediction"""
 DIFFERENT_POSE_ORIGIN = "Check if the designated pose estimation files do not originate from the same provider (DLC, SLEAP)."
 POSE_UPLOAD_HELP = "Upload pose estimation files to predict with the trained classifier. Default provider and file type is based on the project config."
