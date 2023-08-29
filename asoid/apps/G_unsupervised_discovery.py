@@ -17,7 +17,7 @@ from utils.project_utils import create_new_project, update_config, copy_config
 from config.help_messages import POSE_ORIGIN_SELECT_HELP, FPS_HELP, MULTI_ANIMAL_HELP, MULTI_ANIMAL_SELECT_HELP, \
     BODYPART_SELECT, WORKING_DIR_HELP, PREFIX_HELP, DATA_DIR_IMPORT_HELP, POSE_DIR_IMPORT_HELP, POSE_ORIGIN_HELP, \
     POSE_SELECT_HELP, LABEL_DIR_IMPORT_HELP, LABEL_ORIGIN_HELP, LABEL_SELECT_HELP, PREPROCESS_HELP, EXCLUDE_OTHER_HELP, \
-    INIT_CLASS_SELECT_HELP, SAMPLE_RATE_HELP
+    INIT_CLASS_SELECT_HELP, SAMPLE_RATE_HELP, SUBCLASS_SELECT_HELP, SAVE_NEW_HELP
 import numpy as np
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
@@ -248,7 +248,7 @@ def save_update_info(config, behavior_names_split):
         st.success(f'Entered **{prefix_new}** as the prefix.')
     else:
         st.error('Please enter a prefix.')
-    if st.button('create new project'):
+    if st.button('Create new project', help= SAVE_NEW_HELP):
         parameters_dict = {
             'Data': dict(
                 DATA_INPUT_FILES=st.session_state['uploaded_fnames'],
@@ -340,9 +340,10 @@ def main(ri=None, config=None):
                 if st.session_state['output_sav'] is not None:
                     behav_figs, behav_groups, behav_embeds = plot_hdbscan_embedding(st.session_state['output_sav'])
                     for behav_keys in list(behav_figs.keys()):
+                        right_col_top.subheader(f'{behav_keys.capitalize()}')
                         fig = behav_figs[behav_keys]
                         right_col_top.plotly_chart(fig, use_container_width=True)
-                        right_col_top.info(f'minimum cluster: '
+                        right_col_top.info(f'Minimum cluster duration: '
                                            f'{np.round((cluster_range*behav_embeds[behav_keys].shape[0])/framerate, 1)} '
                                            f'total seconds')
                     with open(st.session_state['input_sav'], 'rb') as fr:
@@ -355,11 +356,13 @@ def main(ri=None, config=None):
                         other_id = annotation_classes.index('other')
                         annotation_classes_ex.pop(other_id)
                         idx_other = np.where(all_labels == other_id)[0]
+                    left_col.subheader('Splitting')
                     for target_behav in target_behavior:
                         if target_behav == target_behavior[0]:
-                            selected_subgroup = left_col.multiselect(f'select the {target_behav} sub groups',
+                            selected_subgroup = left_col.multiselect(f'Select the {target_behav} sub groups',
                                                  behav_groups[target_behav][1:], behav_groups[target_behav][1:],
-                                                                     key=target_behav)
+                                                                     key=target_behav
+                                                                     ,help = SUBCLASS_SELECT_HELP)
                             target_beh_id = annotation_classes_ex.index(target_behav)
                             # find where these target behavior is
                             idx_target_beh = np.where(all_labels == target_beh_id)[0]
@@ -401,9 +404,10 @@ def main(ri=None, config=None):
                                 behavior_names_split.extend(['other'])
 
                         else:
-                            selected_subgroup = left_col.multiselect(f'select the {target_behav} sub groups',
+                            selected_subgroup = left_col.multiselect(f'Select the {target_behav} sub groups',
                                                  behav_groups[target_behav][1:], behav_groups[target_behav][1:],
-                                                                     key=target_behav)
+                                                                     key=target_behav,
+                                                                     help = SUBCLASS_SELECT_HELP)
                             target_beh_id = annotation_classes_ex.index(target_behav)
                             # find where these target behavior is
                             idx_target_beh = np.where(all_labels == target_beh_id)[0]

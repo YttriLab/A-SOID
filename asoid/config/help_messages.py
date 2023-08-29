@@ -94,6 +94,11 @@ SHOW_FINAL_RESULTS_HELP = "Check to reveal results of the latest active learning
 
 RE_CLASSIFY_HELP = "Check to re-classify your data with a new set of configurations. This will overwrite previous active learning cycles!"
 
+"Auto active learning"
+
+CONFIDENCE_THRESHOLD_HELP = 'Confidence threshold for the classifier to use for active learning.' \
+                            ' Samples with a confidence below the threshold can be added to the training set.'
+
 """Prediction"""
 DIFFERENT_POSE_ORIGIN = "Check if the designated pose estimation files do not originate from the same provider (DLC, SLEAP)."
 POSE_UPLOAD_HELP = "Upload pose estimation files to predict with the trained classifier. Default provider and file type is based on the project config."

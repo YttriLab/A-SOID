@@ -4,7 +4,7 @@ import numpy as np
 import streamlit as st
 from config.help_messages import INIT_RATIO_HELP, MAX_ITER_HELP, MAX_SAMPLES_HELP, \
     SHOW_FINAL_RESULTS_HELP, RE_CLASSIFY_HELP, IMPRESS_TEXT, NO_CONFIG_HELP, \
-    NO_FEATURES_HELP
+    NO_FEATURES_HELP, CONFIDENCE_THRESHOLD_HELP
 from utils.auto_active_learning import show_classifier_results, RF_Classify
 from utils.load_workspace import load_features, load_heldout, \
     load_iter0, load_iterX, load_all_train
@@ -69,7 +69,8 @@ def prompt_setup(software, train_fx, conf,
                                                  key='maxs3', help=MAX_SAMPLES_HELP)
     st.session_state['conf_threshold'] = col2_bot_exp.number_input('Confidence threshold',
                                                min_value=0.05, max_value=0.95,
-                                               value=conf)
+                                               value=conf
+                                               ,help = CONFIDENCE_THRESHOLD_HELP)
     parameters_dict = {
         "Processing": dict(
             TRAIN_FRACTION=init_ratio,
