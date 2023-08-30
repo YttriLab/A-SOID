@@ -443,11 +443,11 @@ def predict_annotate_video(ftype, selected_bodyparts, iterX_model, framerate, fr
                                         framerate, annotation_classes,
                                         frame_dir,
                                         video_checkbox, predictions_match)
-                st.balloons()
+
                 message_box.success('Done. Type "R" to refresh.')
             np.save(vidpath_out.replace('mp4', 'npy'),
                     predictions_match)
-
+        st.balloons()
 
 def annotate_video(video_path, framerate, annotation_classes,
                    frame_dir, videos_dir, iter_folder,
@@ -701,7 +701,7 @@ def main(ri=None, config=None):
             if annot_vid_path == 'Add New Data':
 
                 try:
-                    st.write(project_dir, iter_folder)
+                    # st.write(project_dir, iter_folder)
                     [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
                     ri.info(f'loaded {iter_folder} model')
                     prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
