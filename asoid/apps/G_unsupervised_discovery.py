@@ -256,6 +256,8 @@ def save_update_info(config, behavior_names_split):
     d4 = today.strftime("%b-%d-%Y")
     prefix_new = input_container.text_input('Enter filename prefix', d4,
                                             help=PREFIX_HELP)
+    st.write(st.session_state['uploaded_fnames'])
+    sort_nicely(st.session_state['uploaded_fnames'])
     if prefix_new:
         st.success(f'Entered **{prefix_new}** as the prefix.')
     else:
@@ -263,7 +265,7 @@ def save_update_info(config, behavior_names_split):
     if st.button('Create new project', help=SAVE_NEW_HELP):
         parameters_dict = {
             'Data': dict(
-                DATA_INPUT_FILES=sort_nicely(st.session_state['uploaded_fnames']),
+                DATA_INPUT_FILES=st.session_state['uploaded_fnames'],
                 LABEL_INPUT_FILES=None),
 
             "Project": dict(
