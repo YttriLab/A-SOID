@@ -18,6 +18,8 @@ import umap
 import hdbscan
 import joblib
 from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
 from sklearn.decomposition import PCA
 
 TITLE = "Unsupervised discovery"
@@ -157,6 +159,7 @@ def pca_umap_hdbscan(target_behavior, annotation_classes, input_sav, cluster_ran
         assignments = {key: [] for key in target_behavior}
         assign_prob = {key: [] for key in target_behavior}
         soft_assignments = {key: [] for key in target_behavior}
+        pred_assign = {key: [] for key in target_behavior}
 
         if right_col.button('Embed and Cluster Targeted Behavior'):
             # for each target behavior, scale the features
@@ -182,9 +185,20 @@ def pca_umap_hdbscan(target_behavior, annotation_classes, input_sav, cluster_ran
                             soft_assignments[target_behav] = hdbscan_classification(
                             umap_embeddings[target_behav],
                             [cluster_range[target_behav], cluster_range[target_behav] + 0.5])
+                    with st.spinner('Training a classifier to predict membership for noise points...'):
+                        rf_ = RandomForestClassifier(n_estimators=200, random_state=42, n_jobs=-1,
+                                               criterion='gini',
+                                               class_weight='balanced_subsample'
+                                               )
+                        rf_.fit(selected_features[assignments[target_behav]>=0],
+                                assignments[target_behav][assignments[target_behav]>=0])
+                        pred_assign[target_behav] = rf_.predict(selected_features)
+                        st.info(f'random forest predictions match soft assignments '
+                                f'{round(accuracy_score(soft_assignments[target_behav], pred_assign[target_behav]), 2)}'
+                                f'')
 
             save_data(project_dir, iter_folder, 'embedding_output.sav',
-                      [umap_embeddings, assignments, soft_assignments])
+                      [umap_embeddings, assignments, soft_assignments, pred_assign])
             st.session_state['output_sav'] = os.path.join(project_dir, iter_folder, 'embedding_output.sav')
             st.success('Done. Type "R" to Refresh.')
 
@@ -192,17 +206,17 @@ def pca_umap_hdbscan(target_behavior, annotation_classes, input_sav, cluster_ran
 def plot_hdbscan_embedding(output_sav):
     if output_sav is not None:
         with open(output_sav, 'rb') as fr:
-            [umap_embeddings, assignments, soft_assignments] = joblib.load(fr)
+            [umap_embeddings, assignments, soft_assignments, pred_assign] = joblib.load(fr)
         # some plotting parameters
-        behav_figs = {key: [] for key in list(assignments.keys())}
-        behav_groups = {key: [] for key in list(assignments.keys())}
+        behav_figs = {key: [] for key in list(pred_assign.keys())}
+        behav_groups = {key: [] for key in list(pred_assign.keys())}
         # behav_embeds = {key: [] for key in list(assignments.keys())}
-        for behav in list(assignments.keys()):
-            assign = assignments[behav]
+        for behav in list(pred_assign.keys()):
+            assign = pred_assign[behav]
             embeds = umap_embeddings[behav]
             unique_classes = np.unique(assign)
-            group_types = ['Noise']
-            group_types.extend(['Group{}'.format(i) for i in unique_classes if i >= 0])
+            # group_types = ['Noise']
+            group_types = ['Group{}'.format(i) for i in unique_classes if i >= 0]
 
             trace_list = []
 
@@ -256,7 +270,7 @@ def save_update_info(config, behavior_names_split):
     d4 = today.strftime("%b-%d-%Y")
     prefix_new = input_container.text_input('Enter filename prefix', d4,
                                             help=PREFIX_HELP)
-    st.write(st.session_state['uploaded_fnames'])
+    # st.write(st.session_state['uploaded_fnames'])
     sort_nicely(st.session_state['uploaded_fnames'])
     if prefix_new:
         st.success(f'Entered **{prefix_new}** as the prefix.')
@@ -368,7 +382,7 @@ def main(ri=None, config=None):
                     with open(st.session_state['input_sav'], 'rb') as fr:
                         [all_feats, all_labels] = joblib.load(fr)
                     with open(st.session_state['output_sav'], 'rb') as fr:
-                        [_, assignments, soft_assignments] = joblib.load(fr)
+                        [_, assignments, soft_assignments, pred_assign] = joblib.load(fr)
                     # reorder and integrate new labels
                     annotation_classes_ex = annotation_classes.copy()
                     if exclude_other:
@@ -379,8 +393,8 @@ def main(ri=None, config=None):
                     for target_behav in target_behavior:
                         if target_behav == target_behavior[0]:
                             selected_subgroup = left_col.multiselect(f'Select the {target_behav} sub groups',
-                                                                     behav_groups[target_behav][1:],
-                                                                     behav_groups[target_behav][1:],
+                                                                     behav_groups[target_behav],
+                                                                     behav_groups[target_behav],
                                                                      key=target_behav,
                                                                      help=SUBCLASS_SELECT_HELP)
                             target_beh_id = annotation_classes_ex.index(target_behav)
@@ -389,19 +403,19 @@ def main(ri=None, config=None):
                             # create a copy to perturb
                             all_labels_split = all_labels.copy()
 
-                            group_id = [behav_groups[target_behav][1:].index(sel) for sel in selected_subgroup]
-                            new_assigns = soft_assignments[target_behav].copy()
+                            group_id = [behav_groups[target_behav].index(sel) for sel in selected_subgroup]
+                            new_assigns = pred_assign[target_behav].copy()
                             # for each behavior being split, change the index into last->last+n
                             count = 1
-                            for id_ in [behav_groups[target_behav][1:].index(sel)
-                                        for sel in behav_groups[target_behav][1:]]:
+                            for id_ in [behav_groups[target_behav].index(sel)
+                                        for sel in behav_groups[target_behav]]:
                                 if id_ in group_id:
                                     max_id = np.max(all_labels_split) + 1
-                                    new_assigns[soft_assignments[target_behav] == id_] = max_id + count
+                                    new_assigns[pred_assign[target_behav] == id_] = max_id + count
                                     count += 1
                                 else:
                                     max_id = np.max(all_labels_split) + 1
-                                    new_assigns[soft_assignments[target_behav] == id_] = max_id
+                                    new_assigns[pred_assign[target_behav] == id_] = max_id
                             all_labels_split[idx_target_beh] = new_assigns
 
                             # put other in last if exclude, for active learning to ignore
@@ -425,8 +439,8 @@ def main(ri=None, config=None):
 
                         else:
                             selected_subgroup = left_col.multiselect(f'Select the {target_behav} sub groups',
-                                                                     behav_groups[target_behav][1:],
-                                                                     behav_groups[target_behav][1:],
+                                                                     behav_groups[target_behav],
+                                                                     behav_groups[target_behav],
                                                                      key=target_behav,
                                                                      help=SUBCLASS_SELECT_HELP)
                             target_beh_id = annotation_classes_ex.index(target_behav)
@@ -435,19 +449,19 @@ def main(ri=None, config=None):
                             # create a copy to perturb
                             all_labels_split = all_labels_split_reorg.copy()
 
-                            group_id = [behav_groups[target_behav][1:].index(sel) for sel in selected_subgroup]
-                            new_assigns = soft_assignments[target_behav].copy()
+                            group_id = [behav_groups[target_behav].index(sel) for sel in selected_subgroup]
+                            new_assigns = pred_assign[target_behav].copy()
                             # for each behavior being split, change the index into last->last+n
                             count = 1
-                            for id_ in [behav_groups[target_behav][1:].index(sel)
+                            for id_ in [behav_groups[target_behav].index(sel)
                                         for sel in behav_groups[target_behav][1:]]:
                                 if id_ in group_id:
                                     max_id = np.max(all_labels_split) + 1
-                                    new_assigns[soft_assignments[target_behav] == id_] = max_id + count
+                                    new_assigns[pred_assign[target_behav] == id_] = max_id + count
                                     count += 1
                                 else:
                                     max_id = np.max(all_labels_split) + 1
-                                    new_assigns[soft_assignments[target_behav] == id_] = max_id
+                                    new_assigns[pred_assign[target_behav] == id_] = max_id
                             all_labels_split[idx_target_beh] = new_assigns
                             # put other in last if exclude, for active learning to ignore
                             # has to put prior to label encoder
