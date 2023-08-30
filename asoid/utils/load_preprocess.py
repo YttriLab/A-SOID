@@ -102,6 +102,7 @@ class Preprocess:
         self.input_videos = None
         self.label_csvs = None
         self.pose_csvs = None
+        self.llh_value = None
         self.pose_data_directories = None
         self.label_data_directories = None
         self.data_directories_test = None
@@ -311,7 +312,11 @@ class Preprocess:
                     # retrieve files in right order:
                     self.pose_csvs = [self.pose_files[x] for x in self.pose_csvs]
                     # st.write(self.pose_csvs)
+                    self.llh_value = upload_container.number_input('Likelihood value to filter',
+                                                                   min_value=0.05, max_value=0.95,
+                                                                   value=0.1)
                     upload_container.write('---')
+
                 # do the same for labels
                 self.label_files = upload_container.file_uploader(
                     'Upload corresponding annotation files',
@@ -445,7 +450,7 @@ class Preprocess:
                     # the loaded sleap file has them too, so exclude for both
                     idx_selected = [i for i in idx_selected if i not in idx_llh]
 
-                    filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh)
+                    filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh, self.llh_value)
 
                     # self.processed_input_data.append(np.array(current_pose.iloc[:, idx_selected]))
                     self.processed_input_data.append(filt_pose)
@@ -519,6 +524,7 @@ class Preprocess:
                     MULTI_ANIMAL=self.multi_animal
                 ),
                 "Processing": dict(
+                    LLH_VALUE=self.llh_value,
                     ITERATION=0,
                 )
             }

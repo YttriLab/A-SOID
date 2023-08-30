@@ -382,7 +382,7 @@ def create_labeled_vid(labels, proba,
     return all_ex_idx
 
 
-def create_videos(new_pose_csvs, selected_bodyparts, iterX_model, framerate, frames2integ,
+def create_videos(new_pose_csvs, selected_bodyparts, llh_value, iterX_model, framerate, frames2integ,
                   outlier_method, p_cutoff, num_outliers, output_fps, min_n_seconds, annotation_classes,
                   frame_dir, shortvid_dir):
     examples_idx = None
@@ -412,7 +412,7 @@ def create_videos(new_pose_csvs, selected_bodyparts, iterX_model, framerate, fra
             idx_llh = selected_pose_idx[2::3]
             # the loaded sleap file has them too, so exclude for both
             idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
-            filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh)
+            filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh, llh_value)
             # using feature scaling from training set
             feats, _ = feature_extraction([filt_pose], 1, frames2integ)
             features.append(feats)
@@ -615,6 +615,7 @@ def main(ri=None, config=None):
             annotation_classes_ex.pop(annotation_classes_ex.index('other'))
         # threshold = config["Processing"].getfloat("SCORE_THRESHOLD")
         selected_bodyparts = [x.strip() for x in config["Project"].get("KEYPOINTS_CHOSEN").split(",")]
+        llh_value = config["Processing"].getint("LLH_VALUE")
         threshold = 0.1
         iteration = config["Processing"].getint("ITERATION")
         framerate = config["Project"].getint("FRAMERATE")
@@ -744,6 +745,7 @@ def main(ri=None, config=None):
                                         create_videos(
                                             st.session_state['pose'],
                                             selected_bodyparts,
+                                            llh_value,
                                             iterX_model,
                                             framerate,
                                             frames2integ,

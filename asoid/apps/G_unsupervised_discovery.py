@@ -70,7 +70,8 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
         #     st.session_state['uploaded_fnames'] = []
 
 
-def get_features_labels(selected_bodyparts, iterX_model, frames2integ, project_dir, iter_folder, placeholder,
+def get_features_labels(selected_bodyparts, llh_value,
+                        iterX_model, frames2integ, project_dir, iter_folder, placeholder,
                         ):
     features = [None]
     predict_arr = [None]
@@ -97,7 +98,7 @@ def get_features_labels(selected_bodyparts, iterX_model, frames2integ, project_d
             idx_llh = selected_pose_idx[2::3]
             # the loaded sleap file has them too, so exclude for both
             idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
-            filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh)
+            filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh, llh_value)
             # using feature scaling from training set
             feats, _ = feature_extraction([filt_pose], 1, frames2integ)
             features.append(feats)
@@ -309,6 +310,7 @@ def main(ri=None, config=None):
         exclude_other = config["Project"].getboolean("EXCLUDE_OTHER")
         # threshold = config["Processing"].getfloat("SCORE_THRESHOLD")
         threshold = 0.1
+        llh_value = config["Processing"].getint("LLH_VALUE")
         iteration = config["Processing"].getint("ITERATION")
         framerate = config["Project"].getint("FRAMERATE")
         duration_min = config["Processing"].getfloat("MIN_DURATION")
@@ -338,7 +340,8 @@ def main(ri=None, config=None):
         if 'output_sav' not in st.session_state:
             st.session_state['output_sav'] = None
         if st.session_state['input_sav'] is None:
-            all_feats, all_labels = get_features_labels(selected_bodyparts, iterX_model, frames2integ,
+            all_feats, all_labels = get_features_labels(selected_bodyparts, llh_value,
+                                                        iterX_model, frames2integ,
                                                         project_dir, iter_folder,
                                                         left_col
                                                         )

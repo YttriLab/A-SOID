@@ -364,7 +364,7 @@ def create_annotated_videos(vidpath_out,
         video.release()
 
 
-def predict_annotate_video(ftype, selected_bodyparts, iterX_model, framerate, frames2integ,
+def predict_annotate_video(ftype, selected_bodyparts, llh_value, iterX_model, framerate, frames2integ,
                            annotation_classes,
                            frame_dir, videos_dir, iter_folder,
                            video_checkbox, colL):
@@ -418,7 +418,7 @@ def predict_annotate_video(ftype, selected_bodyparts, iterX_model, framerate, fr
 
                 # the loaded sleap file has them too, so exclude for both
                 idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
-            filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh)
+            filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh, llh_value)
 
             total_n_frames.append(filt_pose.shape[0])
             feats, _ = feature_extraction([filt_pose], 1, frames2integ)
@@ -652,6 +652,7 @@ def main(ri=None, config=None):
         exclude_other = config["Project"].getboolean("EXCLUDE_OTHER")
         # threshold = config["Processing"].getfloat("SCORE_THRESHOLD")
         threshold = 0.1
+        llh_value = config["Processing"].getint("LLH_VALUE")
         iteration = config["Processing"].getint("ITERATION")
         framerate = config["Project"].getint("FRAMERATE")
         duration_min = config["Processing"].getfloat("MIN_DURATION")
@@ -710,7 +711,7 @@ def main(ri=None, config=None):
                     ri.info(f'Please train a {iter_folder} model in :orange[Active Learning] step.')
                 if st.session_state['pose'] is not None:
                     placeholder = st.empty()
-                    predict_annotate_video(ftype, selected_bodyparts, iterX_model, framerate, frames2integ,
+                    predict_annotate_video(ftype, selected_bodyparts, llh_value, iterX_model, framerate, frames2integ,
                                            annotation_classes,
                                            None, videos_dir, iter_folder,
                                            None, placeholder)

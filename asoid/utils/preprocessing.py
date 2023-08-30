@@ -49,7 +49,7 @@ def get_filenamesjson(base_path, folder):
     sort_nicely(filenames)
     return filenames
 
-def adp_filt(pose, idx_selected, idx_llh):
+def adp_filt(pose, idx_selected, idx_llh, llh_value):
     datax = np.array(pose.iloc[:, idx_selected[::2]])
     datay = np.array(pose.iloc[:, idx_selected[1::2]])
     data_lh = np.array(pose.iloc[:, idx_llh])
@@ -59,7 +59,7 @@ def adp_filt(pose, idx_selected, idx_llh):
         perc_rect.append(0)
     for x in range(data_lh.shape[1]):
         # TODO: load from config.ini the llh threshold
-        llh = 0.6
+        llh = llh_value
         data_lh_float = data_lh[:, x].astype(float)
         perc_rect[x] = np.sum(data_lh_float < llh) / data_lh.shape[0]
         currdf_filt[0, (2 * x):(2 * x + 2)] = np.hstack([datax[0, x], datay[0, x]])
