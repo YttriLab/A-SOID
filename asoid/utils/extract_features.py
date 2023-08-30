@@ -1,5 +1,5 @@
 import math
-
+import os
 import matplotlib.colors as mcolors
 import numpy as np
 import pandas as pd
@@ -8,13 +8,10 @@ import streamlit as st
 from numba import jit
 from scipy import stats
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 from stqdm import stqdm
 
 from utils.load_workspace import load_data, save_data
-from config.help_messages import BEHAVIOR_COLOR_SELECT_HELP
-
-
+from config.help_messages import *
 
 
 @jit(nopython=True)
@@ -193,7 +190,8 @@ def bsoid_extract_numba(data, fps):
 
 def feature_extraction(train_datalist, num_train, framerate):
     f_integrated = []
-    for i in stqdm(range(num_train), desc="Extracting spatiotemporal features from pose"):
+    # for i in stqdm(range(num_train), desc="Extracting spatiotemporal features from pose"):
+    for i in range(num_train):
         with st.spinner('Extracting features from pose...'):
             binned_features = bsoid_extract_numba([train_datalist[i]], framerate)
             f_integrated.append(binned_features[0])  # getting only the non-shifted
@@ -202,6 +200,7 @@ def feature_extraction(train_datalist, num_train, framerate):
     scaler.fit(features)
     scaled_features = scaler.transform(features)
     return features, scaled_features
+
 
 def feature_extraction_with_extr_scaler(train_datalist, num_train, framerate, scaler):
     f_integrated = []
@@ -248,6 +247,20 @@ def bsoid_predict_numba_noscale(scaled_feats, clf):
         labels = clf.predict(np.nan_to_num(scaled_feats[i]))
         labels_fslow.append(labels)
     return labels_fslow
+
+
+def bsoid_predict_proba_numba_noscale(scaled_feats, clf):
+    """
+    :param scaler:
+    :param feats: list, multiple feats (original feature space)
+    :param clf: Obj, MLP classifier
+    :return nonfs_labels: list, label/100ms
+    """
+    labels_proba = []
+    for i in range(0, len(scaled_feats)):
+        predict_proba = clf.predict_proba(np.nan_to_num(scaled_feats[i]))
+        labels_proba.append(predict_proba)
+    return labels_proba
 
 
 def frameshift_predict(data_test, num_test, scaler, rf_model, framerate=30):
@@ -359,20 +372,20 @@ def interactive_durations_dist(targets, behavior_classes, framerate, plot_contai
 
             for i, class_id in enumerate(behavior_classes):
                 behavior_colors[class_id] = option_expander.selectbox(f'Color for {behavior_classes[i]}',
-                                                                 all_c_options,
-                                                                 index=all_c_options.index(default_colors[i]),
-                                                                 key=f'color_option{i}',
-                                                                 help= BEHAVIOR_COLOR_SELECT_HELP)
+                                                                      all_c_options,
+                                                                      index=all_c_options.index(default_colors[i]),
+                                                                      key=f'color_option{i}',
+                                                                      help=BEHAVIOR_COLOR_SELECT_HELP)
             colors = [behavior_colors[class_id] for class_id in behavior_classes]
         else:
             behavior_colors = {k: [] for k in ['All']}
             default_colors = ['dodgerblue']
             for i, class_id in enumerate(['All']):
                 behavior_colors[class_id] = option_expander.selectbox(f'Color for all',
-                                                                 all_c_options,
-                                                                 index=all_c_options.index(default_colors[i]),
-                                                                 key=f'color_option{i}',
-                                                                 help = BEHAVIOR_COLOR_SELECT_HELP)
+                                                                      all_c_options,
+                                                                      index=all_c_options.index(default_colors[i]),
+                                                                      key=f'color_option{i}',
+                                                                      help=BEHAVIOR_COLOR_SELECT_HELP)
             colors = [behavior_colors[class_id] for class_id in ['All']]
 
     duration_dict = {k: [] for k in behavior_classes}
@@ -385,7 +398,7 @@ def interactive_durations_dist(targets, behavior_classes, framerate, plot_contai
     for seq in range(len(durations)):
         current_seq_durs = durations[seq]
         for unique_beh in np.unique(np.hstack(corr_targets)):
-            #make sure it's an int
+            # make sure it's an int
             unique_beh = int(unique_beh)
             idx_behavior = np.where(corr_targets[seq] == unique_beh)[0]
             curr_annot = behavior_classes[unique_beh]
@@ -438,12 +451,13 @@ def interactive_durations_dist(targets, behavior_classes, framerate, plot_contai
 
 class Extract:
 
-    def __init__(self, working_dir, prefix, frames2integ, shuffled_splits):
+    def __init__(self, working_dir, prefix, frames2integ):
 
         self.working_dir = working_dir
         self.prefix = prefix
+        self.project_dir = os.path.join(working_dir, prefix)
+        self.iteration_0 = 'iteration-0'
         self.frames2integ = frames2integ
-        self.shuffled_splits = shuffled_splits
 
         self.processed_input_data = None
         self.targets = None
@@ -471,57 +485,37 @@ class Extract:
                                                                  self.frames2integ)
 
     def downsample_labels(self):
-        num2skip = int(self.frames2integ / 10)
-        # standardize, and keep the scalar for future data
-        self.scalar = StandardScaler()
-        self.scalar.fit(self.features)
-        # downsample labels to match binned features
-        for i in range(len(self.processed_input_data)):
-            targets_mode_temp = np.hstack(
-                [stats.mode(self.targets[i][num2skip * n:num2skip * n + num2skip])[
-                     0] for n in range(len(self.targets[i]))])
-            targets_fitted = self.targets[i][:int(self.targets[i].shape[0] / num2skip) * num2skip:num2skip]
-            if i == 0:
-                self.targets_mode = targets_mode_temp[:targets_fitted.shape[0]].copy()
-            else:
-                self.targets_mode = np.hstack((self.targets_mode,
-                                               targets_mode_temp[:targets_fitted.shape[0]]))
-
-    def shuffle_data(self):
-        # partitioning into 20 randomly selected train/test splits
-        seeds = np.arange(self.shuffled_splits)
-        for seed in stqdm(seeds, desc="Randomly partitioning into 70/30..."):
-            X_train, X_test, y_train, y_test = train_test_split(self.scaled_features, self.targets_mode,
-                                                                test_size=0.30, random_state=seed)
-            self.features_train.append(X_train)
-            self.targets_train.append(y_train)
-            self.features_heldout.append(X_test)
-            self.targets_heldout.append(y_test)
-
-        # initialize shuffled features and targets
-        # for seed in seeds:
-        #     scaled_features_train_shuf, targets_mode_shuf = unison_shuffled_copies(self.scaled_features_train,
-        #                                                                            self.targets_mode,
-        #                                                                            seed)
-        #     self.features_runlist.append(scaled_features_train_shuf)
-        #     self.targets_runlist.append(targets_mode_shuf)
+        num2skip = int(self.frames2integ / 10)  # 12
+        targets_ls = []
+        for i in range(len(self.targets)):
+            targets_not_matching = np.hstack(
+                [stats.mode(self.targets[i][(num2skip - 1) + num2skip * n:(num2skip - 1) + num2skip * n + num2skip])[0]
+                 for n in range(len(self.targets[i]))])
+            # features are skipped so if it's not multiple of 12, we discard the final few targets
+            targets_matching_features = self.targets[i][(num2skip - 1):-1:num2skip]
+            targets_ls.append(targets_not_matching[:targets_matching_features.shape[0]])
+        self.targets_mode = np.hstack(targets_ls)
+        if self.features.shape[0] > self.targets_mode.shape[0]:
+            self.features = self.features[:self.targets_mode.shape[0]]
+            # y = self.targets_mode.copy()
+        elif self.features.shape[0] < self.features.shape[0]:
+            # X = self.features.copy()
+            self.targets_mode = self.targets_mode[:self.features.shape[0]]
+        # else:
+        #     X = self.features.copy()
+        #     y = self.targets_mode.copy()
 
     def save_features_targets(self):
-        # save partitioned datasets, useful for cross-validation
-        save_data(self.working_dir, self.prefix, 'feats_targets.sav',
-                  [self.features_train,
-                   self.targets_train,
-                   self.scalar,
-                   self.frames2integ])
+        save_data(self.project_dir, self.iteration_0, 'feats_targets.sav',
+                  [
+                      self.features,
+                      self.targets_mode,
+                      self.frames2integ
+                  ])
 
-        save_data(self.working_dir, self.prefix, 'heldout_feats_targets.sav',
-                  [self.features_heldout,
-                   self.targets_heldout])
-        
     def main(self):
         self.extract_features()
         self.downsample_labels()
-        self.shuffle_data()
         self.save_features_targets()
         col_left, _, col_right = st.columns([1, 1, 1])
         col_right.success("Continue on with next module".upper())

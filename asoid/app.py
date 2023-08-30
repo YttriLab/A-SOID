@@ -1,95 +1,151 @@
 import configparser as cfg
-import functools
-import tempfile
 from pathlib import Path
-
-import hydralit_components as hc
-import numpy as np
 import streamlit as st
 from PIL import Image
 from streamlit_option_menu import option_menu
+import base64
+from io import StringIO
 
-import apps as _stable_apps
-import categories as _categories
-import utilities
-from utils.load_workspace import load_features, load_iterX
+from apps import *
 from config.help_messages import UPLOAD_CONFIG_HELP, IMPRESS_TEXT
+from utils.load_workspace import load_data
 
 
-def get_url_app():
-    """
-    :return: current app key
-    """
-    try:
-        return st.experimental_get_query_params()["app"][0]
-    except KeyError:
-        return "index"
+def img_to_bytes(img_path):
+    img_bytes = Path(img_path).read_bytes()
+    encoded = base64.b64encode(img_bytes).decode()
+    return encoded
 
 
-def swap_app(app):
-    """
-    :param app: the desired app to toggle to
-    :return:
-    """
-    st.experimental_set_query_params(app=app)
-    session_state = utilities.session_state()
-    if not session_state.app == app:
-        session_state.app = app
-        # time.sleep(0.1)
-        st.experimental_rerun()
+def img_to_html(img_path, width=500):
+    img_html = f"<img src='data:image/png;base64,{img_to_bytes(img_path)}'  width='{width}px', class='img-fluid'>"
+    return img_html
 
 
-def index(application_options):
+def index():
     """
     :param application_options: dictionary (app_key: apps)
     :return:
     """
-
-    num_columns = len(_categories.APPLICATION_CATEGORIES_BY_COLUMN.keys())
-    columns = st.columns(num_columns)
-    bottom_cont = st.container()
     HERE = Path(__file__).parent.resolve()
 
     step1_fname = HERE.joinpath("images/data_process_wht.png")
-    step1_im = Image.open(step1_fname)
     step2_fname = HERE.joinpath("images/feature_extraction_wht.png")
-    step2_im = Image.open(step2_fname)
     step3_fname = HERE.joinpath("images/baseline_classifier_wht.png")
-    step3_im = Image.open(step3_fname)
     step4_fname = HERE.joinpath("images/active_learning_schematic.png")
-    step4_im = Image.open(step4_fname)
-    step5_fname =  HERE.joinpath("images/app_discovery.png")
-    step5_im = Image.open(step5_fname)
+    step5_fname = HERE.joinpath("images/app_discovery.png")
 
-    # 4 column layout
-    for (
-            column_index,
-            categories,
-    ) in _categories.APPLICATION_CATEGORIES_BY_COLUMN.items():
-        column = columns[column_index]
-        # for each category
-        for category in categories:
-            applications_in_this_category = [
-                item
-                for item in application_options.items()
-                if item[1].CATEGORY == category
-            ]
-            # create a container expander that puts an image/gif/video and a button to navigate
-            for app_key, application in applications_in_this_category:
-                    app_ = column.expander(f'{category}', expanded=True)
-                    if application.TITLE == 'Preprocess data':
-                        app_.image(step1_im)
-                    elif application.TITLE == 'Extract Features':
-                        app_.image(step2_im)
-                    elif application.TITLE == "Active Learning":
-                        app_.image(step3_im)
-                    elif application.TITLE == 'Refine Behaviors':
-                        app_.image(step4_im)
-                    elif application.TITLE == "Unsupervised discovery":
-                        app_.image(step5_im)
+    st.markdown(f" <h1 style='text-align: left; color: #f6386d; font-size:30px; "
+                f"font-family:Avenir; font-weight:normal'>Welcome to A-SOiD</h1> "
+                , unsafe_allow_html=True)
+    st.write("---")
+    st.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
+                f"font-family:Avenir; font-weight:normal'>"
+                f"Introducing A-SOiD, the innovative no code website for building supervised classifiers. "
+                f"With our platform, you can input pose and behavioral labels to create a customized classifier "
+                f"that accurately identifies and classifies animal behavior. "
+                f"Our active learning paradigm ensures balanced training data, "
+                f"while our manual refinement process allows you to expand and refine behavioral classes "
+                f"in an iterative fashion, 'learning the animal behavior as you go.'"
+                f"And with our unsupervised segmentation technology, "
+                f"A-SOiD can further dissect subtle differences within the same human-defined behavior, "
+                f"providing even deeper insights into animal behavior."
+                f"Best of all, A-SOiD's performance outperforms state-of-the-art solutions, "
+                f"all without the need for a GPU. With in-depth analysis and interactive visuals, "
+                f"as well as downloadable CSVs for easy integration into your existing workflow, "
+                f"A-SOiD is the ultimate tool for building your own animal behavior classifiers. "
+                f"Try A-SOiD today and unlock a new level of insights into animal behavior."
+                , unsafe_allow_html=True)
+    # st.write("---")
+    st.markdown(f" <h1 style='text-align: left; color: #f6386d; font-size:18px; "
+                f"font-family:Avenir; font-weight:normal'>Get Started by Selecting a Step</h1> "
+                , unsafe_allow_html=True)
 
-                    if app_.button(f'{application.TITLE}', key=app_key):
-                        swap_app(app_key)
+    selected_step = st.select_slider('Steps',
+                                     options=['Step 1',
+                                              'Step 2',
+                                              'Step 3',
+                                              'Step 4',
+                                              'Step 5',
+                                              'Step 6'],
+                                     value=st.session_state['page'],
+                                     label_visibility='collapsed')
+
+    colL, colR = st.columns(2)
+    if selected_step == 'Step 1':
+        colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
+                      f"font-family:Avenir; font-weight:normal'>Step 1: Upload Your Pose Estimation and Annotation Data"
+                      , unsafe_allow_html=True)
+
+        colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
+                      f"font-family:Avenir; font-weight:normal'>"
+                      f""
+                      f"To begin, ensure that your pose estimation files are in either DLC or SLEAP format. "
+                      f"These files contain the spatial coordinates of the individual body parts in your video,"
+                      f" enabling us to accurately track movement and analyze posture."
+                      f"", unsafe_allow_html=True)
+        colR.markdown("<p style='text-align: right; color: grey; '>" + img_to_html(step1_fname, width=350) + "</p>",
+                      unsafe_allow_html=True)
+
+    elif selected_step == 'Step 2':
+        colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
+                      f"font-family:Avenir; font-weight:normal'> Step 2: Extract spatio-temporal features from pose"
+                      f"", unsafe_allow_html=True)
+        colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
+                      f"font-family:Avenir; font-weight:normal'> In this step,"
+                      f" you will examine the distribution of your annotated behaviors. "
+                      f"Once you define your minimum duration, features are then computed "
+                      f"across time.", unsafe_allow_html=True)
+        colR.markdown("<p style='text-align: right; color: grey; '>" + img_to_html(step2_fname, width=350) + "</p>",
+                      unsafe_allow_html=True)
+    elif selected_step == 'Step 3':
+        colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
+                      f"font-family:Avenir; font-weight:normal'> Step 3: Training a classifier"
+                      f"", unsafe_allow_html=True)
+        colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
+                      f"font-family:Avenir; font-weight:normal'> In this step,"
+                      f" you will build a machine learning classifier. "
+                      f"A-SOiD automatically balances your training data to prevent  "
+                      f"emphasis on large classes.", unsafe_allow_html=True)
+        colR.markdown("<p style='text-align: right; color: grey; '>" + img_to_html(step3_fname, width=350) + "</p>",
+                      unsafe_allow_html=True)
+    elif selected_step == 'Step 4':
+        colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
+                      f"font-family:Avenir; font-weight:normal'> Step 4: Manual refinement on new data"
+                      f"", unsafe_allow_html=True)
+        colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
+                      f"font-family:Avenir; font-weight:normal'> In this step,"
+                      f" you will refine the low confidence behaviors. "
+                      f"The refinements will be added to the training dataset."
+                      f"", unsafe_allow_html=True)
+        colR.markdown("<p style='text-align: right; color: grey; '>" + img_to_html(step4_fname, width=350) + "</p>",
+                      unsafe_allow_html=True)
+
+    elif selected_step == 'Step 5':
+        colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
+                      f"font-family:Avenir; font-weight:normal'> Step 5: Discover subtle differences within behavior"
+                      f"", unsafe_allow_html=True)
+        colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
+                      f"font-family:Avenir; font-weight:normal'> In this step,"
+                      f" you can run unsupervised learning on a particular behavior to get "
+                      f"segmented behaviors."
+                      f"", unsafe_allow_html=True)
+        colR.markdown("<p style='text-align: right; color: grey; '>" + img_to_html(step5_fname, width=350) + "</p>",
+                      unsafe_allow_html=True)
+
+    elif selected_step == 'Step 6':
+        colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
+                      f"font-family:Avenir; font-weight:normal'> Step 5: Discover subtle differences within behavior"
+                      f"", unsafe_allow_html=True)
+        colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
+                      f"font-family:Avenir; font-weight:normal'> In this step,"
+                      f" you can run unsupervised learning on a particular behavior to get "
+                      f"segmented behaviors."
+                      f"", unsafe_allow_html=True)
+        colR.markdown("<p style='text-align: right; color: grey; '>" + img_to_html(step5_fname, width=350) + "</p>",
+                      unsafe_allow_html=True)
+
+    bottom_cont = st.container()
 
     with bottom_cont:
         st.markdown("""---""")
@@ -97,36 +153,15 @@ def index(application_options):
         st.markdown('<span style="color:grey">{}</span>'.format(IMPRESS_TEXT), unsafe_allow_html=True)
 
 
-def _get_apps_from_module(module):
-    """
-    :param module: a module folder that contains each python file app
-    :return: list of apps
-    """
-    # strip _ and ignore __init__.py
-    apps = {
-        item.replace("_", "-"): getattr(module, item)
-        for item in dir(module)
-        if not item.startswith("_")
-    }
-
-    return apps
-
-
 def main():
-    session_state = utilities.session_state(app=get_url_app())
-    stable_apps = _get_apps_from_module(_stable_apps)
     HERE = Path(__file__).parent.resolve()
     logo_fname_ = HERE.joinpath("images/asoid_logo.png")
     logo_im_ = Image.open(logo_fname_)
-    #TODO: Decide on one, delete over
-    logo_fname = HERE.joinpath("images/asoid_logo_wtext.png")
-    logo_im = Image.open(logo_fname)
     # set webpage icon and layout
     st.set_page_config(
         page_title="A-SOiD",
         page_icon=logo_im_,
         layout="wide",
-        # initial_sidebar_state="expanded",
         menu_items={
         }
     )
@@ -138,155 +173,88 @@ def main():
                 """
     st.markdown(hide_streamlit_style, unsafe_allow_html=True)
     st.set_option('deprecation.showPyplotGlobalUse', False)
-    header_container = st.container()
-    # locate module
-    application_options = {**stable_apps}
-    cc = st.columns(len(application_options))
-    # if stuck in no mans land, return to index (main menu)
-    if (
-            session_state.app != "index"
-            and not session_state.app in application_options.keys()
-    ):
-        print(f"Option {session_state.app} not valid. Returning to main menu...")
-        swap_app("index")
     st.markdown(
         """
         <style>
-        [data-testid="stSidebar"][aria-expanded="true"] > div:first-child {
-            width: 250px;
+        [data-testid="stSidebar"]{
+            min-width: 250px;
+            max-width: 250px;   
         }
-        [data-testid="stSidebar"][aria-expanded="false"] > div:first-child {
-            width: 250px;
-            margin-left: -500px;
+        [data-testid="stSidebar"][aria-expanded="false"] {
+            margin-left: -250px;
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
-    theme_bad = {'bgcolor': '#0C0C0C', 'title_color': 'orange', 'content_color': 'orange', 'icon_color': 'orange',
-                 'icon': 'fa fa-question-circle'}
-    theme_okay = {'bgcolor': '#0C0C0C', 'title_color': 'yellow', 'content_color': 'yellow', 'icon_color': 'yellow',
-                  'icon': 'fa fa-question-circle'}
-    theme_good = {'bgcolor': '#0C0C0C', 'title_color': 'green', 'content_color': 'green', 'icon_color': 'green',
-                  'icon': 'fa fa-check-circle'}
+    header_container = st.container()
+    if 'page' not in st.session_state:
+        st.session_state['page'] = 'Step 1'
+    if 'config' not in st.session_state:
+        st.session_state['config'] = None
+
     # if in main menu, display applications, see above index for item layout
     with st.sidebar:
         le, ri = header_container.columns([1, 1])
 
-        uploaded_config = le.file_uploader('upload config file'.upper()
-                                           , type='ini'
-                                           , help= UPLOAD_CONFIG_HELP)
-
-        if uploaded_config is not None:
-            # Make temp file path from uploaded file
-            with tempfile.NamedTemporaryFile(mode="wb", delete=False) as temp:
-                bytes_data = uploaded_config.getvalue()
-                temp.write(bytes_data)
-            project_config = cfg.ConfigParser()
-            project_config.optionxform = str
-            with open(temp.name) as file:
-                project_config.read_file(file)
-
-        try:
-            sections = [x for x in project_config.keys() if x != "DEFAULT"]
-            for parameter, value in project_config[sections[0]].items():
-                if parameter == 'PROJECT_PATH':
-                    working_dir = value
-                elif parameter == 'PROJECT_NAME':
-                    prefix = value
-                elif parameter == 'CLASSES':
-                    annotations = value
-            with cc[0]:
-                hc.info_card(title='Upload Data',
-                             content=f'{working_dir}/{prefix}', bar_value=100,
-                             icon_size="1.5rem", title_text_size="1rem", content_text_size="0.8rem",
-                             theme_override=theme_good, key='first')
-            try:
-                [features_train, _, _, _] = load_features(working_dir, prefix)
-                with cc[1]:
-                    hc.info_card(title='Extract Features',
-                                 content=f'Extracted {len(features_train)} random splits, each with '
-                                         f'features {[*np.vstack(features_train[0]).shape]} for '
-                                         f'{annotations}', bar_value=100,
-                                 icon_size="1.5rem", title_text_size="1rem", content_text_size="0.8rem",
-                                 theme_override=theme_good, key='second')
-            except:
-                with cc[1]:
-                    hc.info_card(title='Extract Features', content='', bar_value=5,
-                                 icon_size="1.5rem", title_text_size="1rem", content_text_size="0.8rem",
-                                 theme_override=theme_bad, key='second')
-            try:
-                [_, _, _, scores, _, _] = load_iterX(working_dir, prefix)
-                with cc[2]:
-                    rounded_scores = [int(100*round(np.mean(scores[-1], axis=0)[c], 2))
-                                      for c in range(len(scores[-1][0]))]
-                    classes = annotations.split(', ')
-                    hc.info_card(title='Active Learning',
-                                 content=f'Final classication was {[*rounded_scores]}% '
-                                         f'for behaviors: {classes[:-1]}', bar_value=100,
-                                 icon_size="1.5rem", title_text_size="1rem", content_text_size="0.8rem",
-                                 theme_override=theme_good, key='third')
-            except:
-                with cc[2]:
-                    hc.info_card(title='Active Learning', content='', bar_value=5,
-                                 icon_size="1.5rem", title_text_size="1rem", content_text_size="0.8rem",
-                                 theme_override=theme_bad, key='third')
-            # try:
-            #     [predict, proba, outlier_indices] = load_predict_proba(working_dir, prefix)
-            #     with cc[3]:
-            #         # can just use 'good', 'bad', 'neutral' sentiment to auto color the card
-            #         hc.info_card(title='Refine Behaviors', content='', sentiment='good', bar_value=60,
-            #                      icon_size="1.5rem", title_text_size="1rem", content_text_size="0.8rem",
-            #                      theme_override=theme_okay, key='fourth')
-            # except:
-            #     with cc[3]:
-            #         hc.info_card(title='Refine Behaviors', content='', bar_value=5,
-            #                      icon_size="1.5rem", title_text_size="1rem", content_text_size="0.8rem",
-            #                      theme_override=theme_bad, key='fourth')
-
-        except:
-            with cc[0]:
-                hc.info_card(title='Upload Data', content='', bar_value=5,
-                             icon_size="1.5rem", title_text_size="1rem", content_text_size="0.8rem",
-                             theme_override=theme_bad, key='first')
+        with le.form("config".upper(), clear_on_submit=True):
+            uploaded_config = st.file_uploader('Upload Config File', type='ini', help=UPLOAD_CONFIG_HELP)
+            if st.session_state['config'] is None:
+                submitted = st.form_submit_button("Upload")
+                if submitted and uploaded_config is not None:
+                    # To convert to a string based IO:
+                    stringio = StringIO(uploaded_config.getvalue().decode("utf-8"))
+                    # read stringio
+                    project_config = cfg.ConfigParser()
+                    project_config.optionxform = str
+                    project_config.read_file(stringio)
+                    st.session_state['config'] = project_config
+                    st.experimental_rerun()
+            elif st.session_state['config'] is not None:
+                cleared = st.form_submit_button(":red[Delete]")
+                if cleared:
+                    st.session_state['config'] = None
+                    st.session_state['page'] = None
+                    st.experimental_rerun()
 
         _, mid_im, _ = st.columns([0.35, 1, 0.35])
-        _, mid_im2, _ = st.columns([0.415, 1, 0.415])
+
         mid_im.image(logo_im_)
-        if mid_im2.button("Start A-SOiD"):
-            swap_app('A-data-preprocess')
         st.write('---')
-        app_names = np.array(['index',
-                              'A-data-preprocess',
-                              'B-extract-features',
-                              'C-auto-active-learning',
-                              #'D-active-learning',
-                              'E-predict',
-                              'F-view',
-                              'G-unsupervised-discovery',
-                              ])
-        menu_options = ['Menu',
-                        'Upload Data',
-                        'Extract Features',
-                        'Active Learning',
-                        #'Refine Behaviors',
-                        'Predict',
-                        "View",
-                        "Discover",
-                        ]
-        icon_options = ['window-desktop',
-                        'upload',
-                        'bar-chart-line',
-                        'diagram-2',
-                        #'images',
-                        'file-earmark-plus',
-                        'binoculars',
-                        "signpost-split",
-                        ]
+        try:
+            working_dir = st.session_state['config']["Project"].get("PROJECT_PATH")
+            prefix = st.session_state['config']["Project"].get("PROJECT_NAME")
+            data, config = load_data(working_dir,
+                                     prefix)
+            menu_options = ['Menu', 'Upload Data', 'Extract Features', 'Active Learning',
+                            'Refine Behaviors', 'Create New Dataset', 'Predict', 'Discover']
+            icon_options = ['window-desktop',
+                            'upload',
+                            'bar-chart-line',
+                            'diagram-2',
+                            'images',
+                            'file-earmark-plus',
+                            'robot',
+                            "signpost-split",
+                            ]
+
+        except:
+            menu_options = ['Menu', 'Upload Data', 'Active Learning',
+                            'Refine Behaviors', 'Create New Dataset', 'Predict', 'Discover']
+            icon_options = ['window-desktop',
+                            'upload',
+
+                            'diagram-2',
+                            'images',
+                            'file-earmark-plus',
+                            'robot',
+                            "signpost-split",
+                            ]
+
         nav_options = option_menu(None, menu_options,
                                   icons=icon_options,
                                   menu_icon="",
-                                  default_index=int(np.where(app_names == get_url_app())[0]),
+                                  default_index=0,
                                   # orientation="horizontal",
                                   styles={
                                       "container": {"padding": "0!important",
@@ -301,31 +269,48 @@ def main():
                                           "--hover-color": "#000000"},
                                       "nav-link-selected": {
                                           "font-weight": "normal",
-                                          # "text-decoration": "underline",
                                           "color": "#FFFFFF",
                                           "background-color": '#f6386d'},
                                   }
                                   )
-        for i in range(len(menu_options)):
-            if nav_options == menu_options[i]:
-                swap_app(app_names[i])
 
-    if session_state.app == "index":
-        application_function = functools.partial(
-            index, application_options=application_options,
-        )
-
-    else:
-        try:
-            application_function = functools.partial(
-                application_options[session_state.app].main, config=project_config,
-            )
-        except:
-            application_function = functools.partial(
-                application_options[session_state.app].main, config=None,
-            )
-
-    application_function()
+    if nav_options == 'Menu':
+        index()
+    elif 'Upload Data' in nav_options:
+        if "config" in st.session_state.keys():
+            A_data_preprocess.main(config=st.session_state['config'])
+        else:
+            A_data_preprocess.main(config=None)
+    elif 'Extract Features' in nav_options:
+        if "config" in st.session_state.keys():
+            B_extract_features.main(config=st.session_state['config'])
+        else:
+            B_extract_features.main(config=None)
+    elif 'Active Learning' in nav_options:
+        if "config" in st.session_state.keys():
+            C_auto_active_learning.main(ri=ri, config=st.session_state['config'])
+        else:
+            C_auto_active_learning.main(ri=ri, config=None)
+    elif 'Refine Behaviors' in nav_options:
+        if "config" in st.session_state.keys():
+            D_manual_active_learning.main(ri=ri, config=st.session_state['config'])
+        else:
+            D_manual_active_learning.main(ri=ri, config=None)
+    elif 'Create New Dataset' in nav_options:
+        if "config" in st.session_state.keys():
+            E_create_new_training.main(ri=ri, config=st.session_state['config'])
+        else:
+            E_create_new_training.main(ri=ri, config=None)
+    elif 'Predict' in nav_options:
+        if "config" in st.session_state.keys():
+            F_predict.main(ri=ri, config=st.session_state['config'])
+        else:
+            F_predict.main(ri=ri, config=None)
+    elif 'Discover' in nav_options:
+        if "config" in st.session_state.keys():
+            G_unsupervised_discovery.main(ri=ri, config=st.session_state['config'])
+        else:
+            G_unsupervised_discovery.main(ri=None, config=None)
 
 
 if __name__ == "__main__":

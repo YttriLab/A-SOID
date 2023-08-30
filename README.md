@@ -5,11 +5,44 @@
 
 ### Read the [preprint](https://www.biorxiv.org/content/10.1101/2022.11.04.515138v1)!
 
+---
+## News:
+### August 2023: A-SOiD v0.3.0 is released!
+Our first major update is launched! This update includes major changes in the workflow and the GUI.
+
+- **New features**:
+  - New manual refinement step: allows users to refine the classification of individual bouts.
+  - Predict tab: Ethogram, Pie charts, Stats and  **Videos!**
+- **Extended features**:
+  - Discover tab: simultaneous split of multiple behaviors in one go
+  - Data upload: Sample rate of annotation files can now be set explicitly during upload.
+  - Active learning: Confidence threshold now accessible in the GUI
+- **Other changes:**
+  - Several UX improvements
+  - Bug fixes
+  - Increased performance during active learning
+
+### How to update:
+> Please be aware that this update is not backwards compatible with previous versions of A-SOiD.
+1. Download or clone the latest version of A-SOiD from this repository.
+2. Create a **new** environment using the `asoid.yml` file (see below).
+````
+conda env create --file asoid.yml
+````
+3. Activate the environment you installed A-SOiD in.
+4. Start A-SOiD and use it just like before.
+````
+asoid app
+````
+---
+
+### Introduction:
+
 [DeepLabCut](https://github.com/AlexEMG/DeepLabCut) <sup>1,2,3</sup>, 
 [SLEAP](https://github.com/murthylab/sleap) <sup>4</sup>, and 
 [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) <sup>5</sup> 
 have revolutionized the way behavioral scientists analyze data. 
-These algorithm utilizes recent advances in computer vision and deep learning to automatically estimate 3D-poses. 
+These algorithm utilizes advances in computer vision and deep learning to automatically estimate poses. 
 Interpreting the positions of an animal can be useful in studying behavior; 
 however, it does not encompass the whole dynamic range of naturalistic behaviors. 
 
@@ -22,9 +55,6 @@ overcomes several of their inherent drawbacks. A-SOiD iteratively learns user-de
 groups with a fraction of the usual training data while attaining expansive classification
 through directed unsupervised classification.
 
-To facilitate use, A-SOiD comes as an intuitive, open-source interface for efficient segmentation
-of user-defined behaviors and discovered subactions.
-
 ## Overview: 
 
 ![DLS_Stim](asoid/images/GUI_overview.png)
@@ -32,40 +62,14 @@ of user-defined behaviors and discovered subactions.
 A-SOiD is a streamlit-based application that integrates the core features of [A-SOiD](https://www.biorxiv.org/content/10.1101/2022.11.04.515138v1) into a user-friendly,
 no-coding required GUI solution that can be downloaded and used on custom data.
 
-
 For this we developed a multi-step pipeline that guides users, independent of their previous machine learning abilities
-through the process of generating a well-trained, semi-supervised classifier for their own use-case.
+through the process of generating a well-trained classifier for their own use-case.
 
 In general, users are required to provide a small labeled data set (ground truth) with behavioral categories of
 their choice using one of the many available labeling tools (e.g. [BORIS](https://www.boris.unito.it/)<sup>7</sup> ) or
 import their previous supervised machine learning data sets. Following the upload of data
 (see Fig. above, a), a A-SOiD project is created, including several parameters that further enable
 users to select individual animals (in social data) and exclude body parts from the feature extraction.
-
-
-Based on the configuration, the feature extraction (see Fig. below, b top) can be further customized
-by defining a "bout length" referring to the temporal resolution in which single motifs are expected to appear
-(e.g. the shortest duration a definable component of the designated behavior is expected to last).
-The extracted features are then used in combination with the labeled ground truth to train a baseline model.
-Here, an initial evaluation will give users insight into the performance on their base data set (see Fig. above, b bottom).
-Note, that different splits are used to allow for a more thorough analysis (see Publication Methods for further details).
-
-
-The baseline classification will then be used as a basis for the first active learning iteration,
-where users are prompted by the app to view and refine bouts that were classified with low confidence
-by the baseline model (see Fig. above,c left). Bouts are visualized by showing an animated sequence
-of the provided pose information and designated body parts and the viewer can be utilized to show the bouts
-in several options, including increased/decreased speed, reverse view and frame-by-frame view.
-After submission of a refined bout, a new bout is shown at its place and the refinement continues for
-a user-defined amount of low confidence bouts. Following refinement, a new iteration of the model is trained
-and its performance can be viewed (see Fig. above,c right) in comparison to previous iterations.
-This process is then repeated until the user is satisfied with the model's performance or until a plateau
-has been reached (see publication).
-\newline
-
-Finally, users can upload and classify new data using the app and the previously trained classifier
-(see Fig. above,d). To gain further insight into the results of the classification,
-the app offers a reporting tab that allows users to view results (see Fig. above,d).
 
 ## Input:
 
@@ -88,15 +92,12 @@ A-SOiD requires only a standard computer with enough RAM to support the model tr
 
 ### Software requirements
 #### OS Requirements
-This package is supported for *Windows* but can be run on *Linux* computers given additional installation of require packages.
+This package is supported for *Windows* and *Mac* but can be run on *Linux* computers given additional installation of require packages.
 
 #### Python Dependencies
 For dependencies please refer to the requirements.txt file. No additional requirements.
 
 ## Installation
-
-There are two ways to install A-SOiD. Installation will only take a couple of minutes. We recommend using a fresh environment in any case to avoid any installation conflicts.
-To simplify the process, we provide `asoid.yml` file that will do everything for you (see below).
 
 ### Download repository and install locally as python package within a new environment
 
@@ -112,62 +113,21 @@ git clone https://github.com/YttriLab/A-SOID.git
 ```
 or download ZIP and unpack where you want. 
 
-#### Create an environment using anaconda:
+### Install A-SOiD using conda (recommended)
+
+1. Create a **new** environment using the `asoid.yml` file (see below).
 ````
 conda env create --file asoid.yml
 ````
 
-#### Alternatively, you can install A-SOiD locally 
-in the directory you saved the repo in:
-````
-cd path/to/A-SOiD
-````
-activate the environment, you want to install A-SOiD in:
-````
-conda activate MYENVIRONMENT
-````
-install using `setup.py` in your own environment:
-````
-pip install .
-````
-
-A-SOiD is installed alongside all dependencies.
-
-## Updating A-SOiD
-
-1. Download or clone the latest version of A-SOiD from this repository.
-
-2. Activate the environment you installed A-SOiD in.
-````
-conda activate asoid
-````
-3. Go to the locotion of that you unpacked the latest version at.
-````
-cd path/to/A-SOiD
-````
-4. Install the new version on-top of the other using `setup.py`:
-````
-pip install .
-````
-The console output should look like this:
-
-    Successfully built asoid
-    Installing collected packages: asoid
-      Attempting uninstall: asoid
-        Found existing installation: asoid 0.1
-        Uninstalling asoid-0.1:
-          Successfully uninstalled asoid-0.1
-    Successfully installed asoid-0.2.0
-
-You can start A-SOiD again and use the new version just like before.
-
 ## How to start A-SOiD:
 
+1. Activate the environment you installed A-SOiD in.
 ````
 conda activate asoid
 ````
 
-You can run A-SOiD now from inside your environment by using (you do not have change directories anymore):
+2. You can run A-SOiD now from inside your environment:
 ````
 asoid app
 ````
@@ -183,7 +143,6 @@ We invite you to test A-SOiD using the [CalMS21](https://data.caltech.edu/record
 
 The overall runtime depends on your setup and parameters set during training, but should be completed within 1h of starting the project.
 Tested on: AMD Ryzen 9 6900HX 3.30 GHz and 16 GB RAM; Windows 11 Home
-
 
 ---
 ## Contributors:

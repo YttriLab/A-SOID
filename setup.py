@@ -1,14 +1,20 @@
 from setuptools import setup, find_packages
 from os import path
+import asoid
+
+
 curr_dir = path.abspath(path.dirname(__file__))
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+def get_requirements():
+    with open(path.join(curr_dir, "requirements.txt"), encoding="utf-8") as f:
+        return f.read().strip().split("\n")
 
 setup(
     name='asoid',
-    version='0.2.5b',
+    version= asoid.__version__,
     description='ASOiD: An active learning approach to behavioral classification',
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -25,32 +31,6 @@ setup(
         },
     packages=find_packages(),  # same as name
     include_package_data=True,
-    install_requires=["matplotlib"
-                    ,"numpy"
-                    ,"pandas"
-                    ,"seaborn"
-                      #streamlit 1.12.0 has an error with streamlit.cli...
-                    ,"streamlit~=1.11.0"
-                    ,"altair~=4.1.0"
-                    ,"streamlit_option_menu"
-                    ,"hydralit"
-                    ,"opencv-python"
-                    ,"tqdm"
-                    ,"stqdm"
-                    ,"scikit-learn"
-                    ,"h5py"
-                    ,"plotly"
-                    ,"pillow"
-                    ,"joblib"
-                    ,"scipy~=1.9.3"
-                    ,"ipython"
-                    ,"psutil"
-                    ,"numba"
-                    ,"hdbscan"
-                    ,"setuptools"
-                    ,"umap-learn"
-                    ,"click"
-                    ,"moviepy"
-                    ],
+    install_requires=get_requirements(),
     python_requires=">=3.7",
 )

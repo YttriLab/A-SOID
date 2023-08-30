@@ -1,8 +1,3 @@
-"""
-likelihood processing analysis_utilities
-Forward fill low likelihood (x,y)
-"""
-
 import glob
 import re
 
@@ -49,115 +44,23 @@ def get_filenamesnpy(base_path, folder):
     sort_nicely(filenames)
     return filenames
 
-
 def get_filenamesjson(base_path, folder):
     filenames = glob.glob(base_path + folder + '/*.json')
     sort_nicely(filenames)
     return filenames
 
-
-def import_folders(base_path, folders: list, pose):
-    fldrs = []
-    filenames = []
-    rawdata_li = []
-    data_li = []
-    perc_rect_li = []
-    for i, fd in enumerate(folders):  # Loop through folders
-        f = get_filenames(base_path, fd)
-        for j, filename in enumerate(f):
-            curr_df = pd.read_csv(filename, low_memory=False)
-            curr_df_filt, perc_rect = adp_filt(curr_df, pose)
-            rawdata_li.append(curr_df)
-            perc_rect_li.append(perc_rect)
-            data_li.append(curr_df_filt)
-        fldrs.append(fd)
-        filenames.append(f)
-    data = np.array(data_li)
-    return fldrs, filenames, data, perc_rect_li
-
-
-def adp_filt_new(currdf: object, pose):
-    """preprocessing function for internal format (dlc-style)"""
-    lIndex = []
-    xIndex = []
-    yIndex = []
-
-    #subselects
-    #Pick clm index for likelihood, x, and y based on bodypart subselection.
-    headers = currdf.columns.get_level_values(2)
-    for header in pose:
-        if headers[header] == "likelihood":
-            lIndex.append(header)
-        elif headers[header] == "x":
-            xIndex.append(header)
-        elif headers[header] == "y":
-            yIndex.append(header)
-
-    #remove bodyparts, scorer, and frames
-    curr_df1 = np.array(currdf.values)
-    #old code
-    # datax = curr_df1[1:, np.array(xIndex)]
-    # datay = curr_df1[1:, np.array(yIndex)]
-    # data_lh = curr_df1[1:, np.array(lIndex)]
-    datax = curr_df1[:, np.array(xIndex)]
-    datay = curr_df1[:, np.array(yIndex)]
-    data_lh = curr_df1[:, np.array(lIndex)]
+def adp_filt(pose, idx_selected, idx_llh):
+    datax = np.array(pose.iloc[:, idx_selected[::2]])
+    datay = np.array(pose.iloc[:, idx_selected[1::2]])
+    data_lh = np.array(pose.iloc[:, idx_llh])
     currdf_filt = np.zeros((datax.shape[0], (datax.shape[1]) * 2))
     perc_rect = []
     for i in range(data_lh.shape[1]):
         perc_rect.append(0)
-
-    #TODO: Check with Alex if SLEAP nan and simulated likelihood are working with this likelihood filter
     for x in range(data_lh.shape[1]):
-        a, b = np.histogram(data_lh[1:, x].astype(np.float))
-        rise_a = np.where(np.diff(a) >= 0)
-        if rise_a[0][0] > 1:
-            llh = b[rise_a[0][0]]
-        else:
-            llh = b[rise_a[0][1]]
-        # llh = 0.2
-        data_lh_float = data_lh[:, x].astype(np.float)
-        perc_rect[x] = np.sum(data_lh_float < llh) / data_lh.shape[0]
-        currdf_filt[0, (2 * x):(2 * x + 2)] = np.hstack([datax[0, x], datay[0, x]])
-        for i in range(1, data_lh.shape[0]):
-            if data_lh_float[i] < llh:
-                currdf_filt[i, (2 * x):(2 * x + 2)] = currdf_filt[i - 1, (2 * x):(2 * x + 2)]
-            else:
-                currdf_filt[i, (2 * x):(2 * x + 2)] = np.hstack([datax[i, x], datay[i, x]])
-    currdf_filt = np.array(currdf_filt)
-    currdf_filt = currdf_filt.astype(np.float)
-    return currdf_filt, perc_rect
-
-def adp_filt(currdf: object, pose):
-    lIndex = []
-    xIndex = []
-    yIndex = []
-    currdf = np.array(currdf[1:])
-    for header in pose:
-        if currdf[0][header + 1] == "likelihood":
-            lIndex.append(header)
-        elif currdf[0][header + 1] == "x":
-            xIndex.append(header)
-        elif currdf[0][header + 1] == "y":
-            yIndex.append(header)
-    curr_df1 = currdf[:, 1:]
-    datax = curr_df1[1:, np.array(xIndex)]
-    datay = curr_df1[1:, np.array(yIndex)]
-    data_lh = curr_df1[1:, np.array(lIndex)]
-    currdf_filt = np.zeros((datax.shape[0], (datax.shape[1]) * 2))
-    perc_rect = []
-    for i in range(data_lh.shape[1]):
-        perc_rect.append(0)
-    for x in tqdm(range(data_lh.shape[1])):
-        a, b = np.histogram(data_lh[1:, x].astype(np.float))
-        rise_a = np.where(np.diff(a) >= 0)
-        if rise_a[0][0] > 1:
-            llh = b[rise_a[0][0]]
-        else:
-            llh = b[rise_a[0][1]]
-        ## TODO: load from config.ini the llh threshold
+        # TODO: load from config.ini the llh threshold
         llh = 0.6
-        data_lh_float = data_lh[:, x].astype(np.float)
+        data_lh_float = data_lh[:, x].astype(float)
         perc_rect[x] = np.sum(data_lh_float < llh) / data_lh.shape[0]
         currdf_filt[0, (2 * x):(2 * x + 2)] = np.hstack([datax[0, x], datay[0, x]])
         for i in range(1, data_lh.shape[0]):
@@ -166,7 +69,7 @@ def adp_filt(currdf: object, pose):
             else:
                 currdf_filt[i, (2 * x):(2 * x + 2)] = np.hstack([datax[i, x], datay[i, x]])
     currdf_filt = np.array(currdf_filt)
-    currdf_filt = currdf_filt.astype(np.float)
+    currdf_filt = currdf_filt.astype(float)
     return currdf_filt, perc_rect
 
 
@@ -247,4 +150,3 @@ def no_filt_sleap_h5(currdf: object, pose):
                                         names=['algorithm', 'pose', 'coord'])
     df = pd.DataFrame(currdf_nofilt, columns=header)
     return df
-

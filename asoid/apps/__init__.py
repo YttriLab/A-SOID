@@ -1,3 +1,1 @@
-from . import A_data_preprocess, B_extract_features, C_auto_active_learning, E_predict, F_view,\
-    G_unsupervised_discovery\
-    #, D_manual_active_learning
+from . import A_data_preprocess, B_extract_features, C_auto_active_learning, D_manual_active_learning, E_create_new_training, F_predict, G_unsupervised_discovery
