@@ -454,7 +454,7 @@ def main(ri=None, config=None):
                             # for each behavior being split, change the index into last->last+n
                             count = 1
                             for id_ in [behav_groups[target_behav].index(sel)
-                                        for sel in behav_groups[target_behav][1:]]:
+                                        for sel in behav_groups[target_behav]]:
                                 if id_ in group_id:
                                     max_id = np.max(all_labels_split) + 1
                                     new_assigns[pred_assign[target_behav] == id_] = max_id + count
