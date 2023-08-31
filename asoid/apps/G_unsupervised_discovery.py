@@ -310,7 +310,7 @@ def main(ri=None, config=None):
         exclude_other = config["Project"].getboolean("EXCLUDE_OTHER")
         # threshold = config["Processing"].getfloat("SCORE_THRESHOLD")
         threshold = 0.1
-        llh_value = config["Processing"].getint("LLH_VALUE")
+        llh_value = config["Processing"].getfloat("LLH_VALUE")
         iteration = config["Processing"].getint("ITERATION")
         framerate = config["Project"].getint("FRAMERATE")
         duration_min = config["Processing"].getfloat("MIN_DURATION")

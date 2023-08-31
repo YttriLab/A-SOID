@@ -615,8 +615,8 @@ def main(ri=None, config=None):
             annotation_classes_ex.pop(annotation_classes_ex.index('other'))
         # threshold = config["Processing"].getfloat("SCORE_THRESHOLD")
         selected_bodyparts = [x.strip() for x in config["Project"].get("KEYPOINTS_CHOSEN").split(",")]
-        llh_value = config["Processing"].getint("LLH_VALUE")
         threshold = 0.1
+        llh_value = config["Processing"].getfloat("LLH_VALUE")
         iteration = config["Processing"].getint("ITERATION")
         framerate = config["Project"].getint("FRAMERATE")
         duration_min = config["Processing"].getfloat("MIN_DURATION")
