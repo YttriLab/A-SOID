@@ -461,6 +461,7 @@ class Preprocess:
                     self.targets.append(targets)
 
             self.save_update_info()
+            # st.write(self.llh_value)
 
     def save_update_info(self):
         # create new project folder with prefix as name:
@@ -502,6 +503,7 @@ class Preprocess:
                     EXCLUDE_OTHER=self.exclude_other
                 ),
                 "Processing": dict(
+                    LLH_VALUE=self.llh_value,
                     ITERATION=0,
                 )
             }
@@ -524,7 +526,7 @@ class Preprocess:
                     MULTI_ANIMAL=self.multi_animal
                 ),
                 "Processing": dict(
-                    LLH_VALUE=self.llh_value,
+
                     ITERATION=0,
                 )
             }
