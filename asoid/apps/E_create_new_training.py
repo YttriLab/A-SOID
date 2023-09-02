@@ -57,7 +57,6 @@ def main(ri=None, config=None):
                             if os.path.isdir(os.path.join(project_dir, iter_folder, d))]
         selected_refine_dirs = ri.multiselect('Select Refinement', refined_vid_dirs, refined_vid_dirs
                                               , help=NEW_DATA_SELECT_HELP)
-
         try:
             new_features_dir = []
             new_targets_dir = []
@@ -83,6 +82,16 @@ def main(ri=None, config=None):
                                 len(refinements[annotation_cls][j]['Behavior']))]
                         start_idx = examples_idx[annotation_cls][j][0]
                         stop_idx = examples_idx[annotation_cls][j][1]
+                        # if debug_button:
+                        if features[start_idx:stop_idx, :].shape[0] != len(refined_behaviors):
+                            # with placeholder:
+                            st.write(f'In {selected_refine_dir}, '
+                                     f'behavior: {annotation_cls}, '
+                                     f'feature length does not match targets in example {j}')
+                        # else:
+                            # with placeholder:
+                            #     st.write(f'There is no mismatch, good to go.')
+
                         # st.write(features[start_idx:stop_idx, :].shape, len(refined_behaviors))
                         submitted_feats.append(features[start_idx:stop_idx, :])
                         submitted_targets.append([annotation_classes.index(refined_behaviors[k])
