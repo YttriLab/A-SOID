@@ -150,7 +150,7 @@ def hdbscan_classification(umap_embeddings, cluster_range):
     return retained_hierarchy, assignments, assign_prob, soft_assignments
 
 
-def pca_umap_hdbscan(target_behavior, annotation_classes, input_sav, cluster_range,
+def pca_umap_hdbscan(target_behavior, annotation_classes, input_sav, cluster_range, normalize_feats, determine_dim,
                      project_dir, iter_folder, left_col, right_col):
     if input_sav is not None:
         with open(input_sav, 'rb') as fr:
@@ -169,16 +169,25 @@ def pca_umap_hdbscan(target_behavior, annotation_classes, input_sav, cluster_ran
                     target_beh_id = annotation_classes.index(target_behav)
                     selected_features = features[predictions == target_beh_id]
                     scalar = StandardScaler()
-                    selected_feats_scaled = scalar.fit_transform(selected_features)
-                    pca = PCA(random_state=42)
-                    # define manifold dim to variance explained at 70%
-                    pca.fit(selected_feats_scaled)
-                    n_dim = np.where(np.cumsum(pca.explained_variance_ratio_) >= 0.7)[0][0]
+                    if normalize_feats:
+                        selected_feats_ = scalar.fit_transform(selected_features)
+                    else:
+                        selected_feats_ = selected_features.copy()
+                    if determine_dim:
+                        pca = PCA(random_state=42)
+                        # define manifold dim to variance explained at 70%
+                        pca.fit(selected_feats_)
+                        n_dim = np.where(np.cumsum(pca.explained_variance_ratio_) >= 0.7)[0][0]
+                    else:
+                        n_dim = 2
                     # st.info(f'{n_dim} latent dimension achieves 70% variacne')
+                    # n_dim = 2
                     reducer = umap.UMAP(**UMAP_PARAMS, n_components=n_dim)
 
                     with st.spinner(f'Embedding into {n_dim} dimensions...'):
-                        umap_embeddings[target_behav] = reducer.fit_transform(selected_feats_scaled)
+
+                        umap_embeddings[target_behav] = reducer.fit_transform(selected_feats_)
+                        # umap_embeddings[target_behav] = reducer.fit_transform(selected_features)
 
                     with st.spinner('Clustering...'):
                         retained_hierarchy[target_behav], \
@@ -350,6 +359,9 @@ def main(ri=None, config=None):
             annotation_classes_ex.pop(annotation_classes_ex.index('other'))
         target_behavior = ri.multiselect('Select Behavior to Split', annotation_classes_ex, annotation_classes_ex)
         cluster_range = {key: [] for key in target_behavior}
+        ri_l, ri_r = ri.columns(2)
+        normalize_feats = ri_l.checkbox('Normalize feautres?', help='recommended for independent features')
+        determine_dim = ri_r.checkbox('More relaxed embedding?', help='recommended for independent features')
         for target_behav in target_behavior:
             cluster_range[target_behav] = ri.slider(f'Minimum % for a cluster within {target_behav}',
                                                     min_value=0.1, max_value=10.0, value=3.0,
@@ -365,7 +377,7 @@ def main(ri=None, config=None):
 
             if st.session_state['output_sav'] is None:
                 pca_umap_hdbscan(target_behavior, annotation_classes, st.session_state['input_sav'],
-                                 cluster_range,
+                                 cluster_range, normalize_feats, determine_dim,
                                  project_dir, iter_folder, left_col, ri)
 
             else:
