@@ -160,7 +160,9 @@ def get_duration_bouts(predict, behavior_classes, framerate):
         if len(idx_b) > 0:
             behav_durations.append(bout_durations[idx_b] / framerate)
         else:
-            behav_durations.append(np.zeros(1))
+            a = np.empty((1,))
+            a[:] = np.nan
+            behav_durations.append(a)
     return behav_durations
 
 
