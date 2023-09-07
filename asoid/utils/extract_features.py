@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 from numba import jit
+from numba.typed import List
 from scipy import stats
 from sklearn.preprocessing import StandardScaler
 from stqdm import stqdm
@@ -150,7 +151,7 @@ def fast_smooth(data, n):
 @jit(nopython=True)
 def fast_feature_extraction(data, framerate, index, smooth):
     window = int(np.round(0.05 / (1 / framerate)) * 2 - 1)
-    features = []
+    features = List()
     for n in range(len(data)):
         displacement_raw = fast_displacment(data[n])
         length_raw, angle_raw = fast_length_angle(data[n], index)
@@ -166,7 +167,7 @@ def fast_feature_extraction(data, framerate, index, smooth):
 
 @jit(nopython=True)
 def fast_feature_binning(features, framerate, index):
-    binned_features_list = []
+    binned_features_list = List()
     for n in range(len(features)):
         bin_width = int(framerate / 10)
         for s in range(bin_width):
@@ -189,11 +190,13 @@ def bsoid_extract_numba(data, fps):
 
 
 def feature_extraction(train_datalist, num_train, framerate):
+    data_list = List()
     f_integrated = []
     # for i in stqdm(range(num_train), desc="Extracting spatiotemporal features from pose"):
     for i in range(num_train):
         with st.spinner('Extracting features from pose...'):
-            binned_features = bsoid_extract_numba([train_datalist[i]], framerate)
+            data_list.append(train_datalist[i])
+            binned_features = bsoid_extract_numba(data_list, framerate)
             f_integrated.append(binned_features[0])  # getting only the non-shifted
     features = np.vstack([f_integrated[m] for m in range(len(f_integrated))])
     scaler = StandardScaler()
@@ -203,7 +206,7 @@ def feature_extraction(train_datalist, num_train, framerate):
 
 
 def feature_extraction_with_extr_scaler(train_datalist, num_train, framerate, scaler):
-    f_integrated = []
+    f_integrated = List()
     for i in stqdm(range(num_train), desc="Extracting spatiotemporal features from pose"):
         with st.spinner('Extracting features from pose...'):
             binned_features = bsoid_extract_numba([train_datalist[i]], framerate)
