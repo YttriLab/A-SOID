@@ -10,10 +10,11 @@ TITLE = "Create new dataset"
 
 def create_new_training_features_targets(project_dir, selected_iter, new_features, new_targets):
     # load existing training
-    # st.write(new_features.shape, new_targets.shape)
+    # st.write(project_dir, selected_iter)
     iter_folder = str.join('', ('iteration-', str(selected_iter)))
     [features, targets, frames2integ] = \
         load_features(project_dir, iter_folder)
+    # st.write(np.unique(targets, return_counts=True))
     # st.write(features.shape, targets.shape)
     # add iteration number
     new_iter_folder = str.join('', ('iteration-', str(selected_iter + 1)))
@@ -21,7 +22,6 @@ def create_new_training_features_targets(project_dir, selected_iter, new_feature
     # incorporate new features/targets into existing training
     appended_features = np.vstack((features, new_features))
     appended_targets = np.hstack((targets, new_targets))
-    # st.write(appended_features.shape, appended_targets.shape)
     # save into new iteration folder
     save_data(project_dir, new_iter_folder, 'feats_targets.sav',
               [
@@ -107,6 +107,7 @@ def main(ri=None, config=None):
                 new_targets_dir.append(np.hstack(new_targets_byclass))
             new_features = np.vstack(new_features_dir)
             new_targets = np.hstack(new_targets_dir)
+            # st.write(np.unique(new_targets, return_counts=True))
         except:
             pass
 

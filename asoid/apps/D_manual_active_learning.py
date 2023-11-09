@@ -520,15 +520,24 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                                                , help = PLAYBACK_SPEED_HELP)
 
             col1_exp.write(f'Equivalent to {round(output_fps / framerate, 2)} X speed')
-            frame_dir = os.path.join(videos_dir,
-                                     str.join('', (st.session_state['uploaded_vid'].name.rpartition('.mp4')[0],
-                                                   '_pngs')))
+            if st.session_state['uploaded_vid'].name.endswith('mp4'):
+                frame_dir = os.path.join(videos_dir,
+                                         str.join('', (st.session_state['uploaded_vid'].name.rpartition('.mp4')[0],
+                                                       '_pngs')))
+            else:
+                frame_dir = os.path.join(videos_dir,
+                                         str.join('', (st.session_state['uploaded_vid'].name.rpartition('.avi')[0],
+                                                       '_pngs')))
             os.makedirs(frame_dir, exist_ok=True)
             col3_exp.success(f'Entered **{frame_dir}** as the frame directory.')
-
-            shortvid_dir = os.path.join(project_dir, iter_dir,
-                                        str.join('', (st.session_state['uploaded_vid'].name.rpartition('.mp4')[0],
-                                                      '_refine_vids')))
+            if st.session_state['uploaded_vid'].name.endswith('mp4'):
+                shortvid_dir = os.path.join(project_dir, iter_dir,
+                                            str.join('', (st.session_state['uploaded_vid'].name.rpartition('.mp4')[0],
+                                                          '_refine_vids')))
+            else:
+                shortvid_dir = os.path.join(project_dir, iter_dir,
+                                            str.join('', (st.session_state['uploaded_vid'].name.rpartition('.avi')[0],
+                                                          '_refine_vids')))
             os.makedirs(shortvid_dir, exist_ok=True)
             col3_exp.success(f'Entered **{shortvid_dir}** as the refined video directory.')
 
@@ -631,7 +640,12 @@ def main(ri=None, config=None):
         refined_vid_dirs.extend(['Add New Video'])
         outlier_methods = ['Random', 'Low Confidence']
         try:
-            new_vid_name = str.join('', (st.session_state['uploaded_vid'].name.rpartition('.mp4')[0], '_refine_vids'))
+            if st.session_state['uploaded_vid'].name.endswith('mp4'):
+                new_vid_name = str.join('',
+                                        (st.session_state['uploaded_vid'].name.rpartition('.mp4')[0], '_refine_vids'))
+            else:
+                new_vid_name = str.join('',
+                                        (st.session_state['uploaded_vid'].name.rpartition('.avi')[0], '_refine_vids'))
             selected_refine_dir = ri.radio('Select Refinement', refined_vid_dirs,
                                            index=refined_vid_dirs.index(new_vid_name),
                                            horizontal=True, key='selected_refine'
