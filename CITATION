@@ -1,11 +1,12 @@
-@article {Schweihoff2022.11.04.515138,
-	author = {Schweihoff, Jens F. and Hsu, Alexander I. and Schwarz, Martin K. and Yttri, Eric A,},
+@article {Tillmann2022.11.04.515138,
+	author = {Jens F. Tillmann and Alexander I. Hsu and Martin K. Schwarz and Eric A. Yttri},
 	title = {A-SOiD, an active learning platform for expert-guided, data efficient discovery of behavior},
 	elocation-id = {2022.11.04.515138},
-	year = {2022},
+	year = {2023},
 	doi = {10.1101/2022.11.04.515138},
 	publisher = {Cold Spring Harbor Laboratory},
-	URL = {https://www.biorxiv.org/content/early/2022/11/04/2022.11.04.515138},
-	eprint = {https://www.biorxiv.org/content/early/2022/11/04/2022.11.04.515138.full.pdf},
+	abstract = {To identify and extract naturalistic behavior, two schools of methods have become popular: supervised and unsupervised. Each approach carries its own strengths and weaknesses, which the user must weigh in on their decision. Here, a new active learning platform, A-SOiD, blends these strengths and, in doing so, overcomes several of their inherent drawbacks. A-SOiD iteratively learns user-defined groups and can considerably reduce the necessary training data while attaining expansive classification through directed unsupervised classification. In socially-interacting mice, A-SOiD outperformed other methods and required 85\% less training data than was available. Additionally, it isolated two additional ethologically-distinct mouse interactions via unsupervised classification. Similar performance and efficiency were observed using non-human primate 3D pose data. In both cases, the transparency in A-SOiD{\textquoteright}s cluster definitions revealed the defining features of the supervised classification through a game-theoretic approach. Lastly, we show the potential of A-SOiD to segment a large and rich variety of human social and single-person behaviors with 3D position keypoints. To facilitate use, A-SOiD comes as an intuitive, open-source interface for efficient segmentation of user-defined behaviors and discovered sub-actions.Competing Interest StatementThe authors have declared no competing interest.},
+	URL = {https://www.biorxiv.org/content/early/2023/11/06/2022.11.04.515138},
+	eprint = {https://www.biorxiv.org/content/early/2023/11/06/2022.11.04.515138.full.pdf},
 	journal = {bioRxiv}
 }

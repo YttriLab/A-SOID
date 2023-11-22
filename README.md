@@ -149,7 +149,7 @@ Tested on: AMD Ryzen 9 6900HX 3.30 GHz and 16 GB RAM; Windows 11 Home
 
 A-SOiD was developed as a collaboration between the Yttri Lab and Schwarz Lab by:
 
-[Jens Schweihoff](https://github.com/JensBlack), University Bonn
+[Jens Tillmann](https://github.com/JensBlack), University Bonn
 
 [Alex Hsu](https://github.com/runninghsus), Carnegie Mellon University
 
@@ -199,7 +199,7 @@ If you are using our work, please make sure to cite us and any additional resour
 
 ### How to cite us:
     A-SOiD, an active learning platform for expert-guided, data efficient discovery of behavior.
-    Jens F. Schweihoff, Alexander I. Hsu, Martin K. Schwarz, Eric A. Yttri
+    Jens F. Tillmann, Alexander I. Hsu, Martin K. Schwarz, Eric A. Yttri
     bioRxiv 2022.11.04.515138; doi: https://doi.org/10.1101/2022.11.04.515138
 
 or see [Cite Us](CITATION)
