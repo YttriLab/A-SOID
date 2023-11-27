@@ -2,6 +2,7 @@
 
 [![GitHub stars](https://img.shields.io/github/stars/YttriLab/A-SOID.svg?style=social&label=Star)](https://github.com/YttriLab/A-SOID)
 [![GitHub forks](https://img.shields.io/github/forks/YttriLab/A-SOID.svg?style=social&label=Fork)](https://github.com/YttriLab/A-SOID)
+[![DOI](https://zenodo.org/badge/558906663.svg)](https://zenodo.org/doi/10.5281/zenodo.10210508)
 
 ### Read the [preprint](https://www.biorxiv.org/content/10.1101/2022.11.04.515138v1)!
 
