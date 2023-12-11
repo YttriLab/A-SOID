@@ -5,7 +5,7 @@
 [![DOI](https://zenodo.org/badge/558906663.svg)](https://zenodo.org/doi/10.5281/zenodo.10210508)
 
 ### Read the [preprint](https://www.biorxiv.org/content/10.1101/2022.11.04.515138v1)!
-
+> IF YOU ARE NEW HERE: CHECK OUT THE OVERVIEW AND INSTALLATION SECTION TO GET STARTED!
 ---
 ## News:
 ### August 2023: A-SOiD v0.3.0 is released!
