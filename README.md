@@ -100,6 +100,8 @@ For dependencies please refer to the requirements.txt file. No additional requir
 
 ## Installation
 
+> **Note**: This is a quick guide to get you started. For a more detailed guide, see [Installation](docs/installation_stepbystep.md).
+
 ### Download repository and install locally as python package within a new environment
 
 Clone this repository and create a new environment in which A-SOiD will be installed automatically (recommended) [Anaconda/Python3](https://www.anaconda.com/).
