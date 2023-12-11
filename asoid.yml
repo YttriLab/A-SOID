@@ -5,4 +5,4 @@ dependencies:
   - ffmpeg
   - pip
   - pip:
-    - "--editable=.[dev]"
+    - "--editable=."
