@@ -68,7 +68,7 @@ asoid app
 
 > **Note**: This will open a new tab in your default browser. If it does not, copy the URL from the terminal and paste it into your browser.
 
-#### Extpected Output
+#### Expected Output
 
 ```bash
 (asoid) C:\Users\JSchw\PycharmProjects\A-SOID>conda activate asoid
@@ -89,5 +89,4 @@ Your browser should open to the following page (or something similar):
 
 ### Additional Tips
 - **Updating the Environment**: If the `.yml` file is updated, you can update your environment using `conda env update -f environment.yml`.
-- **Troubleshooting**: If you encounter issues, check the repository's `README` or documentation for specific instructions or troubleshooting tips.
-ation for any additional steps or specific requirements.
+- **Troubleshooting**: If you encounter issues, check the repository's `README` or GitHub issues for specific instructions or troubleshooting tips.
