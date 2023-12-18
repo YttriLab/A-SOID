@@ -592,7 +592,7 @@ def prompt_setup_existing(outlier_methods, framerate, videos_dir, project_dir, i
     except FileNotFoundError:
         if col3_exp.button('create frame directory'):
             os.makedirs(frame_dir, exist_ok=True)
-            # st.experimental_rerun()
+            # st.rerun()
 
     try:
         os.listdir(shortvid_dir)
@@ -600,7 +600,7 @@ def prompt_setup_existing(outlier_methods, framerate, videos_dir, project_dir, i
     except FileNotFoundError:
         if col3_exp.button('create refined video directory'):
             os.makedirs(shortvid_dir, exist_ok=True)
-            # st.experimental_rerun()
+            # st.rerun()
 
     return frame_dir, shortvid_dir
 

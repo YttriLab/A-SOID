@@ -275,7 +275,7 @@ class Preprocess:
         except FileNotFoundError:
             if st.button('create output folder'):
                 os.makedirs(self.working_dir, exist_ok=True)
-                st.experimental_rerun()
+                st.rerun()
         today = date.today()
         d4 = today.strftime("%b-%d-%Y")
 
