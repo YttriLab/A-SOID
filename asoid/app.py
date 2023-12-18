@@ -209,13 +209,13 @@ def main():
                     project_config.optionxform = str
                     project_config.read_file(stringio)
                     st.session_state['config'] = project_config
-                    st.experimental_rerun()
+                    st.rerun()
             elif st.session_state['config'] is not None:
                 cleared = st.form_submit_button(":red[Delete]")
                 if cleared:
                     st.session_state['config'] = None
                     st.session_state['page'] = None
-                    st.experimental_rerun()
+                    st.rerun()
 
         _, mid_im, _ = st.columns([0.35, 1, 0.35])
 
