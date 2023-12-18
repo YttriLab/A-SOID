@@ -1,6 +1,13 @@
 Here's a step-by-step guide to install A-SOiD:
 
+### Step 0: Required for some Mac Users (e.g., M1 Max and M2 MacBooks)
 
+Install Xcode Command Line Tools by running the following command in a terminal:
+
+```bash
+xcode-select --install
+```
+Continue with the steps below.
 
 ### Step 1: Install Anaconda or Miniconda
 First, ensure you have Anaconda or Miniconda installed on your system.
@@ -50,6 +57,7 @@ This will install the package and its dependencies into a new environment called
 conda env create -f asoid.yml
 ```
 > **Note**: This may take a few minutes to complete.
+
 
 ### Step 5: Activate the New Environment
 Once the environment is created, activate it.
