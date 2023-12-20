@@ -58,6 +58,8 @@ conda env create -f asoid.yml
 ```
 > **Note**: This may take a few minutes to complete.
 
+> Some users (windows) might experience this [issue](https://github.com/YttriLab/A-SOID/issues/59) with building hdbscan if they have not installed C++ build tools on their machine previously. The solution is to install Microsoft C++ build tools (see link) and restart this step. This might include removing the environment and recreating it ([How to remove a conda environment](https://stackoverflow.com/questions/49127834/removing-conda-environment))
+
 ### Step 5: Activate the New Environment
 Once the environment is created, activate it.
 
