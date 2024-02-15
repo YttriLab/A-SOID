@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import h5py
 import streamlit as st
-
+from scipy.io import loadmat
 
 def get_animals(df: pd.DataFrame, lvl=1):
     """Returns animal list from df in internal multiindex format. Excludes Label column"""
@@ -98,17 +98,57 @@ def load_dlc_data(path, multi_animal=False):
     return df
 
 
+def load_opm_data(path: str):
+    """ Loads openmonkeypose data from mat or txt file and returns it as pd.DataFrame"""
+    if path.name.endswith(".mat"):
+        # mat file
+        # might throw an error if matlab version is to high
+        mat = loadmat(path)
+        monkey_pose = pd.DataFrame(mat['coords'], columns=["idx", "x", "y", "z"])
+    elif path.name.endswith(".txt"):
+        # txt file
+        monkey_pose = pd.read_csv(path, sep=" ", header=None, names=["idx", "x", "y", "z"])
+    else:
+        raise ValueError(f"OpenMonkeyPose file {path.name} is not a .mat or .txt file.")
+    # each body part is represented by 3 columns (x, y, z), however the index is not unique because rows are repeated for each frame per bodypart
+    # we need to reshape the dataframe to have a unique index for each body part
+    n_frames, n_bodyparts = np.unique(monkey_pose["idx"], return_counts=True)
+    assert np.all(n_bodyparts == n_bodyparts[0])
+    # bodyparts are fixed in OpenMonkeyPose
+    bodyparts_opm = "Nose, Head, Neck, RShoulder, RHand, LShoulder, LHand, Hip, RKnee, RFoot, LKnee, LFoot, Tail".split(", ")
+    n_bodyparts = n_bodyparts[0]
+    assert n_bodyparts == len(bodyparts_opm)
+    n_frames = len(n_frames)
+    # drop index
+    monkey_pose["likelihood"] = 1
+    monkey_pose = monkey_pose.drop(columns="idx", errors="ignore")
+
+    monkey_pose = monkey_pose.values.reshape(
+        (n_frames, n_bodyparts * 4))  # reshape to have a unique index for each body part x,y, z, likelihood
+
+    monkey_pose = pd.DataFrame(monkey_pose, columns=pd.MultiIndex.from_product(
+        [["OpenMonkeyStudio"]
+            #, [f"bp_{num}" for num in range(n_bodyparts)]
+            , bodyparts_opm
+            , ["x", "y", "z", "likelihood"]]
+        , names=["Animal", "bodypart", "coords"]))
+
+    return monkey_pose
+
 def load_pose(path, origin, multi_animal=False):
     """General loading function. loads pose estimation file based on origin.
     :param multi_animal:
     :param path: str, full path to pose estimation file
     :param origin: str, origin of pose estimation file. 'DeepLabCut' or 'Sleap'"""
-
     if origin.lower() == 'deeplabcut':
         # file_j_df = pd.read_csv(filename, low_memory=False)
         df = load_dlc_data(path, multi_animal)
     elif origin.lower() == 'sleap':
         df = load_sleap_data(path, multi_animal)
+    elif origin.lower() == 'openmonkeystudio':
+        if multi_animal:
+            raise ValueError("A-SOiD + OpenMonkeyStudio does not support multi animal pose estimation ATM.")
+        df = load_opm_data(path)
     else:
         raise ValueError(f'Pose estimation file origin {origin} is not supported.')
 
@@ -142,7 +182,6 @@ def _load_boris_raw(file):
         labels = pd.read_csv(file, sep='\t')
     else:
         raise ValueError(f"Label file {file.name} is not a csv or tsv file.")
-
     # all unlabeled are placed into "other"
     # create a new column called "other" if not existent yet
     if "other" not in labels.columns:

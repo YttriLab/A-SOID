@@ -66,7 +66,7 @@ def select_software():
     :return:
     """
     software = st.selectbox('Select the type of pose estimation file:',
-                            ('DeepLabCut', 'SLEAP', "CALMS21 (PAPER)"),
+                            ('DeepLabCut', 'SLEAP', "OpenMonkeyStudio","CALMS21 (PAPER)"),
                             help=POSE_ORIGIN_SELECT_HELP)
     if software == 'DeepLabCut':
         # TODO: Add functionality to deal with H5 files from DLC
@@ -79,6 +79,9 @@ def select_software():
 
     if software == 'CALMS21 (PAPER)':
         ftype = 'npy'
+
+    if software == 'OpenMonkeyStudio':
+        ftype = ['mat', "txt"]
 
     return software, ftype
 
@@ -116,6 +119,7 @@ class Preprocess:
         self.resolution = None
         self.classes = None
         self.multi_animal = False
+        self.is_3d = False
 
         self.working_dir = None
         self.prefix = None
@@ -182,10 +186,20 @@ class Preprocess:
                 st.warning('Please select corresponding label files first.')
             except TypeError:
                 st.warning('Please select corresponding label files first.')
-
-            self.multi_animal = st.checkbox("Is this a multiple animal project?",
-                                            False, key="multi_animal_check",
-                                            help=MULTI_ANIMAL_HELP)
+            if self.software == "DeepLabCut" or self.software == "SLEAP":
+                self.multi_animal = st.checkbox("Is this a multiple animal project?",
+                                                False, key="multi_animal_check",
+                                                help=MULTI_ANIMAL_HELP)
+            if self.software == "DeepLabCut":
+                self.is_3d = st.checkbox("Is this a 3D project?",
+                                        False, key="3d_check",
+                                        help=IS_3D_HELP)
+            elif self.software == "OpenMonkeyStudio":
+                self.is_3d = True
+                self.multi_animal = False
+            else:
+                # sleap does not have 3D yet
+                pass
         else:
             self.framerate = 30
             self.classes = ['attack', 'investigation', 'mount', 'other']
@@ -423,7 +437,7 @@ class Preprocess:
                 self.input_labelfiles_test.append(self.test_data_path)
             # elif self.software == 'DeepLabCut' and self.ftype == 'csv':
             else:
-                # if it's deeplabcut or sleap
+                # if it's deeplabcut or sleap or openmonkeystudio
                 # go through all pose files
                 if self.pose_csvs is None:
                     st.warning("Please select pose files first.")
@@ -445,12 +459,26 @@ class Preprocess:
                     current_pose = load_pose(f, origin=self.software.lower(), multi_animal=self.multi_animal)
                     # take user selected bodyparts
                     idx_selected = self.selected_pose_idx
-                    # get rid of likelihood columns for deeplabcut
-                    idx_llh = self.selected_pose_idx[2::3]
+
+                    # get likelihood column idx directly from dataframe columns
+                    idx_llh = [i for i, s in enumerate(current_pose.columns) if "likelihood" in s]
+
+                    # # get rid of likelihood columns for deeplabcut
+                    # idx_llh = self.selected_pose_idx[2::3]
+
                     # the loaded sleap file has them too, so exclude for both
                     idx_selected = [i for i in idx_selected if i not in idx_llh]
 
-                    filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh, self.llh_value)
+                    #TODO: ADAPT FOR 3D
+                    # does not work for 3D yet
+                    #check if there is a z coordinate
+
+                    if "z" in current_pose.columns.get_level_values(2):
+                        print("3D data detected. Skipping likelihood adaptive filtering.")
+                        # if yes, just drop likelihood columns and pick the selected bodyparts
+                        filt_pose = current_pose.iloc[:, idx_selected].values
+                    else:
+                        filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh, self.llh_value)
 
                     # self.processed_input_data.append(np.array(current_pose.iloc[:, idx_selected]))
                     self.processed_input_data.append(filt_pose)

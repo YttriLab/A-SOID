@@ -14,7 +14,7 @@ UPLOAD_CONFIG_HELP = "Upload config files from previous A-SOiD projects to conti
 """Upload Data/ Data preprocess"""
 
 POSE_ORIGIN_SELECT_HELP = "If you want to replicate the published results, select CalMS21 (Paper)." \
-                          " Otherwise, we currently support DeepLabCut and SLEAP pose estimation."
+                          " Otherwise, we currently support DeepLabCut, SLEAP, and OpenMonkeyStudio pose estimation."
 
 FPS_HELP = "This information can usually be found in the meta data of the original videos used for pose estimation."
 SAMPLE_RATE_HELP = "The sample rate is the number of annotated time steps per second that are used for annotation. " \
@@ -33,6 +33,8 @@ MULTI_ANIMAL_HELP = "Only select this option if you are using a multi animal mod
 
 MULTI_ANIMAL_SELECT_HELP = "Select all animals that you want to include in the feature extraction." \
                            " Keep in mind that some behaviors require features of multiple animals to be represented correctly."
+
+IS_3D_HELP = "Select this option if you are using a 3D pose estimation model. This will change the way the data is processed."
 
 BODYPART_SELECT = "Select all body parts that you want included in the feature extraction." \
                   " Keep in mind that while some body parts will not give relevant information for the annotated behaviors," \
