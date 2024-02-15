@@ -494,7 +494,7 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                                                type=['avi', 'mp4'], key='video')
         new_pose_csvs = [ri_exapnder.file_uploader('Upload Corresponding Pose Files',
                                                    accept_multiple_files=False
-                                                   #, type=ftype
+                                                   , type=ftype
                                                     , key='pose')]
 
         if new_videos is not None and new_pose_csvs[0] is not None:
@@ -643,7 +643,7 @@ def disable():
     st.session_state["disabled"] = True
 
 
-class Predictor:
+class Refinement:
     def __init__(self, ri, config):
         self.ri = ri
         self.working_dir = config["Project"].get("PROJECT_PATH")
@@ -652,7 +652,7 @@ class Predictor:
         self.software = config["Project"].get("PROJECT_TYPE")
         self.is_3d = config["Project"].getboolean("IS_3D")
         self.multi_animal = config["Project"].getboolean("MULTI_ANIMAL")
-        self.ftype = config["Project"].get("FILE_TYPE")
+        self.ftype = [x.strip() for x in config["Project"].get("FILE_TYPE").split(",")]
         self.exclude_other = config["Project"].getboolean("EXCLUDE_OTHER")
         self.annotation_classes_ex = self.annotation_classes.copy()
         if self.exclude_other:
