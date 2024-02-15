@@ -442,7 +442,6 @@ def create_videos(new_pose_csvs, selected_bodyparts, llh_value, iterX_model, fra
                 filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh, llh_value)
 
             # using feature scaling from training set
-        # TODO: ADD 3D feature extraction
             if not is_3d:
                 feats, _ = feature_extraction([filt_pose], 1, framerate, frames2integ)
             else:
