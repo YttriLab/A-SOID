@@ -4,9 +4,11 @@ import pandas as pd
 from pathlib import Path
 from config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP
 from stqdm import stqdm
-from utils.extract_features_2D import feature_extraction, \
-    bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
+from utils.extract_features_2D import feature_extraction
+from utils.extract_features_3D import feature_extraction_3d
+from utils.predict import bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
 from utils.load_workspace import load_new_pose, load_iterX, save_data, load_features
+from utils.import_data import load_pose
 from datetime import date
 from utils.project_utils import create_new_project, update_config, copy_config
 from utils.preprocessing import adp_filt, sort_nicely
@@ -70,7 +72,7 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
         #     st.session_state['uploaded_fnames'] = []
 
 
-def get_features_labels(selected_bodyparts, llh_value,
+def get_features_labels(selected_bodyparts, software, multi_animal, is_3d, framerate, llh_value,
                         iterX_model, frames2integ, project_dir, iter_folder, placeholder,
                         ):
     features = [None]
@@ -84,23 +86,40 @@ def get_features_labels(selected_bodyparts, llh_value,
         # filter here
         # for i, f in enumerate(new_pose_csvs):
         for i, f in enumerate(stqdm(new_pose_csvs, desc="Extracting spatiotemporal features from pose")):
-            current_pose = pd.read_csv(f,
-                                       header=[0, 1, 2], sep=",", index_col=0
-                                       )
-            pose_names_list.append(f.name)
+
+            current_pose = load_pose(f, software, multi_animal)
+
             bp_level = 1
             bp_index_list = []
+
             for bp in selected_bodyparts:
                 bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
                 bp_index_list.append(bp_index)
             selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
-            # get rid of likelihood columns for deeplabcut
-            idx_llh = selected_pose_idx[2::3]
+
+            # get likelihood column idx directly from dataframe columns
+            idx_llh = [i for i, s in enumerate(current_pose.columns) if "likelihood" in s]
+
             # the loaded sleap file has them too, so exclude for both
             idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
-            filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh, llh_value)
+
+            # filtering does not work for 3D yet
+            # check if there is a z coordinate
+
+            if "z" in current_pose.columns.get_level_values(2):
+                if is_3d is not True:
+                    st.error("3D data detected. But parameter is set to 2D project.")
+                print("3D project detected. Skipping likelihood adaptive filtering.")
+                # if yes, just drop likelihood columns and pick the selected bodyparts
+                filt_pose = current_pose.iloc[:, idx_selected].values
+            else:
+                filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh, llh_value)
+
             # using feature scaling from training set
-            feats, _ = feature_extraction([filt_pose], 1, frames2integ)
+            if not is_3d:
+                feats, _ = feature_extraction([filt_pose], 1, framerate, frames2integ)
+            else:
+                feats, _ = feature_extraction_3d([filt_pose], 1, frames2integ)
             features.append(feats)
         st.session_state['uploaded_fnames'] = pose_names_list
         predict_arr = []
@@ -117,7 +136,8 @@ def get_features_labels(selected_bodyparts, llh_value,
             save_data(project_dir, iter_folder, 'embedding_input.sav',
                       [input_features, input_targets])
         st.session_state['input_sav'] = os.path.join(project_dir, iter_folder, 'embedding_input.sav')
-        st.success('Done. Type "R" to Refresh.')
+        # st.success('Done. Type "R" to Refresh.')
+        st.rerun()
     return input_features, input_targets
 
 
@@ -210,8 +230,8 @@ def pca_umap_hdbscan(target_behavior, annotation_classes, input_sav, cluster_ran
             save_data(project_dir, iter_folder, 'embedding_output.sav',
                       [umap_embeddings, assignments, soft_assignments, pred_assign])
             st.session_state['output_sav'] = os.path.join(project_dir, iter_folder, 'embedding_output.sav')
-            st.success('Done. Type "R" to Refresh.')
-
+            # st.success('Done. Type "R" to Refresh.')
+            st.rerun()
 
 def plot_hdbscan_embedding(output_sav):
     if output_sav is not None:
@@ -314,7 +334,9 @@ def main(ri=None, config=None):
         prefix = config["Project"].get("PROJECT_NAME")
         annotation_classes = [x.strip() for x in config["Project"].get("CLASSES").split(",")]
         software = config["Project"].get("PROJECT_TYPE")
-        ftype = config["Project"].get("FILE_TYPE")
+        multi_animal = config["Project"].getboolean("MULTI_ANIMAL")
+        is_3d = config["Project"].getboolean("IS_3D")
+        ftype = [x.strip() for x in config["Project"].get("FILE_TYPE").split(",")]
         selected_bodyparts = [x.strip() for x in config["Project"].get("KEYPOINTS_CHOSEN").split(",")]
         exclude_other = config["Project"].getboolean("EXCLUDE_OTHER")
         # threshold = config["Processing"].getfloat("SCORE_THRESHOLD")
@@ -349,7 +371,10 @@ def main(ri=None, config=None):
         if 'output_sav' not in st.session_state:
             st.session_state['output_sav'] = None
         if st.session_state['input_sav'] is None:
-            all_feats, all_labels = get_features_labels(selected_bodyparts, llh_value,
+            all_feats, all_labels = get_features_labels(selected_bodyparts,
+                                                        software, multi_animal, is_3d,
+                                                        framerate,
+                                                        llh_value,
                                                         iterX_model, frames2integ,
                                                         project_dir, iter_folder,
                                                         left_col
@@ -360,7 +385,7 @@ def main(ri=None, config=None):
         target_behavior = ri.multiselect('Select Behavior to Split', annotation_classes_ex, annotation_classes_ex)
         cluster_range = {key: [] for key in target_behavior}
         ri_l, ri_r = ri.columns(2)
-        normalize_feats = ri_l.checkbox('Normalize feautres?', help='recommended for independent features')
+        normalize_feats = ri_l.checkbox('Normalize features?', help='recommended for independent features')
         determine_dim = ri_r.checkbox('More relaxed embedding?', help='recommended for independent features')
         for target_behav in target_behavior:
             cluster_range[target_behav] = ri.slider(f'Minimum % for a cluster within {target_behav}',
@@ -372,7 +397,8 @@ def main(ri=None, config=None):
 
             if buttonL.button(':red[Clear Processed Pose]'):
                 st.session_state['input_sav'] = None
-                st.success('Cleared. Type "R" to Refresh.')
+                # st.success('Cleared. Type "R" to Refresh.')
+                st.rerun()
                 st.session_state['disabled'] = False
 
             if st.session_state['output_sav'] is None:
@@ -384,7 +410,8 @@ def main(ri=None, config=None):
                 right_col_top = right_col.container()
                 if buttonR.button(':red[Clear Embedding]'):
                     st.session_state['output_sav'] = None
-                    st.success('Cleared. Type "R" to Refresh.')
+                    # st.success('Cleared. Type "R" to Refresh.')
+                    st.rerun()
                 if st.session_state['output_sav'] is not None:
                     behav_figs, behav_groups, behav_embeds = plot_hdbscan_embedding(st.session_state['output_sav'])
                     for behav_keys in list(behav_figs.keys()):
