@@ -8,7 +8,7 @@ from stqdm import stqdm
 import os
 from sklearn.metrics import f1_score
 import matplotlib.colors as mcolors
-from utils.extract_features import frameshift_predict, bsoid_predict_numba, bsoid_predict_numba_noscale
+from utils.extract_features_2D import frameshift_predict, bsoid_predict_numba, bsoid_predict_numba_noscale
 from utils.load_workspace import load_features, load_test, save_data
 
 

@@ -14,7 +14,7 @@ import streamlit as st
 from config.help_messages import *
 from sklearn.preprocessing import LabelEncoder
 from stqdm import stqdm
-from utils.extract_features import feature_extraction, \
+from utils.extract_features_2D import feature_extraction, \
     bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
 from utils.import_data import load_labels_auto, load_pose_ftype
 from utils.load_workspace import load_new_pose, load_iterX

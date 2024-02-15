@@ -18,7 +18,7 @@ from utils.load_workspace import load_new_pose
 from utils.preprocessing import adp_filt, sort_nicely
 from utils.load_workspace import load_iterX, load_features, save_data, load_refinement, load_refine_params
 
-from utils.extract_features import feature_extraction, \
+from utils.extract_features_2D import feature_extraction, \
     bsoid_predict_numba, bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
 from config.help_messages import *
 

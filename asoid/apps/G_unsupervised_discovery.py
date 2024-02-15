@@ -4,7 +4,7 @@ import pandas as pd
 from pathlib import Path
 from config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP
 from stqdm import stqdm
-from utils.extract_features import feature_extraction, \
+from utils.extract_features_2D import feature_extraction, \
     bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
 from utils.load_workspace import load_new_pose, load_iterX, save_data, load_features
 from datetime import date
