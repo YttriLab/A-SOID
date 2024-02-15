@@ -67,6 +67,7 @@ def main(config=None):
         software = config["Project"].get("PROJECT_TYPE")
         framerate = config["Project"].getfloat("FRAMERATE")
         iteration = config["Processing"].getint("ITERATION")
+        is_3d = config["Project"].getboolean("IS_3D")
         project_dir = os.path.join(working_dir, prefix)
         iter_folder = str.join('', ('iteration-', str(iteration)))
         os.makedirs(os.path.join(project_dir, iter_folder), exist_ok=True)
@@ -86,7 +87,7 @@ def main(config=None):
                     prompt_setup(prompt_container, software, framerate, annotation_classes,
                                  working_dir, prefix)
                 if st.button('Extract Features', help = EXTRACT_FEATURES_HELP):
-                    extractor = Extract(working_dir, prefix, frames2integ)
+                    extractor = Extract(working_dir, prefix, frames2integ, is_3d)
                     extractor.main()
         except FileNotFoundError:
             prompt_container = st.container()
@@ -94,7 +95,7 @@ def main(config=None):
                 prompt_setup(prompt_container, software, framerate,
                              annotation_classes, working_dir, prefix)
             if st.button('Extract Features'):
-                extractor = Extract(working_dir, prefix, frames2integ)
+                extractor = Extract(working_dir, prefix, frames2integ, is_3d)
                 extractor.main()
         st.session_state['page'] = 'Step 3'
 
