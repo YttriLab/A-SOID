@@ -1,4 +1,3 @@
-import math
 import numpy as np
 import pandas as pd
 from numba import jit
@@ -248,43 +247,3 @@ def boxcar_center(a, n):
     moving_avg = np.array(a1.rolling(window=n, min_periods=1, center=True).mean())
 
     return moving_avg
-
-
-def asoid_predict_numba(feats, scaler, clf):
-    """
-    :param feats: list, multiple feats (original feature space)
-    :param clf: Obj, MLP classifier
-    :return nonfs_labels: list, label/100ms
-    """
-    labels_fslow = []
-    for i in range(0, len(feats)):
-        scaled_feats = scaler.transform(feats[i])
-        labels = clf.predict(np.nan_to_num(scaled_feats))
-        labels_fslow.append(labels)
-    return labels_fslow
-
-def frameshift_predict_3d(data_test, num_test, scaler, rf_model, framerate):
-    labels_fs = []
-    new_predictions = []
-    for i in range(num_test):
-        feats_new = asoid_extract_numba_3d([data_test[i]], framerate)
-        labels = asoid_predict_numba(feats_new, scaler, rf_model)
-        for m in range(0, len(labels)):
-            labels[m] = labels[m][::-1]
-        labels_pad = -1 * np.ones([len(labels), len(max(labels, key=lambda x: len(x)))])
-        for n, l in enumerate(labels):
-            labels_pad[n][0:len(l)] = l
-            labels_pad[n] = labels_pad[n][::-1]
-            if n > 0:
-                labels_pad[n][0:n] = labels_pad[n - 1][0:n]
-        labels_fs.append(labels_pad.astype(int))
-    for k in range(0, len(labels_fs)):
-        labels_fs2 = []
-        for l in range(math.floor(framerate / 10)):
-            labels_fs2.append(labels_fs[k][l])
-        new_predictions.append(np.array(labels_fs2).flatten('F'))
-    new_predictions_pad = []
-    for i in range(0, len(new_predictions)):
-        new_predictions_pad.append(np.pad(new_predictions[i], (len(data_test[i]) -
-                                                               len(new_predictions[i]), 0), 'edge'))
-    return np.hstack(new_predictions_pad)
