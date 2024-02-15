@@ -474,7 +474,10 @@ class Preprocess:
                     #check if there is a z coordinate
 
                     if "z" in current_pose.columns.get_level_values(2):
-                        print("3D data detected. Skipping likelihood adaptive filtering.")
+                        if self.is_3d is not True:
+                            st.warning("3D data detected. But parameter is set to 2D project. Setting to 3D project.")
+                            self.is_3d = True
+                        print("3D project detected. Skipping likelihood adaptive filtering.")
                         # if yes, just drop likelihood columns and pick the selected bodyparts
                         filt_pose = current_pose.iloc[:, idx_selected].values
                     else:
@@ -565,7 +568,8 @@ class Preprocess:
 
         col_left, _, col_right = st.columns([1, 1, 1])
         col_right.success("Continue on with next module".upper())
-        st.rerun()
+        #TODO: fix rerun to work as intended
+        #st.rerun()
 
     def main(self):
         self.setup_project()
