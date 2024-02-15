@@ -14,11 +14,13 @@ import streamlit as st
 from config.help_messages import *
 from sklearn.preprocessing import LabelEncoder
 from stqdm import stqdm
-from utils.extract_features_2D import feature_extraction, \
-    bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
+from utils.extract_features_2D import feature_extraction
+from utils.extract_features_3D import feature_extraction_3d
+from utils.predict import bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
 from utils.import_data import load_labels_auto, load_pose_ftype
 from utils.load_workspace import load_new_pose, load_iterX
 from utils.preprocessing import adp_filt, sort_nicely
+from utils.import_data import load_pose
 
 TITLE = "Predict behaviors"
 
@@ -269,15 +271,6 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
         new_pose_sav = os.path.join(ROOT.joinpath("new_test"), './new_pose.sav')
         new_pose_list = load_new_pose(new_pose_sav)
     else:
-        # try:
-        pose_origin = pose_expander.selectbox('Select pose origin', ['DeepLabCut', 'SLEAP'])
-        if pose_origin == 'DeepLabCut':
-            ftype = 'csv'
-        elif pose_origin == 'SLEAP':
-            ftype = 'h5'
-        else:
-            st.error('Pose origin not recognized.')
-            st.stop()
         new_pose_csvs = pose_expander.file_uploader('Upload Corresponding Pose Files',
                                                    accept_multiple_files=True,
                                                    type=ftype, key='pose')
@@ -366,7 +359,7 @@ def create_annotated_videos(vidpath_out,
         video.release()
 
 
-def predict_annotate_video(ftype, selected_bodyparts, llh_value, iterX_model, framerate, frames2integ,
+def predict_annotate_video(ftype, software, is_3d, multi_animal, selected_bodyparts, llh_value, iterX_model, framerate, frames2integ,
                            annotation_classes,
                            frame_dir, videos_dir, iter_folder,
                            video_checkbox, colL):
@@ -388,10 +381,7 @@ def predict_annotate_video(ftype, selected_bodyparts, llh_value, iterX_model, fr
         for i, f in enumerate(stqdm(new_pose_csvs, desc="Extracting spatiotemporal features from pose")):
         # for i, f in enumerate(new_pose_csvs):
 
-            #current_pose = pd.read_csv(f,
-            #                           header=[0, 1, 2], sep=",", index_col=0)
-            #todo: adapt to multi animal by reading from config
-            current_pose = load_pose_ftype(f, ftype)
+            current_pose = load_pose(f, software, multi_animal)
 
             bp_level = 1
             bp_index_list = []
@@ -411,19 +401,49 @@ def predict_annotate_video(ftype, selected_bodyparts, llh_value, iterX_model, fr
                         if bp not in current_pose.columns.get_level_values(bp_level).unique():
                             st.error(f'At least one keypoint "{bp}" is missing in pose file: {f.name}')
                             st.stop()
+            #     for bp in selected_bodyparts:
+            #         bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
+            #         bp_index_list.append(bp_index)
+            #     selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
+            #
+            #     # get rid of likelihood columns for deeplabcut
+            #     idx_llh = selected_pose_idx[2::3]
+            #
+            #     # the loaded sleap file has them too, so exclude for both
+            #     idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
+            # filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh, llh_value)
+
                 for bp in selected_bodyparts:
                     bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
                     bp_index_list.append(bp_index)
                 selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
-                # get rid of likelihood columns for deeplabcut
-                idx_llh = selected_pose_idx[2::3]
+
+                # get likelihood column idx directly from dataframe columns
+                idx_llh = [i for i, s in enumerate(current_pose.columns) if "likelihood" in s]
 
                 # the loaded sleap file has them too, so exclude for both
                 idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
-            filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh, llh_value)
+
+            # filtering does not work for 3D yet
+            # check if there is a z coordinate
+
+            if "z" in current_pose.columns.get_level_values(2):
+                if is_3d is not True:
+                    st.error("3D data detected. But parameter is set to 2D project.")
+                print("3D project detected. Skipping likelihood adaptive filtering.")
+                # if yes, just drop likelihood columns and pick the selected bodyparts
+                filt_pose = current_pose.iloc[:, idx_selected].values
+            else:
+                filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh, llh_value)
+
+            # using feature scaling from training set
+        # TODO: ADD 3D feature extraction
+            if not is_3d:
+                feats, _ = feature_extraction([filt_pose], 1, framerate, frames2integ)
+            else:
+                feats, _ = feature_extraction_3d([filt_pose], 1, frames2integ)
 
             total_n_frames.append(filt_pose.shape[0])
-            feats, _ = feature_extraction([filt_pose], 1, frames2integ)
             features.append(feats)
         for i in stqdm(range(len(features)), desc="Behavior prediction from spatiotemporal features"):
             with st.spinner('Predicting behavior from features...'):
@@ -433,8 +453,9 @@ def predict_annotate_video(ftype, selected_bodyparts, llh_value, iterX_model, fr
 
             predictions_raw = np.pad(predict_arr.repeat(repeat_n), (repeat_n, 0), 'edge')[:total_n_frames[i]]
             predictions_match = weighted_smoothing(predictions_raw, size=st.session_state['smooth_size'])
-
-            pose_prefix = st.session_state['pose'][i].name.rpartition(str.join('', ('.', ftype)))[0]
+            curr_file_name = st.session_state['pose'][i].name
+            curr_ftype = curr_file_name.split('.')[-1]
+            pose_prefix = curr_file_name.rpartition(str.join('', ('.', curr_ftype)))[0]
             annotated_str = str.join('', ('_annotated_', iter_folder))
             annotated_vid_name = str.join('', (pose_prefix, annotated_str, '.mp4'))
 
@@ -649,9 +670,11 @@ def main(ri=None, config=None):
         prefix = config["Project"].get("PROJECT_NAME")
         annotation_classes = [x.strip() for x in config["Project"].get("CLASSES").split(",")]
         software = config["Project"].get("PROJECT_TYPE")
-        ftype = config["Project"].get("FILE_TYPE")
+        ftype = [x.strip() for x in config["Project"].get("FILE_TYPE").split(",")]
         selected_bodyparts = [x.strip() for x in config["Project"].get("KEYPOINTS_CHOSEN").split(",")]
         exclude_other = config["Project"].getboolean("EXCLUDE_OTHER")
+        is_3d = config["Project"].getboolean("IS_3D")
+        multi_animal = config["Project"].getboolean("MULTI_ANIMAL")
         # threshold = config["Processing"].getfloat("SCORE_THRESHOLD")
         threshold = 0.1
         llh_value = config["Processing"].getfloat("LLH_VALUE")
@@ -713,7 +736,7 @@ def main(ri=None, config=None):
                     ri.info(f'Please train a {iter_folder} model in :orange[Active Learning] step.')
                 if st.session_state['pose'] is not None:
                     placeholder = st.empty()
-                    predict_annotate_video(ftype, selected_bodyparts, llh_value, iterX_model, framerate, frames2integ,
+                    predict_annotate_video(ftype, software, is_3d, multi_animal, selected_bodyparts, llh_value, iterX_model, framerate, frames2integ,
                                            annotation_classes,
                                            None, videos_dir, iter_folder,
                                            None, placeholder)
