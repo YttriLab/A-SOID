@@ -528,7 +528,8 @@ class Preprocess:
                     PROJECT_PATH=self.working_dir,
                     CLASSES=self.classes,
                     MULTI_ANIMAL=self.multi_animal,
-                    EXCLUDE_OTHER=self.exclude_other
+                    EXCLUDE_OTHER=self.exclude_other,
+                    IS_3D=self.is_3d
                 ),
                 "Processing": dict(
                     LLH_VALUE=self.llh_value,
@@ -551,7 +552,8 @@ class Preprocess:
                     KEYPOINTS_CHOSEN=self.selected_bodyparts,
                     PROJECT_PATH=self.working_dir,
                     CLASSES=self.classes,
-                    MULTI_ANIMAL=self.multi_animal
+                    MULTI_ANIMAL=self.multi_animal,
+                    IS_3D=self.is_3d
                 ),
                 "Processing": dict(
 
