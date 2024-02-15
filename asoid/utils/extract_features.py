@@ -150,11 +150,13 @@ class Extract:
         number2train = len(self.processed_input_data)
         # extract features, bin them
         if self.is_3d:
+            print('3D feature extraction')
             #3D feature extraction
             self.features, self.scaled_features = feature_extraction_3d(self.processed_input_data,
                                                                  number2train,
                                                                  self.frames2integ)
         else:
+            print('2D feature extraction')
             #2D feature extraction
             self.features, self.scaled_features = feature_extraction(self.processed_input_data,
                                                                  number2train,
