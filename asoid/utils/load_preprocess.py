@@ -563,6 +563,7 @@ class Preprocess:
 
         col_left, _, col_right = st.columns([1, 1, 1])
         col_right.success("Continue on with next module".upper())
+        st.rerun()
 
     def main(self):
         self.setup_project()
