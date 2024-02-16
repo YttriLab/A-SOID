@@ -81,15 +81,21 @@ def main(ri=None, config=None):
                     # st.write(annotation_cls)
                     # for each example
                     for j in range(len(examples_idx[annotation_cls])):
-                        refined_behaviors = [refinements[annotation_cls][j]['Behavior'][k]
-                                             for k in range(
-                                len(refinements[annotation_cls][j]['Behavior']))]
+                        try:
+                            refined_behaviors = [refinements[annotation_cls][j]['Behavior'][k]
+                                                 for k in range(
+                                    len(refinements[annotation_cls][j]['Behavior']))]
+                        except TypeError:
+                            st.error('At least one insufficient refinement found '
+                                     f" in {selected_refine_dir}, example {j} of {annotation_cls}."
+                                     ' Please refine behaviors and save your refinements in :orange[Refine Behaviors] first!')
+                            st.stop()
                         start_idx = examples_idx[annotation_cls][j][0]
                         stop_idx = examples_idx[annotation_cls][j][1]
                         # if debug_button:
                         if features[start_idx:stop_idx, :].shape[0] != len(refined_behaviors):
                             # with placeholder:
-                            st.write(f'In {selected_refine_dir}, '
+                            st.error(f'In {selected_refine_dir}, '
                                      f'behavior: {annotation_cls}, '
                                      f'feature length does not match targets in example {j}')
                         # else:
@@ -112,8 +118,12 @@ def main(ri=None, config=None):
             new_features = np.vstack(new_features_dir)
             new_targets = np.hstack(new_targets_dir)
             # st.write(np.unique(new_targets, return_counts=True))
-        except UnboundLocalError:
+        except FileNotFoundError:
             st.error('No refinement data found in this iteration')
+            selected_refine_dirs = []
+
+        except ValueError:
+            st.error('Select at least one refinement to create new dataset.')
             selected_refine_dirs = []
 
         if len(selected_refine_dirs) > 0:
