@@ -245,19 +245,21 @@ def main():
 
         except:
             menu_options = ['Menu', 'Upload Data'
-                # , 'Active Learning'
-                # ,'Refine Behaviors'
-                # , 'Create New Dataset'
-                # , 'Predict'
-                # , 'Discover'
+                 , 'Active Learning'
+                 , 'Extract Features'
+                 ,'Refine Behaviors'
+                 , 'Create New Dataset'
+                 , 'Predict'
+                 , 'Discover'
                             ]
             icon_options = ['window-desktop',
                             'upload',
-                            #'diagram-2',
-                            #'images',
-                            #'file-earmark-plus',
-                            #'robot',
-                            #"signpost-split",
+                            'bar-chart-line',
+                            'diagram-2',
+                            'images',
+                            'file-earmark-plus',
+                            'robot',
+                            "signpost-split",
                             ]
 
         nav_options = option_menu(None, menu_options,
