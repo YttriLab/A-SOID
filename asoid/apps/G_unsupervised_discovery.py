@@ -26,6 +26,21 @@ from sklearn.decomposition import PCA
 
 TITLE = "Unsupervised discovery"
 
+DISCOVERY_HELP = ("In this step, you can discover new behaviors from the data you upload. "
+                  " Uploaded pose data will be predicted using the current model and then clustered to identify new behaviors."
+                  " The clustered subsets can be used to create a new training set (including a selected set of subtypes) - in a new project."
+                  "\n\n --- \n\n"
+                  " Step 1: Upload and preprocess pose data."
+                    "\n\n Step 2: Embed and cluster behaviors."
+                    "\n\n Step 3: Select relevant subtypes and save them to the new training set."
+                  "\n\n Step 4: Train a new model with the new training set - in the newly created project."
+                  "\n\n --- \n\n"
+                  "\n\n **Note:** This can be done on a selection of behaviors or on all behaviors in the dataset but will always cluster them in seperate subsets of the entire data."
+                  " However, the subtypes will be merged to create a new training set so that you can train a classifier to predict all of them."
+                  )
+
+PREPROCESS_HELP = ("This will extract features from the uploaded pose files and predict the behavior using the current model.")
+
 
 def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                  framerate, videos_dir, project_dir, iter_dir, pose_expander):
@@ -42,7 +57,8 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
     else:
         new_pose_csvs = pose_expander.file_uploader('Upload Corresponding Pose Files',
                                                     accept_multiple_files=True,
-                                                    type=ftype, key='pose')
+                                                    type=ftype, key='pose'
+                                                    , help="You can upload multiple pose files at once. ")
 
         # if len(new_pose_csvs) > 0:
         #     new_pose_list = []
@@ -79,7 +95,7 @@ def get_features_labels(selected_bodyparts, software, multi_animal, is_3d, frame
     predict_arr = [None]
     new_pose_csvs = st.session_state['pose']
     input_features, input_targets = None, None
-    if placeholder.button('preprocess files'):
+    if placeholder.button('Preprocess files', help = PREPROCESS_HELP):
         st.session_state['disabled'] = True
         pose_names_list = []
         features = []
@@ -182,7 +198,7 @@ def pca_umap_hdbscan(target_behavior, annotation_classes, input_sav, cluster_ran
         soft_assignments = {key: [] for key in target_behavior}
         pred_assign = {key: [] for key in target_behavior}
 
-        if right_col.button('Embed and Cluster Targeted Behavior'):
+        if right_col.button('Embed and Cluster Targeted Behavior', help='This will embed and cluster the selected behaviors.'):
             # for each target behavior, scale the features
             for target_behav in target_behavior:
                 with st.spinner(f'working on splitting {target_behav}...'):
@@ -328,6 +344,9 @@ def save_update_info(config, behavior_names_split):
 def main(ri=None, config=None):
     st.markdown("""---""")
 
+    st.title("Directed Discovery (powered by B-SOiD)")
+    st.expander("What is this?", expanded=False).markdown(DISCOVERY_HELP)
+
     if config is not None:
         # st.warning("If you did not do it yet, remove and reupload the config file to make sure that you use the latest configuration!")
         working_dir = config["Project"].get("PROJECT_PATH")
@@ -382,7 +401,8 @@ def main(ri=None, config=None):
         annotation_classes_ex = annotation_classes.copy()
         if exclude_other:
             annotation_classes_ex.pop(annotation_classes_ex.index('other'))
-        target_behavior = ri.multiselect('Select Behavior to Split', annotation_classes_ex, annotation_classes_ex)
+        target_behavior = ri.multiselect('Select Behavior to Split', annotation_classes_ex, annotation_classes_ex
+                                         , help="Select the behaviors you want to split into subtypes.")
         cluster_range = {key: [] for key in target_behavior}
         ri_l, ri_r = ri.columns(2)
         normalize_feats = ri_l.checkbox('Normalize features?', help='recommended for independent features')
@@ -395,7 +415,7 @@ def main(ri=None, config=None):
         if st.session_state['input_sav'] is not None:
             st.session_state['disabled'] = True
 
-            if buttonL.button(':red[Clear Processed Pose]'):
+            if buttonL.button(':red[Clear Processed Pose]', help = 'This will clear the processed pose data.'):
                 st.session_state['input_sav'] = None
                 # st.success('Cleared. Type "R" to Refresh.')
                 st.rerun()
@@ -408,7 +428,7 @@ def main(ri=None, config=None):
 
             else:
                 right_col_top = right_col.container()
-                if buttonR.button(':red[Clear Embedding]'):
+                if buttonR.button(':red[Clear Embedding]', help='This will clear the embedding and clustering results.'):
                     st.session_state['output_sav'] = None
                     # st.success('Cleared. Type "R" to Refresh.')
                     st.rerun()

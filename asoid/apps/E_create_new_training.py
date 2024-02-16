@@ -6,7 +6,8 @@ from utils.load_workspace import load_refinement, load_features, load_iterX, sav
 from utils.project_utils import update_config
 
 TITLE = "Create new dataset"
-
+DATASET_HELP = ("After refining behaviors, you can create a new dataset to retrain the model."
+                "\n\n This step is optional, but can be repeated for several iterations (requires new refinements). Select an iteration on the top right.")
 
 def create_new_training_features_targets(project_dir, selected_iter, new_features, new_targets):
     # load existing training
@@ -41,8 +42,11 @@ def create_new_training_features_targets(project_dir, selected_iter, new_feature
     st.balloons()
 
 
+
 def main(ri=None, config=None):
     st.markdown("""---""")
+    st.title("Create new Dataset (optional)")
+    st.expander("What is this?", expanded=False).markdown(DATASET_HELP)
 
     if config is not None:
         working_dir = config["Project"].get("PROJECT_PATH")
@@ -108,9 +112,9 @@ def main(ri=None, config=None):
             new_features = np.vstack(new_features_dir)
             new_targets = np.hstack(new_targets_dir)
             # st.write(np.unique(new_targets, return_counts=True))
-        except:
-            #TODO: FIX THIS UNSPECIFIED ERROR
-            pass
+        except UnboundLocalError:
+            st.error('No refinement data found in this iteration')
+            selected_refine_dirs = []
 
         if len(selected_refine_dirs) > 0:
             create_button = st.button(f'Create :orange[ITERATION {selected_iter + 1}] training dataset')

@@ -23,6 +23,11 @@ from utils.preprocessing import adp_filt, sort_nicely
 from utils.import_data import load_pose
 
 TITLE = "Predict behaviors"
+PREDICT_HELP = ("In this step, you can predict the behavior in sessions (pose) using the trained model."
+                "\n\n The predictions will be used to generate summary statistics and visualizations."
+                "\n\n **Optional:** You can also generate annotated videos with the predicted labels."
+                "\n\n---\n\n"
+                "> **Note**: The predictions will be saved in the project directory for your further analysis.")
 
 
 def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder, top_most_container, vidname):
@@ -255,8 +260,9 @@ def frame_extraction(video_file, frame_dir, placeholder=None):
             placeholder.error('stdout:', e.stdout.decode('utf8'))
             placeholder.error('stderr:', e.stderr.decode('utf8'))
         placeholder.info('Done extracting {} frames from {}'.format(num_frames, video_file))
-        placeholder.success('Done. Type "R" to refresh.')
-
+        placeholder.success('Done. Type f to refresh.')
+        st.balloons()
+        # st.rerun()
 
 def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                  framerate, videos_dir, project_dir, iter_dir):
@@ -437,7 +443,6 @@ def predict_annotate_video(ftype, software, is_3d, multi_animal, selected_bodypa
                 filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh, llh_value)
 
             # using feature scaling from training set
-        # TODO: ADD 3D feature extraction
             if not is_3d:
                 feats, _ = feature_extraction([filt_pose], 1, framerate, frames2integ)
             else:
@@ -468,6 +473,8 @@ def predict_annotate_video(ftype, software, is_3d, multi_animal, selected_bodypa
                                         video_checkbox, predictions_match)
 
                 message_box.success('Done. Type "R" to refresh.')
+                st.balloons()
+                # st.rerun()
             np.save(vidpath_out.replace('mp4', 'npy'),
                     predictions_match)
         st.balloons()
@@ -530,7 +537,7 @@ def just_annotate_video(predict_npy, framerate,
                                predict)
                 st.balloons()
                 st.success('Done. Type "R" to refresh.')
-
+                #st.rerun()
 
 def save_predictions(predict_npy, source_file_name, annotation_classes, framerate):
     """takes numerical labels and transforms back into one-hot encoded file (BORIS style). Saves as csv"""
@@ -663,6 +670,10 @@ def weighted_smoothing(predictions, size):
 
 def main(ri=None, config=None):
     st.markdown("""---""")
+
+    st.title("Predict new Data")
+    st.expander("What is this?", expanded=False).markdown(PREDICT_HELP)
+
 
     if config is not None:
         # st.warning("If you did not do it yet, remove and reupload the config file to make sure that you use the latest configuration!")

@@ -8,6 +8,10 @@ from config.help_messages import *
 
 TITLE = "Extract features"
 
+EXTRACT_FEATURES_HELP = ("In this step, you can extract features from the labeled data you uploaded. "
+                         "\n\n The features will be used to train the classifier and predict the behavior in the next steps."
+                         )
+
 
 def prompt_setup(prompt_container, software, framerate, annotation_classes,
                  working_dir, prefix, show_only=False):
@@ -59,6 +63,9 @@ def prompt_setup(prompt_container, software, framerate, annotation_classes,
 
 def main(config=None):
     st.markdown("""---""")
+
+    st.title("Extract Features")
+    st.expander("What is this?", expanded=False).markdown(EXTRACT_FEATURES_HELP)
 
     if config is not None:
         working_dir = config["Project"].get("PROJECT_PATH")
