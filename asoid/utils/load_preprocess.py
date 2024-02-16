@@ -281,7 +281,6 @@ class Preprocess:
 
     def select_working_dir(self):
         input_container = st.container()
-        # TODO: adapt to run with mac and ubuntu
         self.working_dir = input_container.text_input('Enter a working directory',
                                                       str.join('', (str(Path.home()), '/Desktop/asoid_output')),
                                                       help=WORKING_DIR_HELP)

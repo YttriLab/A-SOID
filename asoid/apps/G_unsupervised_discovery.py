@@ -1,7 +1,5 @@
 import streamlit as st
 import os
-import pandas as pd
-from pathlib import Path
 from config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP
 from stqdm import stqdm
 from utils.extract_features_2D import feature_extraction
@@ -45,14 +43,8 @@ PREPROCESS_HELP = ("This will extract features from the uploaded pose files and 
 def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                  framerate, videos_dir, project_dir, iter_dir, pose_expander):
     if software == 'CALMS21 (PAPER)':
-        try:
-            # TODO: deprecate
-            ROOT = Path(__file__).parent.parent.parent.resolve()
-            new_pose_sav = os.path.join(ROOT.joinpath("new_test"), './new_pose.sav')
-            new_pose_list = load_new_pose(new_pose_sav)
-        except FileNotFoundError:
-            st.error("The CALMS21 data set is not designed to be used with the discovery step.")
-            st.stop()
+        st.error("The CALMS21 data set is not designed to be used with the discovery step.")
+        st.stop()
 
     else:
         new_pose_csvs = pose_expander.file_uploader('Upload Corresponding Pose Files',
@@ -60,32 +52,6 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                                                     type=ftype, key='pose'
                                                     , help="You can upload multiple pose files at once. ")
 
-        # if len(new_pose_csvs) > 0:
-        #     new_pose_list = []
-        #     pose_names_list = []
-        #     for i, f in enumerate(new_pose_csvs):
-        #         current_pose = pd.read_csv(f,
-        #                                    header=[0, 1, 2], sep=",", index_col=0)
-        #         bp_level = 1
-        #         bp_index_list = []
-        #         for bp in selected_bodyparts:
-        #             bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
-        #             bp_index_list.append(bp_index)
-        #         selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
-        #         # get rid of likelihood columns for deeplabcut
-        #         idx_llh = selected_pose_idx[2::3]
-        #         # the loaded sleap file has them too, so exclude for both
-        #         idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
-        #         # idx_selected = np.array([0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16])
-        #
-        #
-        #         new_pose_list.append(np.array(current_pose.iloc[:, idx_selected]))
-        #         pose_names_list.append(f.name)
-        #     st.session_state['uploaded_pose'] = new_pose_list
-        #     st.session_state['uploaded_fnames'] = pose_names_list
-        # else:
-        #     st.session_state['uploaded_pose'] = []
-        #     st.session_state['uploaded_fnames'] = []
 
 
 def get_features_labels(selected_bodyparts, software, multi_animal, is_3d, framerate, llh_value,

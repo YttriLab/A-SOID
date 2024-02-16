@@ -14,7 +14,6 @@ import re
 import tkinter as tk
 import base64
 from moviepy.editor import VideoFileClip
-from utils.load_workspace import load_new_pose
 from utils.import_data import load_pose
 from utils.preprocessing import adp_filt, sort_nicely
 from utils.load_workspace import load_iterX, load_features, save_data, load_refinement, load_refine_params
@@ -482,10 +481,8 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
     shortvid_dir = None
 
     if software == 'CALMS21 (PAPER)':
-        #todo: deprecate
-        ROOT = Path(__file__).parent.parent.parent.resolve()
-        new_pose_sav = os.path.join(ROOT.joinpath("new_test"), './new_pose.sav')
-        new_pose_list = load_new_pose(new_pose_sav)
+        st.error('CALMS21 (PAPER) is not supported for this feature.')
+        st.stop()
     else:
         # try:
         new_videos = le_exapnder.file_uploader('Upload Video Files',
@@ -691,15 +688,8 @@ class Refinement:
                                           , help=REFINEMENT_SELECT_HELP)
 
        if self.software == 'CALMS21 (PAPER)':
-           try:
-               # TODO: deprecate
-               ROOT = Path(__file__).parent.parent.parent.resolve()
-               targets_test_csv = os.path.join(ROOT.joinpath("test"), './test_labels.csv')
-               targets_test_df = pd.read_csv(targets_test_csv, header=0)
-               targets_test = np.array(targets_test_df['annotation'])
-           except FileNotFoundError:
-               st.error("The CALMS21 data set is not designed to be used with the refinement step.")
-               st.stop()
+           st.error("The CALMS21 data set is not designed to be used with the refinement step.")
+           st.stop()
        else:
            if 'disabled' not in st.session_state:
                st.session_state['disabled'] = False

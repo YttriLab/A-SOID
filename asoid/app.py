@@ -231,7 +231,7 @@ def main():
             prefix = st.session_state['config']["Project"].get("PROJECT_NAME")
             data, config = load_data(working_dir,
                                      prefix)
-            menu_options = ['Menu', 'Upload Data', 'Extract Features', 'Active Learning',
+            menu_options = ['Menu', 'View Config', 'Extract Features', 'Active Learning',
                             'Refine Behaviors', 'Create New Dataset', 'Predict', 'Discover']
             icon_options = ['window-desktop',
                             'upload',
@@ -244,16 +244,20 @@ def main():
                             ]
 
         except:
-            menu_options = ['Menu', 'Upload Data', 'Active Learning',
-                            'Refine Behaviors', 'Create New Dataset', 'Predict', 'Discover']
+            menu_options = ['Menu', 'Upload Data'
+                # , 'Active Learning'
+                # ,'Refine Behaviors'
+                # , 'Create New Dataset'
+                # , 'Predict'
+                # , 'Discover'
+                            ]
             icon_options = ['window-desktop',
                             'upload',
-
-                            'diagram-2',
-                            'images',
-                            'file-earmark-plus',
-                            'robot',
-                            "signpost-split",
+                            #'diagram-2',
+                            #'images',
+                            #'file-earmark-plus',
+                            #'robot',
+                            #"signpost-split",
                             ]
 
         nav_options = option_menu(None, menu_options,
@@ -281,7 +285,7 @@ def main():
 
     if nav_options == 'Menu':
         index()
-    elif 'Upload Data' in nav_options:
+    elif 'Upload Data' in nav_options or 'View Config' in nav_options:
         if "config" in st.session_state.keys():
             A_data_preprocess.main(config=st.session_state['config'])
         else:

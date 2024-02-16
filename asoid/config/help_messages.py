@@ -157,4 +157,4 @@ SAVE_NEW_HELP = "Press to save your previous selection in the project folder."
 
 """Final"""
 
-IMPRESS_TEXT = "A-SOiD was developed by Alexander Hsu and Jens Schweihoff. For support, visit our [GitHub Repository](https://github.com/YttriLab/A-SOID)."
+IMPRESS_TEXT = "A-SOiD is developed by Alexander Hsu and Jens Tillmann. For support, visit our [GitHub Repository](https://github.com/YttriLab/A-SOID)."

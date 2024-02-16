@@ -17,7 +17,6 @@ from stqdm import stqdm
 from utils.extract_features_2D import feature_extraction
 from utils.extract_features_3D import feature_extraction_3d
 from utils.predict import bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
-from utils.import_data import load_labels_auto, load_pose_ftype
 from utils.load_workspace import load_new_pose, load_iterX
 from utils.preprocessing import adp_filt, sort_nicely
 from utils.import_data import load_pose
@@ -265,8 +264,9 @@ def frame_extraction(video_file, frame_dir, placeholder=None):
             placeholder.error('stdout:', e.stdout.decode('utf8'))
             placeholder.error('stderr:', e.stderr.decode('utf8'))
         placeholder.info('Done extracting {} frames from {}'.format(num_frames, video_file))
-        placeholder.success('Done. Type f to refresh.')
+        placeholder.success('Done. Press "R" on your keyboard to refresh.')
         st.balloons()
+        # TODO: Find suitable replacement for manual refresh
         # st.rerun()
 
 def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
@@ -295,7 +295,7 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
         #
         #         #current_pose = pd.read_csv(f,
         #         #                           header=[0, 1, 2], sep=",", index_col=0)
-        #         #todo: adapt to multi animal by reading from config
+        #
         #         current_pose = load_pose_ftype(f, ftype)
         #
         #         bp_level = 1
@@ -477,8 +477,9 @@ def predict_annotate_video(ftype, software, is_3d, multi_animal, selected_bodypa
                                         frame_dir,
                                         video_checkbox, predictions_match)
 
-                message_box.success('Done. Type "R" to refresh.')
+                message_box.success('Done. Press "R" on your keyboard to refresh.')
                 st.balloons()
+                #TODO: Find suitable replacement for manual refresh
                 # st.rerun()
             np.save(vidpath_out.replace('mp4', 'npy'),
                     predictions_match)
@@ -541,7 +542,8 @@ def just_annotate_video(predict_npy, framerate,
                                frame_dir, videos_dir, iter_folder,
                                predict)
                 st.balloons()
-                st.success('Done. Type "R" to refresh.')
+                st.success('Done. Press "R" on your keyboard to refresh.')
+                #TODO: Find suitable replacement for manual refresh
                 #st.rerun()
 
 def save_predictions(predict_npy, source_file_name, annotation_classes, framerate):
@@ -650,8 +652,8 @@ def describe_labels_single(df_label, annotation_classes, framerate, placeholder)
 
                              },
                     inplace=True)
-    # TODO: autosize columns with newer streamlit versions (e.g., using use_container_width=True)
-    placeholder.dataframe(count_df, hide_index=True)
+
+    placeholder.dataframe(count_df, hide_index=True, use_container_width=True)
 
 
 def weighted_smoothing(predictions, size):
@@ -722,15 +724,8 @@ def main(ri=None, config=None):
             annot_vid_path = 'Add New Data'
 
         if software == 'CALMS21 (PAPER)':
-            try:
-                #TODO: deprecate
-                ROOT = Path(__file__).parent.parent.parent.resolve()
-                targets_test_csv = os.path.join(ROOT.joinpath("test"), './test_labels.csv')
-                targets_test_df = pd.read_csv(targets_test_csv, header=0)
-                targets_test = np.array(targets_test_df['annotation'])
-            except FileNotFoundError:
-                st.error("The CALMS21 data set is not designed to be used with the predict step.")
-                st.stop()
+            st.error("The CALMS21 data set is not designed to be used with the predict step.")
+            st.stop()
         else:
             if 'disabled' not in st.session_state:
                 st.session_state['disabled'] = False
@@ -796,6 +791,7 @@ def main(ri=None, config=None):
                               selection)
                 # display video from video path
                 if os.path.isfile(annot_vid_path):
+                    # video_col.write(f"### Video: {annot_vid_path}")
                     video_col.video(annot_vid_path)
                 else:
                     video_checkbox = video_col.checkbox("Create Labeled Video?")
