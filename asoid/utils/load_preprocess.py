@@ -190,10 +190,12 @@ class Preprocess:
                 self.multi_animal = st.checkbox("Is this a multiple animal project?",
                                                 False, key="multi_animal_check",
                                                 help=MULTI_ANIMAL_HELP)
-            if self.software == "DeepLabCut":
-                self.is_3d = st.checkbox("Is this a 3D project?",
-                                        False, key="3d_check",
-                                        help=IS_3D_HELP)
+            #TODO: Verify if 3D DLC is this format
+
+            # if self.software == "DeepLabCut":
+            #     self.is_3d = st.checkbox("Is this a 3D project?",
+            #                             False, key="3d_check",
+            #                             help=IS_3D_HELP)
             elif self.software == "OpenMonkeyStudio":
                 self.is_3d = True
                 self.multi_animal = False
