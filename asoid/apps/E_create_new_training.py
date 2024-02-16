@@ -7,7 +7,11 @@ from utils.project_utils import update_config
 
 TITLE = "Create new dataset"
 DATASET_HELP = ("After refining behaviors, you can create a new dataset to retrain the model."
-                "\n\n This step is optional, but can be repeated for several iterations (requires new refinements). Select an iteration on the top right.")
+                "\n\n Step 1: Select an iteration and refinement to include in the new dataset."
+                "\n\n Step 2: Click on 'Create :orange[ITERATION X] training dataset' to include the new data into the training set."
+                "\n\n Step 3: Move to :orange[Active Learning] to retrain the classifier with the new dataset."
+                "\n\n ---"
+                "\n\n :blue[This step is optional, but can be repeated for several iterations (requires new refinements).]")
 
 def create_new_training_features_targets(project_dir, selected_iter, new_features, new_targets):
     # load existing training

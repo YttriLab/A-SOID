@@ -5,14 +5,21 @@ from utils.manual_refinement import Refinement
 
 
 TITLE = "Refine behaviors"
-REFINE_HELP = ("After using the active learning step, you can further refine your model by adding new, previously unseen data (video + pose)."
+REFINE_HELP = ("After using the :orange[Active Learning] step, you can further refine your model by adding new, previously unseen data (video + pose)."
                " **The added data does not require manual labels**, but will be classified by the current model.\n\n"
                " Similiar to the active learning regime, the model will suggest samples with low-confidence (or random) that can be refined manually in this step."
                " The refined data will then be used to retrain the model and improve its performance (in the next step). \n\n"
-               " You can add multiple sessions (video + pose) before retraining the model. \n\n"
-               "---\n\n"
-               "> *Don't forget to save the refined data before moving to the next step or a new session.*\n\n"
-               "> **Note**: The model will not be retrained automatically after adding new data. But you will need to go to the next tab (Create new Dataset) and retrain the model with the new data.")
+               " :blue[You can add multiple sessions (video + pose) before retraining the model.] \n\n"
+               " ---\n\n"
+                " **Step 1**: Select an iteration."
+               "\n\n **Step 2**: Select a refinement or add a new video.\n\n"
+               " **Step 3**: Go through each behavior (radio buttons) and each example (tabs) and refine the predicted labels."
+               "\n\n **Step 4**: Save the refined data before moving to the next step or a new example."
+               "\n\n **Step 5**: Go to the next tab :orange[Create New Dataset] and retrain the model with the new data."
+               "\n\n :blue[This process can be repeated for several iterations (requires new refinements).]"
+               "\n\n ---\n\n"
+               ":red[**Don't forget to save the refined data before moving to the next step or a new session.**]"
+               )
 
 
 def main(ri=None, config=None):

@@ -30,13 +30,13 @@ DISCOVERY_HELP = ("In this step, you can discover new behaviors from the data yo
                   " Uploaded pose data will be predicted using the current model and then clustered to identify new behaviors."
                   " The clustered subsets can be used to create a new training set (including a selected set of subtypes) - in a new project."
                   "\n\n --- \n\n"
-                  " Step 1: Upload and preprocess pose data."
-                    "\n\n Step 2: Embed and cluster behaviors."
-                    "\n\n Step 3: Select relevant subtypes and save them to the new training set."
-                  "\n\n Step 4: Train a new model with the new training set - in the newly created project."
+                  " **Step 1**: Upload and preprocess pose data."
+                    "\n\n **Step 2**: Embed and cluster behaviors."
+                    "\n\n **Step 3**: Select relevant subtypes and save them to the new training set."
+                  "\n\n **Step 4**: Train a new model with the new training set - in the newly created project."
                   "\n\n --- \n\n"
-                  "\n\n **Note:** This can be done on a selection of behaviors or on all behaviors in the dataset but will always cluster them in seperate subsets of the entire data."
-                  " However, the subtypes will be merged to create a new training set so that you can train a classifier to predict all of them."
+                  "\n\n :blue[This can be done on a selection of behaviors or on all behaviors in the dataset but will always cluster them in seperate subsets of the entire data.]"
+                  " \n\n :blue[However, the subtypes will be merged to create a new training set so that you can train a classifier to predict all of them.]"
                   )
 
 PREPROCESS_HELP = ("This will extract features from the uploaded pose files and predict the behavior using the current model.")

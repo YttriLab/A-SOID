@@ -27,7 +27,12 @@ PREDICT_HELP = ("In this step, you can predict the behavior in sessions (pose) u
                 "\n\n The predictions will be used to generate summary statistics and visualizations."
                 "\n\n **Optional:** You can also generate annotated videos with the predicted labels."
                 "\n\n---\n\n"
-                "> **Note**: The predictions will be saved in the project directory for your further analysis.")
+                "**Step 1**: Select an iteration."
+                "\n\n **Step 2**: Select a session (pose) to visualize results or add new data."
+                "\n\n **Step 3**: Predict the behavior."
+                "\n\n **Step 4**: Generate summary statistics and visualizations."
+                "\n\n---\n\n"
+                ":blue[The predictions will be saved in the project directory for your further analysis.]")
 
 
 def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder, top_most_container, vidname):
@@ -707,7 +712,8 @@ def main(ri=None, config=None):
         annotated_vids_trim.extend(['Add New Data'])
         annotated_vids.extend(['Add New Data'])
 
-        selection = ri.selectbox('Select Video Prediction', annotated_vids_trim)
+        selection = ri.selectbox('Select Data to for prediction', annotated_vids_trim
+                                 , help = "Select a pose file/video to visualize and or add new data")
         selected_annot_video = annotated_vids[annotated_vids_trim.index(selection)]
 
         if selected_annot_video != 'Add New Data':
@@ -743,14 +749,16 @@ def main(ri=None, config=None):
                     ri.info(f'loaded {iter_folder} model')
                     prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                                  framerate, videos_dir, project_dir, iter_folder)
+                    if st.session_state['pose'] is not None:
+                        placeholder = st.empty()
+                        predict_annotate_video(ftype, software, is_3d, multi_animal, selected_bodyparts, llh_value,
+                                               iterX_model, framerate, frames2integ,
+                                               annotation_classes,
+                                               None, videos_dir, iter_folder,
+                                               None, placeholder)
                 except:
-                    ri.info(f'Please train a {iter_folder} model in :orange[Active Learning] step.')
-                if st.session_state['pose'] is not None:
-                    placeholder = st.empty()
-                    predict_annotate_video(ftype, software, is_3d, multi_animal, selected_bodyparts, llh_value, iterX_model, framerate, frames2integ,
-                                           annotation_classes,
-                                           None, videos_dir, iter_folder,
-                                           None, placeholder)
+                    st.error(f'Please train a {iter_folder} model in :orange[Active Learning] step.')
+
             else:
                 top_most_container = st.container()
                 video_col, summary_col = st.columns([2, 1.5])

@@ -9,11 +9,17 @@ from utils.load_workspace import load_features, load_heldout, \
 from utils.project_utils import update_config
 
 TITLE = "Active learning"
-ACTIVE_LEARNING_HELP = ("In this step, you can train a classifier using a small set of labeled data and then small portions of the remaining training data are feed to the classifier for several iterations."
+ACTIVE_LEARNING_HELP = ("In this step, you will train a classifier using a small set of labeled data and then small portions of the remaining training data are feed to the classifier for several iterations."
                         "\n\n The samples are selected based on the classifier's confidence in its predictions. This process reaches high performance with limited labeled data."
-                        "\n\n **Note:** The parameters 'Initial sampling ratio', 'Max number of self-learning iterations', and 'Max samples amongst the classes' can be adjusted to control the active learning process."
+                        "\n\n :blue[The parameters **Initial sampling ratio**, **Max number of self-learning iterations**, and **Max samples amongst the X classes** can be adjusted to control the active learning process.]"
                         "\n\n---\n\n"
-                        "> This classifier can be directly used in the prediction and discovery steps. Alternatively, you can refine the classifier by adding more unlabeled data in the next step ('Refine Behaviors').")
+                        "**Step 1**: Select an iteration."
+                        "\n\n **Step 2**: Set the parameters."
+                        "\n\n **Step 3**: Train the classifier."
+                        "\n\n **Step 4**: View the results."
+                        "\n\n **Step 5**: Refine the parameters or move to the next step :orange[Predict], :orange[Discover], or :orange[Refine Behaviors]."
+                        "\n\n---\n\n"
+                        ":blue[This classifier can be directly used in the prediction and discovery steps. Alternatively, you can refine the classifier by adding more unlabeled data in the next step:] :orange[Refine Behaviors]")
 
 def prompt_setup(software, train_fx, conf,
                  working_dir, prefix, iteration_dir, exclude_other, annotation_classes):

@@ -8,8 +8,15 @@ from config.help_messages import *
 
 TITLE = "Extract features"
 
-EXTRACT_FEATURES_HELP = ("In this step, you can extract features from the labeled data you uploaded. "
+EXTRACT_FEATURES_HELP = ("In this step, you will extract features from the labeled data you uploaded. "
                          "\n\n The features will be used to train the classifier and predict the behavior in the next steps."
+                         "\n\n---\n\n"
+                            "**Step 1**: Upload your project config file."
+                            "\n\n **Step 2**: Set the parameters."
+                            "\n\n **Step 3**: Extract the features."
+                            "\n\n **Step 4**: Continue with :orange[Active Learning]."
+                            "\n\n---\n\n"
+                         ":blue[Feature extraction can be repeated but requires new training afterwards.]"
                          )
 
 
