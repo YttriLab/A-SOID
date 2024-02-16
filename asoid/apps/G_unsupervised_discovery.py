@@ -381,182 +381,183 @@ def main(ri=None, config=None):
         pose_expander = left_col.expander('pose'.upper(), expanded=True)
         prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                      framerate, videos_dir, project_dir, iter_folder, pose_expander)
+        try:
+            [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
 
-        [iterX_model, _, _] = load_iterX(project_dir, iter_folder)
-
-        buttonL, buttonR = st.columns(2)
-        if 'input_sav' not in st.session_state:
-            st.session_state['input_sav'] = None
-        if 'output_sav' not in st.session_state:
-            st.session_state['output_sav'] = None
-        if st.session_state['input_sav'] is None:
-            all_feats, all_labels = get_features_labels(selected_bodyparts,
-                                                        software, multi_animal, is_3d,
-                                                        framerate,
-                                                        llh_value,
-                                                        iterX_model, frames2integ,
-                                                        project_dir, iter_folder,
-                                                        left_col
-                                                        )
-        annotation_classes_ex = annotation_classes.copy()
-        if exclude_other:
-            annotation_classes_ex.pop(annotation_classes_ex.index('other'))
-        target_behavior = ri.multiselect('Select Behavior to Split', annotation_classes_ex, annotation_classes_ex
-                                         , help="Select the behaviors you want to split into subtypes.")
-        cluster_range = {key: [] for key in target_behavior}
-        ri_l, ri_r = ri.columns(2)
-        normalize_feats = ri_l.checkbox('Normalize features?', help='recommended for independent features')
-        determine_dim = ri_r.checkbox('More relaxed embedding?', help='recommended for independent features')
-        for target_behav in target_behavior:
-            cluster_range[target_behav] = ri.slider(f'Minimum % for a cluster within {target_behav}',
-                                                    min_value=0.1, max_value=10.0, value=3.0,
-                                                    key=f'slider_{target_behav}')
-
-        if st.session_state['input_sav'] is not None:
-            st.session_state['disabled'] = True
-
-            if buttonL.button(':red[Clear Processed Pose]', help = 'This will clear the processed pose data.'):
+            buttonL, buttonR = st.columns(2)
+            if 'input_sav' not in st.session_state:
                 st.session_state['input_sav'] = None
-                # st.success('Cleared. Type "R" to Refresh.')
-                st.rerun()
-                st.session_state['disabled'] = False
+            if 'output_sav' not in st.session_state:
+                st.session_state['output_sav'] = None
+            if st.session_state['input_sav'] is None:
+                all_feats, all_labels = get_features_labels(selected_bodyparts,
+                                                            software, multi_animal, is_3d,
+                                                            framerate,
+                                                            llh_value,
+                                                            iterX_model, frames2integ,
+                                                            project_dir, iter_folder,
+                                                            left_col
+                                                            )
+            annotation_classes_ex = annotation_classes.copy()
+            if exclude_other:
+                annotation_classes_ex.pop(annotation_classes_ex.index('other'))
+            target_behavior = ri.multiselect('Select Behavior to Split', annotation_classes_ex, annotation_classes_ex
+                                             , help="Select the behaviors you want to split into subtypes.")
+            cluster_range = {key: [] for key in target_behavior}
+            ri_l, ri_r = ri.columns(2)
+            normalize_feats = ri_l.checkbox('Normalize features?', help='recommended for independent features')
+            determine_dim = ri_r.checkbox('More relaxed embedding?', help='recommended for independent features')
+            for target_behav in target_behavior:
+                cluster_range[target_behav] = ri.slider(f'Minimum % for a cluster within {target_behav}',
+                                                        min_value=0.1, max_value=10.0, value=3.0,
+                                                        key=f'slider_{target_behav}')
 
-            if st.session_state['output_sav'] is None:
-                pca_umap_hdbscan(target_behavior, annotation_classes, st.session_state['input_sav'],
-                                 cluster_range, normalize_feats, determine_dim,
-                                 project_dir, iter_folder, left_col, ri)
+            if st.session_state['input_sav'] is not None:
+                st.session_state['disabled'] = True
 
-            else:
-                right_col_top = right_col.container()
-                if buttonR.button(':red[Clear Embedding]', help='This will clear the embedding and clustering results.'):
-                    st.session_state['output_sav'] = None
+                if buttonL.button(':red[Clear Processed Pose]', help = 'This will clear the processed pose data.'):
+                    st.session_state['input_sav'] = None
                     # st.success('Cleared. Type "R" to Refresh.')
                     st.rerun()
-                if st.session_state['output_sav'] is not None:
-                    behav_figs, behav_groups, behav_embeds = plot_hdbscan_embedding(st.session_state['output_sav'])
-                    for behav_keys in list(behav_figs.keys()):
-                        right_col_top.subheader(f'{behav_keys.capitalize()}')
-                        fig = behav_figs[behav_keys]
-                        right_col_top.plotly_chart(fig, use_container_width=True)
-                        right_col_top.info(f'Minimum cluster duration: '
-                                           f'{np.round((cluster_range[target_behav] * behav_embeds[behav_keys].shape[0]) / framerate, 1)} '
-                                           f'total seconds')
-                    with open(st.session_state['input_sav'], 'rb') as fr:
-                        [all_feats, all_labels] = joblib.load(fr)
-                    with open(st.session_state['output_sav'], 'rb') as fr:
-                        [_, assignments, soft_assignments, pred_assign] = joblib.load(fr)
-                    # reorder and integrate new labels
-                    annotation_classes_ex = annotation_classes.copy()
-                    if exclude_other:
-                        other_id = annotation_classes.index('other')
-                        annotation_classes_ex.pop(other_id)
-                        idx_other = np.where(all_labels == other_id)[0]
-                    left_col.subheader('Splitting')
-                    for target_behav in target_behavior:
-                        if target_behav == target_behavior[0]:
-                            selected_subgroup = left_col.multiselect(f'Select the {target_behav} sub groups',
-                                                                     behav_groups[target_behav],
-                                                                     behav_groups[target_behav],
-                                                                     key=target_behav,
-                                                                     help=SUBCLASS_SELECT_HELP)
-                            target_beh_id = annotation_classes_ex.index(target_behav)
-                            # find where these target behavior is
-                            idx_target_beh = np.where(all_labels == target_beh_id)[0]
-                            # create a copy to perturb
-                            all_labels_split = all_labels.copy()
+                    st.session_state['disabled'] = False
 
-                            group_id = [behav_groups[target_behav].index(sel) for sel in selected_subgroup]
-                            new_assigns = pred_assign[target_behav].copy()
-                            # for each behavior being split, change the index into last->last+n
-                            count = 1
-                            for id_ in [behav_groups[target_behav].index(sel)
-                                        for sel in behav_groups[target_behav]]:
-                                if id_ in group_id:
-                                    max_id = np.max(all_labels_split) + 1
-                                    new_assigns[pred_assign[target_behav] == id_] = max_id + count
-                                    count += 1
-                                else:
-                                    max_id = np.max(all_labels_split) + 1
-                                    new_assigns[pred_assign[target_behav] == id_] = max_id
-                            all_labels_split[idx_target_beh] = new_assigns
+                if st.session_state['output_sav'] is None:
+                    pca_umap_hdbscan(target_behavior, annotation_classes, st.session_state['input_sav'],
+                                     cluster_range, normalize_feats, determine_dim,
+                                     project_dir, iter_folder, left_col, ri)
 
-                            # put other in last if exclude, for active learning to ignore
-                            # has to put prior to label encoder
-                            if exclude_other:
-                                all_labels_split[idx_other] = np.max(all_labels_split[idx_target_beh]) + 1
+                else:
+                    right_col_top = right_col.container()
+                    if buttonR.button(':red[Clear Embedding]', help='This will clear the embedding and clustering results.'):
+                        st.session_state['output_sav'] = None
+                        # st.success('Cleared. Type "R" to Refresh.')
+                        st.rerun()
+                    if st.session_state['output_sav'] is not None:
+                        behav_figs, behav_groups, behav_embeds = plot_hdbscan_embedding(st.session_state['output_sav'])
+                        for behav_keys in list(behav_figs.keys()):
+                            right_col_top.subheader(f'{behav_keys.capitalize()}')
+                            fig = behav_figs[behav_keys]
+                            right_col_top.plotly_chart(fig, use_container_width=True)
+                            right_col_top.info(f'Minimum cluster duration: '
+                                               f'{np.round((cluster_range[target_behav] * behav_embeds[behav_keys].shape[0]) / framerate, 1)} '
+                                               f'total seconds')
+                        with open(st.session_state['input_sav'], 'rb') as fr:
+                            [all_feats, all_labels] = joblib.load(fr)
+                        with open(st.session_state['output_sav'], 'rb') as fr:
+                            [_, assignments, soft_assignments, pred_assign] = joblib.load(fr)
+                        # reorder and integrate new labels
+                        annotation_classes_ex = annotation_classes.copy()
+                        if exclude_other:
+                            other_id = annotation_classes.index('other')
+                            annotation_classes_ex.pop(other_id)
+                            idx_other = np.where(all_labels == other_id)[0]
+                        left_col.subheader('Splitting')
+                        for target_behav in target_behavior:
+                            if target_behav == target_behavior[0]:
+                                selected_subgroup = left_col.multiselect(f'Select the {target_behav} sub groups',
+                                                                         behav_groups[target_behav],
+                                                                         behav_groups[target_behav],
+                                                                         key=target_behav,
+                                                                         help=SUBCLASS_SELECT_HELP)
+                                target_beh_id = annotation_classes_ex.index(target_behav)
+                                # find where these target behavior is
+                                idx_target_beh = np.where(all_labels == target_beh_id)[0]
+                                # create a copy to perturb
+                                all_labels_split = all_labels.copy()
 
-                            # reorder using labelencoder
-                            encoder = LabelEncoder()
-                            all_labels_split_reorg = encoder.fit_transform(all_labels_split)
-                            annot_array = np.array(annotation_classes_ex)
-                            # rename these groups into label_n
-                            behavior_names_split = list(annot_array[annot_array != target_behav])
-                            behavior_names_split.extend([f'{target_behav}_{i}' if i > 0 else f'{target_behav}'
-                                                         for i in
-                                                         range(len(np.unique(new_assigns)))])
+                                group_id = [behav_groups[target_behav].index(sel) for sel in selected_subgroup]
+                                new_assigns = pred_assign[target_behav].copy()
+                                # for each behavior being split, change the index into last->last+n
+                                count = 1
+                                for id_ in [behav_groups[target_behav].index(sel)
+                                            for sel in behav_groups[target_behav]]:
+                                    if id_ in group_id:
+                                        max_id = np.max(all_labels_split) + 1
+                                        new_assigns[pred_assign[target_behav] == id_] = max_id + count
+                                        count += 1
+                                    else:
+                                        max_id = np.max(all_labels_split) + 1
+                                        new_assigns[pred_assign[target_behav] == id_] = max_id
+                                all_labels_split[idx_target_beh] = new_assigns
 
-                            # has to be placed after new split names to maintain last order
-                            if exclude_other:
-                                behavior_names_split.extend(['other'])
+                                # put other in last if exclude, for active learning to ignore
+                                # has to put prior to label encoder
+                                if exclude_other:
+                                    all_labels_split[idx_other] = np.max(all_labels_split[idx_target_beh]) + 1
 
-                        else:
-                            selected_subgroup = left_col.multiselect(f'Select the {target_behav} sub groups',
-                                                                     behav_groups[target_behav],
-                                                                     behav_groups[target_behav],
-                                                                     key=target_behav,
-                                                                     help=SUBCLASS_SELECT_HELP)
-                            target_beh_id = annotation_classes_ex.index(target_behav)
-                            # find where these target behavior is
-                            idx_target_beh = np.where(all_labels == target_beh_id)[0]
-                            # create a copy to perturb
-                            all_labels_split = all_labels_split_reorg.copy()
+                                # reorder using labelencoder
+                                encoder = LabelEncoder()
+                                all_labels_split_reorg = encoder.fit_transform(all_labels_split)
+                                annot_array = np.array(annotation_classes_ex)
+                                # rename these groups into label_n
+                                behavior_names_split = list(annot_array[annot_array != target_behav])
+                                behavior_names_split.extend([f'{target_behav}_{i}' if i > 0 else f'{target_behav}'
+                                                             for i in
+                                                             range(len(np.unique(new_assigns)))])
 
-                            group_id = [behav_groups[target_behav].index(sel) for sel in selected_subgroup]
-                            new_assigns = pred_assign[target_behav].copy()
-                            # for each behavior being split, change the index into last->last+n
-                            count = 1
-                            for id_ in [behav_groups[target_behav].index(sel)
-                                        for sel in behav_groups[target_behav]]:
-                                if id_ in group_id:
-                                    max_id = np.max(all_labels_split) + 1
-                                    new_assigns[pred_assign[target_behav] == id_] = max_id + count
-                                    count += 1
-                                else:
-                                    max_id = np.max(all_labels_split) + 1
-                                    new_assigns[pred_assign[target_behav] == id_] = max_id
-                            all_labels_split[idx_target_beh] = new_assigns
-                            # put other in last if exclude, for active learning to ignore
-                            # has to put prior to label encoder
-                            if exclude_other:
-                                all_labels_split[idx_other] = np.max(all_labels_split[idx_target_beh]) + 1
-                                other_id = behavior_names_split.index('other')
-                                behavior_names_split.pop(other_id)
-                            # reorder using labelencoder
-                            encoder = LabelEncoder()
-                            all_labels_split_reorg = encoder.fit_transform(all_labels_split)
-                            annot_array = np.array(behavior_names_split)
-                            # rename these groups into label_n
-                            behavior_names_split = list(annot_array[annot_array != target_behav])
-                            behavior_names_split.extend([f'{target_behav}_{i}' if i > 0 else f'{target_behav}'
-                                                         for i in
-                                                         range(len(np.unique(new_assigns)))])
-                            # has to be placed after new split names to maintain last order
-                            if exclude_other:
-                                behavior_names_split.extend(['other'])
-                    working_dir, iter_folder, prefix_new = save_update_info(config, behavior_names_split)
-                    if os.path.isdir(os.path.join(working_dir, prefix_new, iter_folder)):
-                        save_data(os.path.join(working_dir, prefix_new), iter_folder,
-                                  'feats_targets.sav',
-                                  [
-                                      all_feats,
-                                      all_labels_split_reorg,
-                                      frames2integ
-                                  ])
+                                # has to be placed after new split names to maintain last order
+                                if exclude_other:
+                                    behavior_names_split.extend(['other'])
 
-        else:
-            st.session_state['disabled'] = False
+                            else:
+                                selected_subgroup = left_col.multiselect(f'Select the {target_behav} sub groups',
+                                                                         behav_groups[target_behav],
+                                                                         behav_groups[target_behav],
+                                                                         key=target_behav,
+                                                                         help=SUBCLASS_SELECT_HELP)
+                                target_beh_id = annotation_classes_ex.index(target_behav)
+                                # find where these target behavior is
+                                idx_target_beh = np.where(all_labels == target_beh_id)[0]
+                                # create a copy to perturb
+                                all_labels_split = all_labels_split_reorg.copy()
 
+                                group_id = [behav_groups[target_behav].index(sel) for sel in selected_subgroup]
+                                new_assigns = pred_assign[target_behav].copy()
+                                # for each behavior being split, change the index into last->last+n
+                                count = 1
+                                for id_ in [behav_groups[target_behav].index(sel)
+                                            for sel in behav_groups[target_behav]]:
+                                    if id_ in group_id:
+                                        max_id = np.max(all_labels_split) + 1
+                                        new_assigns[pred_assign[target_behav] == id_] = max_id + count
+                                        count += 1
+                                    else:
+                                        max_id = np.max(all_labels_split) + 1
+                                        new_assigns[pred_assign[target_behav] == id_] = max_id
+                                all_labels_split[idx_target_beh] = new_assigns
+                                # put other in last if exclude, for active learning to ignore
+                                # has to put prior to label encoder
+                                if exclude_other:
+                                    all_labels_split[idx_other] = np.max(all_labels_split[idx_target_beh]) + 1
+                                    other_id = behavior_names_split.index('other')
+                                    behavior_names_split.pop(other_id)
+                                # reorder using labelencoder
+                                encoder = LabelEncoder()
+                                all_labels_split_reorg = encoder.fit_transform(all_labels_split)
+                                annot_array = np.array(behavior_names_split)
+                                # rename these groups into label_n
+                                behavior_names_split = list(annot_array[annot_array != target_behav])
+                                behavior_names_split.extend([f'{target_behav}_{i}' if i > 0 else f'{target_behav}'
+                                                             for i in
+                                                             range(len(np.unique(new_assigns)))])
+                                # has to be placed after new split names to maintain last order
+                                if exclude_other:
+                                    behavior_names_split.extend(['other'])
+                        working_dir, iter_folder, prefix_new = save_update_info(config, behavior_names_split)
+                        if os.path.isdir(os.path.join(working_dir, prefix_new, iter_folder)):
+                            save_data(os.path.join(working_dir, prefix_new), iter_folder,
+                                      'feats_targets.sav',
+                                      [
+                                          all_feats,
+                                          all_labels_split_reorg,
+                                          frames2integ
+                                      ])
 
+            else:
+                st.session_state['disabled'] = False
+
+        except FileNotFoundError:
+            st.error("No model found for this iteration. Please train a model in the :orange[Active Learning] step first.")
 
 
     else:
