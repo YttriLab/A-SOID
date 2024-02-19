@@ -14,13 +14,26 @@ import streamlit as st
 from config.help_messages import *
 from sklearn.preprocessing import LabelEncoder
 from stqdm import stqdm
-from utils.extract_features import feature_extraction, \
-    bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
-from utils.import_data import load_labels_auto, load_pose_ftype
+from utils.extract_features_2D import feature_extraction
+from utils.extract_features_3D import feature_extraction_3d
+from utils.predict import bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
 from utils.load_workspace import load_new_pose, load_iterX
 from utils.preprocessing import adp_filt, sort_nicely
+from utils.import_data import load_pose
 
 TITLE = "Predict behaviors"
+PREDICT_HELP = ("In this step, you can predict the behavior in sessions (pose) using the trained model from :orange[Active Learning]."
+                "\n\n The predictions will be used to generate summary statistics and visualizations."
+                "\n\n **Optional:** You can also generate annotated videos with the predicted labels."
+                "\n\n---\n\n"
+                "**Step 1**: Select an iteration*."
+                "\n\n **Step 2**: Select a session (pose) to visualize results or add new data."
+                "\n\n **Step 3**: Predict the behavior."
+                "\n\n **Step 4**: Generate summary statistics and visualizations."
+                "\n\n:grey[* This refers to the iterations of refinement, followed by active learning.]"
+                "\n\n---\n\n"
+                ":red[This step requires several GUI refreshs of the app (press 'R' on your keyboard when indicated by the] :green[green info box] :red[).]\n\n"
+                ":blue[The predictions will be saved in the project directory for your further analysis.]")
 
 
 def pie_predict(predict_npy, iter_folder, annotation_classes, placeholder, top_most_container, vidname):
@@ -253,8 +266,10 @@ def frame_extraction(video_file, frame_dir, placeholder=None):
             placeholder.error('stdout:', e.stdout.decode('utf8'))
             placeholder.error('stderr:', e.stderr.decode('utf8'))
         placeholder.info('Done extracting {} frames from {}'.format(num_frames, video_file))
-        placeholder.success('Done. Type "R" to refresh.')
-
+        placeholder.success('Done. Press "R" on your keyboard to refresh.')
+        st.balloons()
+        # TODO: Find suitable replacement for manual refresh
+        # st.rerun()
 
 def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                  framerate, videos_dir, project_dir, iter_dir):
@@ -269,15 +284,6 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
         new_pose_sav = os.path.join(ROOT.joinpath("new_test"), './new_pose.sav')
         new_pose_list = load_new_pose(new_pose_sav)
     else:
-        # try:
-        pose_origin = pose_expander.selectbox('Select pose origin', ['DeepLabCut', 'SLEAP'])
-        if pose_origin == 'DeepLabCut':
-            ftype = 'csv'
-        elif pose_origin == 'SLEAP':
-            ftype = 'h5'
-        else:
-            st.error('Pose origin not recognized.')
-            st.stop()
         new_pose_csvs = pose_expander.file_uploader('Upload Corresponding Pose Files',
                                                    accept_multiple_files=True,
                                                    type=ftype, key='pose')
@@ -291,7 +297,7 @@ def prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
         #
         #         #current_pose = pd.read_csv(f,
         #         #                           header=[0, 1, 2], sep=",", index_col=0)
-        #         #todo: adapt to multi animal by reading from config
+        #
         #         current_pose = load_pose_ftype(f, ftype)
         #
         #         bp_level = 1
@@ -366,7 +372,7 @@ def create_annotated_videos(vidpath_out,
         video.release()
 
 
-def predict_annotate_video(ftype, selected_bodyparts, llh_value, iterX_model, framerate, frames2integ,
+def predict_annotate_video(ftype, software, is_3d, multi_animal, selected_bodyparts, llh_value, iterX_model, framerate, frames2integ,
                            annotation_classes,
                            frame_dir, videos_dir, iter_folder,
                            video_checkbox, colL):
@@ -388,10 +394,7 @@ def predict_annotate_video(ftype, selected_bodyparts, llh_value, iterX_model, fr
         for i, f in enumerate(stqdm(new_pose_csvs, desc="Extracting spatiotemporal features from pose")):
         # for i, f in enumerate(new_pose_csvs):
 
-            #current_pose = pd.read_csv(f,
-            #                           header=[0, 1, 2], sep=",", index_col=0)
-            #todo: adapt to multi animal by reading from config
-            current_pose = load_pose_ftype(f, ftype)
+            current_pose = load_pose(f, software, multi_animal)
 
             bp_level = 1
             bp_index_list = []
@@ -411,19 +414,48 @@ def predict_annotate_video(ftype, selected_bodyparts, llh_value, iterX_model, fr
                         if bp not in current_pose.columns.get_level_values(bp_level).unique():
                             st.error(f'At least one keypoint "{bp}" is missing in pose file: {f.name}')
                             st.stop()
+            #     for bp in selected_bodyparts:
+            #         bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
+            #         bp_index_list.append(bp_index)
+            #     selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
+            #
+            #     # get rid of likelihood columns for deeplabcut
+            #     idx_llh = selected_pose_idx[2::3]
+            #
+            #     # the loaded sleap file has them too, so exclude for both
+            #     idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
+            # filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh, llh_value)
+
                 for bp in selected_bodyparts:
                     bp_index = np.argwhere(current_pose.columns.get_level_values(bp_level) == bp)
                     bp_index_list.append(bp_index)
                 selected_pose_idx = np.sort(np.array(bp_index_list).flatten())
-                # get rid of likelihood columns for deeplabcut
-                idx_llh = selected_pose_idx[2::3]
+
+                # get likelihood column idx directly from dataframe columns
+                idx_llh = [i for i, s in enumerate(current_pose.columns) if "likelihood" in s]
 
                 # the loaded sleap file has them too, so exclude for both
                 idx_selected = [i for i in selected_pose_idx if i not in idx_llh]
-            filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh, llh_value)
+
+            # filtering does not work for 3D yet
+            # check if there is a z coordinate
+
+            if "z" in current_pose.columns.get_level_values(2):
+                if is_3d is not True:
+                    st.error("3D data detected. But parameter is set to 2D project.")
+                print("3D project detected. Skipping likelihood adaptive filtering.")
+                # if yes, just drop likelihood columns and pick the selected bodyparts
+                filt_pose = current_pose.iloc[:, idx_selected].values
+            else:
+                filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh, llh_value)
+
+            # using feature scaling from training set
+            if not is_3d:
+                feats, _ = feature_extraction([filt_pose], 1, framerate, frames2integ)
+            else:
+                feats, _ = feature_extraction_3d([filt_pose], 1, frames2integ)
 
             total_n_frames.append(filt_pose.shape[0])
-            feats, _ = feature_extraction([filt_pose], 1, frames2integ)
             features.append(feats)
         for i in stqdm(range(len(features)), desc="Behavior prediction from spatiotemporal features"):
             with st.spinner('Predicting behavior from features...'):
@@ -433,8 +465,9 @@ def predict_annotate_video(ftype, selected_bodyparts, llh_value, iterX_model, fr
 
             predictions_raw = np.pad(predict_arr.repeat(repeat_n), (repeat_n, 0), 'edge')[:total_n_frames[i]]
             predictions_match = weighted_smoothing(predictions_raw, size=st.session_state['smooth_size'])
-
-            pose_prefix = st.session_state['pose'][i].name.rpartition(str.join('', ('.', ftype)))[0]
+            curr_file_name = st.session_state['pose'][i].name
+            curr_ftype = curr_file_name.split('.')[-1]
+            pose_prefix = curr_file_name.rpartition(str.join('', ('.', curr_ftype)))[0]
             annotated_str = str.join('', ('_annotated_', iter_folder))
             annotated_vid_name = str.join('', (pose_prefix, annotated_str, '.mp4'))
 
@@ -446,7 +479,10 @@ def predict_annotate_video(ftype, selected_bodyparts, llh_value, iterX_model, fr
                                         frame_dir,
                                         video_checkbox, predictions_match)
 
-                message_box.success('Done. Type "R" to refresh.')
+                message_box.success('Done. Press "R" on your keyboard to refresh.')
+                st.balloons()
+                #TODO: Find suitable replacement for manual refresh
+                # st.rerun()
             np.save(vidpath_out.replace('mp4', 'npy'),
                     predictions_match)
         st.balloons()
@@ -508,8 +544,9 @@ def just_annotate_video(predict_npy, framerate,
                                frame_dir, videos_dir, iter_folder,
                                predict)
                 st.balloons()
-                st.success('Done. Type "R" to refresh.')
-
+                st.success('Done. Press "R" on your keyboard to refresh.')
+                #TODO: Find suitable replacement for manual refresh
+                #st.rerun()
 
 def save_predictions(predict_npy, source_file_name, annotation_classes, framerate):
     """takes numerical labels and transforms back into one-hot encoded file (BORIS style). Saves as csv"""
@@ -617,8 +654,8 @@ def describe_labels_single(df_label, annotation_classes, framerate, placeholder)
 
                              },
                     inplace=True)
-    # TODO: autosize columns with newer streamlit versions (e.g., using use_container_width=True)
-    placeholder.dataframe(count_df, hide_index=True)
+
+    placeholder.dataframe(count_df, hide_index=True, use_container_width=True)
 
 
 def weighted_smoothing(predictions, size):
@@ -643,15 +680,21 @@ def weighted_smoothing(predictions, size):
 def main(ri=None, config=None):
     st.markdown("""---""")
 
+    st.title("Predict new Data")
+    st.expander("What is this?", expanded=False).markdown(PREDICT_HELP)
+
+
     if config is not None:
         # st.warning("If you did not do it yet, remove and reupload the config file to make sure that you use the latest configuration!")
         working_dir = config["Project"].get("PROJECT_PATH")
         prefix = config["Project"].get("PROJECT_NAME")
         annotation_classes = [x.strip() for x in config["Project"].get("CLASSES").split(",")]
         software = config["Project"].get("PROJECT_TYPE")
-        ftype = config["Project"].get("FILE_TYPE")
+        ftype = [x.strip() for x in config["Project"].get("FILE_TYPE").split(",")]
         selected_bodyparts = [x.strip() for x in config["Project"].get("KEYPOINTS_CHOSEN").split(",")]
         exclude_other = config["Project"].getboolean("EXCLUDE_OTHER")
+        is_3d = config["Project"].getboolean("IS_3D")
+        multi_animal = config["Project"].getboolean("MULTI_ANIMAL")
         # threshold = config["Processing"].getfloat("SCORE_THRESHOLD")
         threshold = 0.1
         llh_value = config["Processing"].getfloat("LLH_VALUE")
@@ -673,7 +716,8 @@ def main(ri=None, config=None):
         annotated_vids_trim.extend(['Add New Data'])
         annotated_vids.extend(['Add New Data'])
 
-        selection = ri.selectbox('Select Video Prediction', annotated_vids_trim)
+        selection = ri.selectbox('Select Data to for prediction', annotated_vids_trim
+                                 , help = "Select a pose file/video to visualize and or add new data")
         selected_annot_video = annotated_vids[annotated_vids_trim.index(selection)]
 
         if selected_annot_video != 'Add New Data':
@@ -682,15 +726,8 @@ def main(ri=None, config=None):
             annot_vid_path = 'Add New Data'
 
         if software == 'CALMS21 (PAPER)':
-            try:
-                #TODO: deprecate
-                ROOT = Path(__file__).parent.parent.parent.resolve()
-                targets_test_csv = os.path.join(ROOT.joinpath("test"), './test_labels.csv')
-                targets_test_df = pd.read_csv(targets_test_csv, header=0)
-                targets_test = np.array(targets_test_df['annotation'])
-            except FileNotFoundError:
-                st.error("The CALMS21 data set is not designed to be used with the predict step.")
-                st.stop()
+            st.error("The CALMS21 data set is not designed to be used with the predict step.")
+            st.stop()
         else:
             if 'disabled' not in st.session_state:
                 st.session_state['disabled'] = False
@@ -709,14 +746,16 @@ def main(ri=None, config=None):
                     ri.info(f'loaded {iter_folder} model')
                     prompt_setup(software, ftype, selected_bodyparts, annotation_classes,
                                  framerate, videos_dir, project_dir, iter_folder)
+                    if st.session_state['pose'] is not None:
+                        placeholder = st.empty()
+                        predict_annotate_video(ftype, software, is_3d, multi_animal, selected_bodyparts, llh_value,
+                                               iterX_model, framerate, frames2integ,
+                                               annotation_classes,
+                                               None, videos_dir, iter_folder,
+                                               None, placeholder)
                 except:
-                    ri.info(f'Please train a {iter_folder} model in :orange[Active Learning] step.')
-                if st.session_state['pose'] is not None:
-                    placeholder = st.empty()
-                    predict_annotate_video(ftype, selected_bodyparts, llh_value, iterX_model, framerate, frames2integ,
-                                           annotation_classes,
-                                           None, videos_dir, iter_folder,
-                                           None, placeholder)
+                    st.error(f'Please train a {iter_folder} model in :orange[Active Learning] step.')
+
             else:
                 top_most_container = st.container()
                 video_col, summary_col = st.columns([2, 1.5])
@@ -754,6 +793,7 @@ def main(ri=None, config=None):
                               selection)
                 # display video from video path
                 if os.path.isfile(annot_vid_path):
+                    # video_col.write(f"### Video: {annot_vid_path}")
                     video_col.video(annot_vid_path)
                 else:
                     video_checkbox = video_col.checkbox("Create Labeled Video?")

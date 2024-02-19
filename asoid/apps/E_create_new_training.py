@@ -6,7 +6,13 @@ from utils.load_workspace import load_refinement, load_features, load_iterX, sav
 from utils.project_utils import update_config
 
 TITLE = "Create new dataset"
-
+DATASET_HELP = ("After refining behaviors, you can create a new dataset to retrain the model."
+                "\n\n Step 1: Select an iteration* and refinement to include in the new dataset."
+                "\n\n Step 2: Click on 'Create :orange[ITERATION X] training dataset' to include the new data into the training set."
+                "\n\n Step 3: Move to :orange[Active Learning] to retrain the classifier with the new dataset."
+                "\n\n:grey[* This refers to the iterations of refinement, followed by active learning.]"
+                "\n\n ---"
+                "\n\n :blue[This step is optional, but can be repeated for several iterations (requires new refinements).]")
 
 def create_new_training_features_targets(project_dir, selected_iter, new_features, new_targets):
     # load existing training
@@ -41,8 +47,11 @@ def create_new_training_features_targets(project_dir, selected_iter, new_feature
     st.balloons()
 
 
+
 def main(ri=None, config=None):
     st.markdown("""---""")
+    st.title("Create new Dataset (optional)")
+    st.expander("What is this?", expanded=False).markdown(DATASET_HELP)
 
     if config is not None:
         working_dir = config["Project"].get("PROJECT_PATH")
@@ -77,15 +86,21 @@ def main(ri=None, config=None):
                     # st.write(annotation_cls)
                     # for each example
                     for j in range(len(examples_idx[annotation_cls])):
-                        refined_behaviors = [refinements[annotation_cls][j]['Behavior'][k]
-                                             for k in range(
-                                len(refinements[annotation_cls][j]['Behavior']))]
+                        try:
+                            refined_behaviors = [refinements[annotation_cls][j]['Behavior'][k]
+                                                 for k in range(
+                                    len(refinements[annotation_cls][j]['Behavior']))]
+                        except TypeError:
+                            st.error('At least one insufficient refinement found '
+                                     f" in {selected_refine_dir}, example {j} of {annotation_cls}."
+                                     ' Please refine behaviors and save your refinements in :orange[Refine Behaviors] first!')
+                            st.stop()
                         start_idx = examples_idx[annotation_cls][j][0]
                         stop_idx = examples_idx[annotation_cls][j][1]
                         # if debug_button:
                         if features[start_idx:stop_idx, :].shape[0] != len(refined_behaviors):
                             # with placeholder:
-                            st.write(f'In {selected_refine_dir}, '
+                            st.error(f'In {selected_refine_dir}, '
                                      f'behavior: {annotation_cls}, '
                                      f'feature length does not match targets in example {j}')
                         # else:
@@ -108,8 +123,13 @@ def main(ri=None, config=None):
             new_features = np.vstack(new_features_dir)
             new_targets = np.hstack(new_targets_dir)
             # st.write(np.unique(new_targets, return_counts=True))
-        except:
-            pass
+        except FileNotFoundError:
+            st.error('No refinement data found in this iteration')
+            selected_refine_dirs = []
+
+        except ValueError:
+            st.error('Select at least one refinement to create new dataset.')
+            selected_refine_dirs = []
 
         if len(selected_refine_dirs) > 0:
             create_button = st.button(f'Create :orange[ITERATION {selected_iter + 1}] training dataset')

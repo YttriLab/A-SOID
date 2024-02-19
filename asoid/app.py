@@ -33,7 +33,8 @@ def index():
     step2_fname = HERE.joinpath("images/feature_extraction_wht.png")
     step3_fname = HERE.joinpath("images/baseline_classifier_wht.png")
     step4_fname = HERE.joinpath("images/active_learning_schematic.png")
-    step5_fname = HERE.joinpath("images/app_discovery.png")
+    step5_fname = HERE.joinpath("images/asoid_logo.png")
+    step6_fname = HERE.joinpath("images/app_discovery.png")
 
     st.markdown(f" <h1 style='text-align: left; color: #f6386d; font-size:30px; "
                 f"font-family:Avenir; font-weight:normal'>Welcome to A-SOiD</h1> "
@@ -123,14 +124,14 @@ def index():
 
     elif selected_step == 'Step 5':
         colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
-                      f"font-family:Avenir; font-weight:normal'> Step 5: Discover subtle differences within behavior"
+                      f"font-family:Avenir; font-weight:normal'> Step 5: Predict behavior on new data"
                       f"", unsafe_allow_html=True)
         colL.markdown(f" <h1 style='text-align: left; color: #FFFFFF; font-size:18px; "
                       f"font-family:Avenir; font-weight:normal'> In this step,"
-                      f" you can run unsupervised learning on a particular behavior to get "
-                      f"segmented behaviors."
+                      f" you can use the trained classifier to predict the behavior of new data"
+                      f"and visualize some core statistics."
                       f"", unsafe_allow_html=True)
-        colR.markdown("<p style='text-align: right; color: grey; '>" + img_to_html(step5_fname, width=350) + "</p>",
+        colR.markdown("<p style='text-align: right; color: grey; '>" + img_to_html(step5_fname, width=200) + "</p>",
                       unsafe_allow_html=True)
 
     elif selected_step == 'Step 6':
@@ -142,7 +143,7 @@ def index():
                       f" you can run unsupervised learning on a particular behavior to get "
                       f"segmented behaviors."
                       f"", unsafe_allow_html=True)
-        colR.markdown("<p style='text-align: right; color: grey; '>" + img_to_html(step5_fname, width=350) + "</p>",
+        colR.markdown("<p style='text-align: right; color: grey; '>" + img_to_html(step6_fname, width=350) + "</p>",
                       unsafe_allow_html=True)
 
     bottom_cont = st.container()
@@ -192,6 +193,8 @@ def main():
         st.session_state['page'] = 'Step 1'
     if 'config' not in st.session_state:
         st.session_state['config'] = None
+    if "project_name" not in st.session_state:
+        st.session_state["project_name"] = None
 
     # if in main menu, display applications, see above index for item layout
     with st.sidebar:
@@ -209,8 +212,10 @@ def main():
                     project_config.optionxform = str
                     project_config.read_file(stringio)
                     st.session_state['config'] = project_config
+                    st.session_state["project_name"] = project_config["Project"].get("PROJECT_NAME")
                     st.rerun()
             elif st.session_state['config'] is not None:
+                st.info(f"Project :green[{st.session_state['project_name']}] loaded.")
                 cleared = st.form_submit_button(":red[Delete]")
                 if cleared:
                     st.session_state['config'] = None
@@ -226,7 +231,7 @@ def main():
             prefix = st.session_state['config']["Project"].get("PROJECT_NAME")
             data, config = load_data(working_dir,
                                      prefix)
-            menu_options = ['Menu', 'Upload Data', 'Extract Features', 'Active Learning',
+            menu_options = ['Menu', 'View Config', 'Extract Features', 'Active Learning',
                             'Refine Behaviors', 'Create New Dataset', 'Predict', 'Discover']
             icon_options = ['window-desktop',
                             'upload',
@@ -239,11 +244,17 @@ def main():
                             ]
 
         except:
-            menu_options = ['Menu', 'Upload Data', 'Active Learning',
-                            'Refine Behaviors', 'Create New Dataset', 'Predict', 'Discover']
+            menu_options = ['Menu', 'Upload Data'
+                , 'Extract Features'
+                 , 'Active Learning'
+                 ,'Refine Behaviors'
+                 , 'Create New Dataset'
+                 , 'Predict'
+                 , 'Discover'
+                            ]
             icon_options = ['window-desktop',
                             'upload',
-
+                            'bar-chart-line',
                             'diagram-2',
                             'images',
                             'file-earmark-plus',
@@ -276,7 +287,7 @@ def main():
 
     if nav_options == 'Menu':
         index()
-    elif 'Upload Data' in nav_options:
+    elif 'Upload Data' in nav_options or 'View Config' in nav_options:
         if "config" in st.session_state.keys():
             A_data_preprocess.main(config=st.session_state['config'])
         else:

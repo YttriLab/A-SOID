@@ -50,6 +50,7 @@ def get_filenamesjson(base_path, folder):
     return filenames
 
 def adp_filt(pose, idx_selected, idx_llh, llh_value):
+    #TODO: ADAPT FOR 3D
     datax = np.array(pose.iloc[:, idx_selected[::2]])
     datay = np.array(pose.iloc[:, idx_selected[1::2]])
     data_lh = np.array(pose.iloc[:, idx_llh])
@@ -58,7 +59,6 @@ def adp_filt(pose, idx_selected, idx_llh, llh_value):
     for i in range(data_lh.shape[1]):
         perc_rect.append(0)
     for x in range(data_lh.shape[1]):
-        # TODO: load from config.ini the llh threshold
         llh = llh_value
         data_lh_float = data_lh[:, x].astype(float)
         perc_rect[x] = np.sum(data_lh_float < llh) / data_lh.shape[0]

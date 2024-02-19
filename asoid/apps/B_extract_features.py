@@ -8,6 +8,17 @@ from config.help_messages import *
 
 TITLE = "Extract features"
 
+EXTRACT_FEATURES_HELP = ("In this step, you will extract features from the labeled data you uploaded. "
+                         "\n\n The features will be used to train the classifier and predict the behavior in the next steps."
+                         "\n\n---\n\n"
+                            "**Step 1**: Upload your project config file."
+                            "\n\n **Step 2**: Set the parameters."
+                            "\n\n **Step 3**: Extract the features."
+                            "\n\n **Step 4**: Continue with :orange[Active Learning]."
+                            "\n\n---\n\n"
+                         ":blue[Feature extraction can be repeated but requires new training afterwards.]"
+                         )
+
 
 def prompt_setup(prompt_container, software, framerate, annotation_classes,
                  working_dir, prefix, show_only=False):
@@ -60,6 +71,9 @@ def prompt_setup(prompt_container, software, framerate, annotation_classes,
 def main(config=None):
     st.markdown("""---""")
 
+    st.title("Extract Features")
+    st.expander("What is this?", expanded=False).markdown(EXTRACT_FEATURES_HELP)
+
     if config is not None:
         working_dir = config["Project"].get("PROJECT_PATH")
         prefix = config["Project"].get("PROJECT_NAME")
@@ -67,6 +81,7 @@ def main(config=None):
         software = config["Project"].get("PROJECT_TYPE")
         framerate = config["Project"].getfloat("FRAMERATE")
         iteration = config["Processing"].getint("ITERATION")
+        is_3d = config["Project"].getboolean("IS_3D")
         project_dir = os.path.join(working_dir, prefix)
         iter_folder = str.join('', ('iteration-', str(iteration)))
         os.makedirs(os.path.join(project_dir, iter_folder), exist_ok=True)
@@ -86,7 +101,7 @@ def main(config=None):
                     prompt_setup(prompt_container, software, framerate, annotation_classes,
                                  working_dir, prefix)
                 if st.button('Extract Features', help = EXTRACT_FEATURES_HELP):
-                    extractor = Extract(working_dir, prefix, frames2integ)
+                    extractor = Extract(working_dir, prefix, frames2integ, is_3d)
                     extractor.main()
         except FileNotFoundError:
             prompt_container = st.container()
@@ -94,7 +109,7 @@ def main(config=None):
                 prompt_setup(prompt_container, software, framerate,
                              annotation_classes, working_dir, prefix)
             if st.button('Extract Features'):
-                extractor = Extract(working_dir, prefix, frames2integ)
+                extractor = Extract(working_dir, prefix, frames2integ, is_3d)
                 extractor.main()
         st.session_state['page'] = 'Step 3'
 

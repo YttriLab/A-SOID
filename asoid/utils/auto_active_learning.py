@@ -4,11 +4,10 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from stqdm import stqdm
 import os
 from sklearn.metrics import f1_score
 import matplotlib.colors as mcolors
-from utils.extract_features import frameshift_predict, bsoid_predict_numba, bsoid_predict_numba_noscale
+from utils.predict import frameshift_predict, bsoid_predict_numba, bsoid_predict_numba_noscale
 from utils.load_workspace import load_features, load_test, save_data
 
 
@@ -577,114 +576,6 @@ class RF_Classify:
                     # save the data on last time
                     self.save_final_model_info()
 
-                # X_train_it = []
-                # Y_train_it = []
-                # iterX_predict_prob_it = []
-                # iterX_macro_scores_it = []
-                # iterX_f1_scores_it = []
-                # sampled_idx = []
-                # for i in range(len(self.targets_train)):
-                #     if it == 0:
-                #         # start with iter0 data (retrieve from above)
-                #         X_train[it] = self.iter0_X_train[i]
-                #         Y_train[it] = self.iter0_Y_train[i]
-                #         # retrieve iteration 0 predict probability
-                #         idx_lowconf = np.where(self.iter0_predict_prob[i].max(1) < self.conf_threshold)[0]
-                #         # identify all features/targets that were low predict prob
-                #         new_X_human = self.features_train[i][self.targets_train[i] != self.label_code_other][
-                #                       idx_lowconf, :]
-                #         new_Y_human = self.targets_train[i][self.targets_train[i] != self.label_code_other][
-                #             idx_lowconf]
-                #     else:
-                #         idx_lowconf = np.where(self.iterX_predict_prob_list[it - 1][i].max(1) < self.conf_threshold)[0]
-                #         new_X_human = self.features_train[i][self.targets_train[i] != self.label_code_other][
-                #                       idx_lowconf, :]
-                #         new_Y_human = self.targets_train[i][self.targets_train[i] != self.label_code_other][
-                #             idx_lowconf]
-                #     np.random.seed(i)
-                #     try:
-                #         # attempt sampling up to max_samples_per iteration
-                #         idx_sampled = np.random.choice(np.arange(idx_lowconf.shape[0]),
-                #                                        self.max_samples_iter, replace=False)
-                #     except:
-                #         # otherwise just grab all
-                #         try:
-                #             idx_sampled = np.random.choice(np.arange(idx_lowconf.shape[0]),
-                #                                            idx_lowconf.shape[0], replace=False)
-                #         except:
-                #             break
-                #
-                #     new_X_sampled = new_X_human[idx_sampled, :]
-                #     new_Y_sampled = new_Y_human[idx_sampled]
-                #     sampled_idx.append(idx_lowconf[idx_sampled])
-                #
-                #     if it == 0:
-                #         # if iteration 1, we use iteration 0 as base, and append new samples
-                #         X_train[it] = np.vstack(
-                #             (X_train[it], new_X_sampled))
-                #         Y_train[it] = np.hstack(
-                #             (Y_train[it], new_Y_sampled))
-                #     else:
-                #         # if iteration >1, we use previous iteration as base, and append new samples
-                #         X_train[it] = np.vstack(
-                #             (self.iterX_X_train_list[it - 1][i], new_X_sampled))
-                #         Y_train[it] = np.hstack(
-                #             (self.iterX_Y_train_list[it - 1][i], new_Y_sampled))
-                #     # model initialization
-                #
-                #     X_train_it.append(X_train[it])
-                #     Y_train_it.append(Y_train[it])
-                #     self.iterX_model = RandomForestClassifier(n_estimators=200, random_state=42, n_jobs=-1,
-                #                                               criterion='gini',
-                #                                               class_weight='balanced_subsample'
-                #                                               )
-                #     self.iterX_model.fit(X_train[it], Y_train[it])
-                #     # if not self.software == 'CALMS21 (PAPER)':
-                #     #     # predict = frameshift_predict(data_test, len(data_test), scalar,
-                #     #     #                              self.iterX_model, framerate=self.frames2integ)
-                #     #     predict = bsoid_predict_numba_noscale([self.features_heldout[i]], self.iterX_model)
-                #     #     predict = np.hstack(predict)
-                #     #
-                #     # else:
-                #     #     predict = frameshift_predict(data_test, len(data_test), scalar,
-                #     #                                  self.iterX_model, framerate=120)
-                #     predict = bsoid_predict_numba_noscale([self.features_heldout[i]], self.iterX_model)
-                #     predict = np.hstack(predict)
-                #
-                #     # TODO: iterX_f1_scores dictionary is not being used properly
-                #     # TODO: iterX_f1_scores should be a dictionary of seeds
-                #     iterX_f1_scores[it] = f1_score(
-                #         self.targets_heldout[i][self.targets_heldout[i] != self.label_code_other],
-                #         predict[self.targets_heldout[i] != self.label_code_other],
-                #         average=None)
-                #     iterX_f1_scores_it.append(iterX_f1_scores[it])
-                #     iterX_macro_scores[it] = f1_score(
-                #         self.targets_heldout[i][self.targets_heldout[i] != self.label_code_other],
-                #         predict[self.targets_heldout[i] != self.label_code_other],
-                #         average='macro')
-                #     iterX_macro_scores_it.append(iterX_macro_scores[it])
-                #     iterX_predict_prob[it] = self.iterX_model.predict_proba(
-                #         self.features_train[i][self.targets_train[i] != self.label_code_other]
-                #         )
-                #     iterX_predict_prob_it.append(iterX_predict_prob[it])
-                # len_low_conf = [len(np.where(iterX_predict_prob_it[ii].max(1) < self.conf_threshold)[0])
-                #                 for ii in range(len(iterX_predict_prob_it))]
-                # if len(iterX_f1_scores_it) != 0 and np.min(len_low_conf) > 0:
-                #     self.iterX_X_train_list.append(X_train_it)
-                #     self.iterX_Y_train_list.append(Y_train_it)
-                #     self.iterX_f1_scores_list.append(iterX_f1_scores_it)
-                #     self.iterX_macro_scores_list.append(iterX_macro_scores_it)
-                #     self.iterX_predict_prob_list.append(iterX_predict_prob_it)
-                #     self.sampled_idx_list.append(sampled_idx)
-                #     self.show_training_performance(it + 1)
-                # else:
-                #     st.success('The model did the best it could, no more confusing samples. Saving your progress...')
-                #     self.save_final_model_info()
-                #     break
-                # if it == self.max_iter - 1:
-                #     st.success("All iterations have been refined. Saving your progress...")
-                #     # save the data on last time
-                #     self.save_final_model_info()
 
     def show_training_performance(self, it):
 
