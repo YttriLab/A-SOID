@@ -245,8 +245,8 @@ def main():
 
         except:
             menu_options = ['Menu', 'Upload Data'
+                , 'Extract Features'
                  , 'Active Learning'
-                 , 'Extract Features'
                  ,'Refine Behaviors'
                  , 'Create New Dataset'
                  , 'Predict'

@@ -22,15 +22,17 @@ from utils.preprocessing import adp_filt, sort_nicely
 from utils.import_data import load_pose
 
 TITLE = "Predict behaviors"
-PREDICT_HELP = ("In this step, you can predict the behavior in sessions (pose) using the trained model."
+PREDICT_HELP = ("In this step, you can predict the behavior in sessions (pose) using the trained model from :orange[Active Learning]."
                 "\n\n The predictions will be used to generate summary statistics and visualizations."
                 "\n\n **Optional:** You can also generate annotated videos with the predicted labels."
                 "\n\n---\n\n"
-                "**Step 1**: Select an iteration."
+                "**Step 1**: Select an iteration*."
                 "\n\n **Step 2**: Select a session (pose) to visualize results or add new data."
                 "\n\n **Step 3**: Predict the behavior."
                 "\n\n **Step 4**: Generate summary statistics and visualizations."
+                "\n\n:grey[* This refers to the iterations of refinement, followed by active learning.]"
                 "\n\n---\n\n"
+                ":red[This step requires several GUI refreshs of the app (press 'R' on your keyboard when indicated by the] :green[green info box] :red[).]\n\n"
                 ":blue[The predictions will be saved in the project directory for your further analysis.]")
 
 
