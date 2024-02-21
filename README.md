@@ -11,6 +11,7 @@
 ### February 2024: Paper published and A-SOiD v0.3.1 released!
 
 [Paper](https://doi.org/10.1038/s41592-024-02200-1)
+
 [New Release](https://github.com/YttriLab/A-SOID/releases/tag/v0.3.1)
 
 ### August 2023: A-SOiD v0.3.0 is released!
