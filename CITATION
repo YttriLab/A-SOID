@@ -1,3 +1,19 @@
+﻿@Article{Tillmann2024,
+author={Tillmann, Jens F.
+and Hsu, Alexander I.
+and Schwarz, Martin K.
+and Yttri, Eric A.},
+title={A-SOiD, an active-learning platform for expert-guided, data-efficient discovery of behavior},
+journal={Nature Methods},
+year={2024},
+month={Feb},
+day={21},
+abstract={To identify and extract naturalistic behavior, two methods have become popular: supervised and unsupervised. Each approach carries its own strengths and weaknesses (for example, user bias, training cost, complexity and action discovery), which the user must consider in their decision. Here, an active-learning platform, A-SOiD, blends these strengths, and in doing so, overcomes several of their inherent drawbacks. A-SOiD iteratively learns user-defined groups with a fraction of the usual training data, while attaining expansive classification through directed unsupervised classification. In socially interacting mice, A-SOiD outperformed standard methods despite requiring 85{\%} less training data. Additionally, it isolated ethologically distinct mouse interactions via unsupervised classification. We observed similar performance and efficiency using nonhuman primate and human three-dimensional pose data. In both cases, the transparency in A-SOiD's cluster definitions revealed the defining features of the supervised classification through a game-theoretic approach. To facilitate use, A-SOiD comes as an intuitive, open-source interface for efficient segmentation of user-defined behaviors and discovered sub-actions.},
+issn={1548-7105},
+doi={10.1038/s41592-024-02200-1},
+url={https://doi.org/10.1038/s41592-024-02200-1}
+}
+
 @article {Tillmann2022.11.04.515138,
 	author = {Jens F. Tillmann and Alexander I. Hsu and Martin K. Schwarz and Eric A. Yttri},
 	title = {A-SOiD, an active learning platform for expert-guided, data efficient discovery of behavior},
