@@ -4,10 +4,15 @@
 [![GitHub forks](https://img.shields.io/github/forks/YttriLab/A-SOID.svg?style=social&label=Fork)](https://github.com/YttriLab/A-SOID)
 [![DOI](https://zenodo.org/badge/558906663.svg)](https://zenodo.org/doi/10.5281/zenodo.10210508)
 
-### Read the [preprint](https://www.biorxiv.org/content/10.1101/2022.11.04.515138v1)!
+### Read the [paper](https://doi.org/10.1038/s41592-024-02200-1)!
 > IF YOU ARE NEW HERE: CHECK OUT THE OVERVIEW AND INSTALLATION SECTION TO GET STARTED!
 ---
 ## News:
+### February 2024: Paper published and A-SOiD v0.3.1 released!
+
+[Paper](https://doi.org/10.1038/s41592-024-02200-1)
+[New Release](https://github.com/YttriLab/A-SOID/releases/tag/v0.3.1)
+
 ### August 2023: A-SOiD v0.3.0 is released!
 Our first major update is launched! This update includes major changes in the workflow and the GUI.
 
@@ -201,9 +206,9 @@ If you are using our work, please make sure to cite us and any additional resour
 7. [Friard, O. and Gamba, M. (2016), BORIS: a free, versatile open-source event-logging software for video/audio coding and live observations.  Methods Ecol Evol, 7: 1325-1330](https://doi.org/10.1111/2041-210X.12584)
 
 ### How to cite us:
-    A-SOiD, an active learning platform for expert-guided, data efficient discovery of behavior.
-    Jens F. Tillmann, Alexander I. Hsu, Martin K. Schwarz, Eric A. Yttri
-    bioRxiv 2022.11.04.515138; doi: https://doi.org/10.1101/2022.11.04.515138
+
+> Tillmann, J.F., Hsu, A.I., Schwarz, M.K. et al. A-SOiD, an active-learning platform for expert-guided, data-efficient discovery of behavior.
+> Nat Methods (2024). https://doi.org/10.1038/s41592-024-02200-1
 
 or see [Cite Us](CITATION)
 
