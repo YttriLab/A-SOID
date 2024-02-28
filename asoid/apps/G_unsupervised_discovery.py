@@ -102,7 +102,7 @@ def get_features_labels(selected_bodyparts, software, multi_animal, is_3d, frame
 
             # using feature scaling from training set
             if not is_3d:
-                feats, _ = feature_extraction([filt_pose], 1, framerate, frames2integ)
+                feats, _ = feature_extraction([filt_pose], 1, frames2integ)
             else:
                 feats, _ = feature_extraction_3d([filt_pose], 1, frames2integ)
             features.append(feats)
