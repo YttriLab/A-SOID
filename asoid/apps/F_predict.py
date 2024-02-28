@@ -451,7 +451,7 @@ def predict_annotate_video(ftype, software, is_3d, multi_animal, selected_bodypa
 
             # using feature scaling from training set
             if not is_3d:
-                feats, _ = feature_extraction([filt_pose], 1, framerate, frames2integ)
+                feats, _ = feature_extraction([filt_pose], 1, frames2integ)
             else:
                 feats, _ = feature_extraction_3d([filt_pose], 1, frames2integ)
 
@@ -753,7 +753,7 @@ def main(ri=None, config=None):
                                                annotation_classes,
                                                None, videos_dir, iter_folder,
                                                None, placeholder)
-                except:
+                except FileNotFoundError:
                     st.error(f'Please train a {iter_folder} model in :orange[Active Learning] step.')
 
             else:
