@@ -442,7 +442,7 @@ def create_videos(new_pose_csvs, selected_bodyparts, llh_value, iterX_model, fra
 
             # using feature scaling from training set
             if not is_3d:
-                feats, _ = feature_extraction([filt_pose], 1, framerate, frames2integ)
+                feats, _ = feature_extraction([filt_pose], 1, frames2integ)
             else:
                 feats, _ = feature_extraction_3d([filt_pose], 1, frames2integ)
 
