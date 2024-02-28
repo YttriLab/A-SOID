@@ -552,6 +552,7 @@ class Preprocess:
                 "Project": dict(
                     PROJECT_TYPE=self.software,
                     FRAMERATE=self.framerate,
+                    FILE_TYPE=self.ftype,
                     INDIVIDUALS_CHOSEN=self.selected_animals,
                     KEYPOINTS_CHOSEN=self.selected_bodyparts,
                     PROJECT_PATH=self.working_dir,
