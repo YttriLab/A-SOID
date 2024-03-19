@@ -462,8 +462,8 @@ class Preprocess:
                     idx_selected = self.selected_pose_idx
 
                     # get likelihood column idx directly from dataframe columns
-                    idx_llh = [i for i, s in enumerate(current_pose.columns) if "likelihood" in s]
-
+                    # go through all selected bodyparts and get the likelihood columns
+                    idx_llh = [i for i, s in enumerate(current_pose.columns) if "likelihood" in s and s in current_pose.columns[idx_selected]]
                     # # get rid of likelihood columns for deeplabcut
                     # idx_llh = self.selected_pose_idx[2::3]
 

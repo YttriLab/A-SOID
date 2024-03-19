@@ -3,6 +3,7 @@ import numpy as np
 import h5py
 import streamlit as st
 from scipy.io import loadmat
+import warnings
 
 def get_animals(df: pd.DataFrame, lvl=1):
     """Returns animal list from df in internal multiindex format. Excludes Label column"""
@@ -94,6 +95,9 @@ def load_dlc_data(path, multi_animal=False):
         df = pd.read_csv(path, header=[0, 1, 2], sep=",", index_col=0)
     else:
         df = pd.read_csv(path, header=[0, 1, 2, 3], sep=",", index_col=0)
+
+    # likelihood filtering based on b-soid approach
+
     return df
 
 
@@ -154,6 +158,7 @@ def load_pose(path, origin, multi_animal=False):
     return df
 
 def load_pose_ftype(path, ftype, multi_animal=False):
+    #TODO: Deprecate this function
     """General loading function. loads pose estimation file based on ftype.
     Limited to csv for dlc and h5 for sleap
     :param multi_animal:
