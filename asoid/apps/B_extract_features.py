@@ -22,6 +22,7 @@ EXTRACT_FEATURES_HELP = ("In this step, you will extract features from the label
 
 def prompt_setup(prompt_container, software, framerate, annotation_classes,
                  working_dir, prefix, show_only=False):
+
     data, config = load_data(working_dir, prefix)
     # get relevant data from data file
     [_, targets] = data
@@ -104,13 +105,16 @@ def main(config=None):
                     extractor = Extract(working_dir, prefix, frames2integ, is_3d)
                     extractor.main()
         except FileNotFoundError:
-            prompt_container = st.container()
-            frames2integ = \
-                prompt_setup(prompt_container, software, framerate,
-                             annotation_classes, working_dir, prefix)
-            if st.button('Extract Features'):
-                extractor = Extract(working_dir, prefix, frames2integ, is_3d)
-                extractor.main()
+            try:
+                prompt_container = st.container()
+                frames2integ = \
+                    prompt_setup(prompt_container, software, framerate,
+                                 annotation_classes, working_dir, prefix)
+                if st.button('Extract Features'):
+                    extractor = Extract(working_dir, prefix, frames2integ, is_3d)
+                    extractor.main()
+            except FileNotFoundError:
+                st.info(SPLIT_PROJECT_HELP)
         st.session_state['page'] = 'Step 3'
 
     else:

@@ -173,6 +173,11 @@ def pca_umap_hdbscan(target_behavior, annotation_classes, input_sav, cluster_ran
                 with st.spinner(f'working on splitting {target_behav}...'):
                     target_beh_id = annotation_classes.index(target_behav)
                     selected_features = features[predictions == target_beh_id]
+                    if len(selected_features) == 0:
+                        # if there is no detected samples for this behavior, abort
+                        st.error(f'No samples for {target_behav} found in the provided data. Deselect {target_behav} and rerun this step to continue... \n If you want to cluster this behavior, you can upload more data and try again.')
+                        st.stop()
+
                     scalar = StandardScaler()
                     if normalize_feats:
                         selected_feats_ = scalar.fit_transform(selected_features)
@@ -421,6 +426,7 @@ def main(ri=None, config=None):
                             annotation_classes_ex.pop(other_id)
                             idx_other = np.where(all_labels == other_id)[0]
                         left_col.subheader('Splitting')
+
                         for target_behav in target_behavior:
                             if target_behav == target_behavior[0]:
                                 selected_subgroup = left_col.multiselect(f'Select the {target_behav} sub groups',

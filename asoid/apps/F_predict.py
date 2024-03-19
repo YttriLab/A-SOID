@@ -352,7 +352,17 @@ def create_annotated_videos(vidpath_out,
         bottomLeftCornerOfText = (25, height - 50)
 
         new_images = []
-        for j in stqdm(range(len(images)), desc=f'Annotating {st.session_state["video"].name}'):
+        if len(predictions_match) != len(images):
+            st.error('Number of frames in video and pose file do not match.')
+            if len(predictions_match) < len(images):
+                st.warning(f"Cutting of video frames ({len(images)})to match labels ({len(predictions_match)})...")
+                len_vid = len(predictions_match)
+            elif len(predictions_match) > len(images):
+                st.warning(f"Cutting of labels ({len(predictions_match)}) to match video frames ({len(images)})...")
+                len_vid = len(images)
+        else:
+            len_vid = len(images)
+        for j in stqdm(range(len_vid), desc=f'Annotating {st.session_state["video"].name}'):
             image = images[j]
             rgb_im = cv2.imread(os.path.join(frame_dir, image))
             cv2.putText(rgb_im, f'{annotation_classes[int(predictions_match[j])]}',
@@ -510,7 +520,19 @@ def annotate_video(video_path, framerate, annotation_classes,
     height, width, layers = frame.shape
     bottomLeftCornerOfText = (25, height - 50)
     new_images = []
-    for j in stqdm(range(len(images)), desc=f'Annotating {annotated_vid_name}'):
+
+    if len(predictions_match) != len(images):
+        st.warning('Number of frames in video and pose file do not match.')
+        if len(predictions_match) < len(images):
+            st.warning(f"Cutting of video frames ({len(images)})to match labels ({len(predictions_match)})...")
+            len_vid = len(predictions_match)
+        elif len(predictions_match) > len(images):
+            st.warning(f"Cutting of labels ({len(predictions_match)}) to match video frames ({len(images)})...")
+            len_vid = len(images)
+    else:
+        len_vid = len(images)
+
+    for j in stqdm(range(len_vid), desc=f'Annotating {annotated_vid_name}'):
         image = images[j]
         rgb_im = cv2.imread(os.path.join(frame_dir, image))
         cv2.putText(rgb_im, f'{annotation_classes[int(predictions_match[j])]}',
