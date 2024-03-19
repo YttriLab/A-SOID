@@ -155,6 +155,8 @@ START_DISCOVERY_HELP = "Press to start the unsupervised clustering step. This in
 SUBCLASS_SELECT_HELP = r"Select one or more sub-classes from the plot above to include in your new annotations."
 SAVE_NEW_HELP = "Press to save your previous selection in the project folder."
 
+SPLIT_PROJECT_HELP= "This project is likely the result of a previous unsupervised discovery. The feature extraction is not necessary. Continue with the next steps. "
+
 """Final"""
 
 IMPRESS_TEXT = "A-SOiD is developed by Alexander Hsu and Jens Tillmann. For support, visit our [GitHub Repository](https://github.com/YttriLab/A-SOID)."
