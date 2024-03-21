@@ -173,7 +173,11 @@ def main():
                 </style>
                 """
     st.markdown(hide_streamlit_style, unsafe_allow_html=True)
-    st.set_option('deprecation.showPyplotGlobalUse', False)
+    if st.__version__ <= "1.31.1":
+        st.set_option('deprecation.showPyplotGlobalUse', False)
+    else:
+        # function is deprecated so warning is as well
+        pass
     st.markdown(
         """
         <style>
