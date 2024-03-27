@@ -1,4 +1,5 @@
 import datetime
+import glob
 import io
 import os
 import re
@@ -513,7 +514,7 @@ def annotate_video(video_path, framerate, annotation_classes,
     fontColor = (0, 0, 255)
     thickness_text = 2
     lineType = 2
-    images = [img for img in os.listdir(frame_dir) if img.endswith(".png")]
+    images = glob.glob(os.path.join(frame_dir, '*.png'))
     sort_nicely(images)
     fourcc = cv2.VideoWriter_fourcc(*'avc1')
     frame = cv2.imread(os.path.join(frame_dir, images[0]))
