@@ -328,7 +328,7 @@ class Preprocess:
                     self.pose_csvs = [self.pose_files[x] for x in self.pose_csvs]
                     # st.write(self.pose_csvs)
                     self.llh_value = upload_container.number_input('Likelihood value to filter',
-                                                                   min_value=0.05, max_value=0.95,
+                                                                   min_value=0.05, max_value=0.99,
                                                                    value=0.1)
                     upload_container.write('---')
 
