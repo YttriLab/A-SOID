@@ -87,7 +87,7 @@ A-SOiD supports the following input types:
 - [DeepLabCut](http://www.mackenziemathislab.org/deeplabcut)
 
 ### Annotation files:
-- [BORIS](https://www.boris.unito.it/) -> exported as binary files in 0.1 sec time steps (10 Hz): [Read the docs](https://boris.readthedocs.io/en/latest/#export-events-as-behavioral-binary-table)
+- [BORIS](https://www.boris.unito.it/) -> exported as binary files in 0.1 sec time steps (10 Hz): [Read the docs](http://www.boris.unito.it/user_guide/export_events/#export-events-as-behaviors-binary-table)
 - any annotation files in this style ([one-hot encoded](https://en.wikipedia.org/wiki/One-hot)), including an index that specifies time steps in seconds.
 ----
 > You can see an example of this using pandas in our docs: [Convert annotations to binary format](docs/export_annotations_to_binary_format.ipynb)
