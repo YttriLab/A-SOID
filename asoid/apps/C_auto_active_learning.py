@@ -127,9 +127,24 @@ def main(ri=None, config=None):
             [_, iterX_Y_train_list, iterX_f1_scores] = \
                 load_iterX(project_dir, iter_folder)
             if st.checkbox('Show final results', key='sr', value=True, help=SHOW_FINAL_RESULTS_HELP):
-                show_classifier_results(annotation_classes, all_f1_scores,
+
+                perf_fig = show_classifier_results(annotation_classes, all_f1_scores,
                                         iter0_f1_scores, iter0_Y_train,
                                         iterX_f1_scores, iterX_Y_train_list)
+
+                if st.button("Save figure", help= 'Save the classifier performance figure as pfd to the project directory.'):
+                    # turn text black for pdf
+                    perf_fig.update_layout(
+                        font=dict(
+                            family="Arial",
+                            size=10,
+                            color="black"
+                        )
+                    )
+                    perf_fig.write_image(
+                        os.path.join(project_dir, iter_folder, 'classifier_performance.pdf'))
+                    st.info('Figure saved as classifier_performance.pdf in the project directory.')
+
             message_container = st.container()
             redo_container = st.container()
             if not redo_container.checkbox('Re-classify behaviors', help=RE_CLASSIFY_HELP):

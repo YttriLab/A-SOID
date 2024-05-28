@@ -115,7 +115,9 @@ def show_classifier_results(behavior_classes, all_score,
             color="white"
         )
     )
+
     plot_col.plotly_chart(fig, use_container_width=False)
+    return fig
 
 
 class RF_Classify:
