@@ -2,7 +2,6 @@
 
 import os
 import configparser as cfg
-import streamlit as st
 
 
 def load_default_config():
@@ -145,16 +144,3 @@ def view_config_str(config):
         for parameter, value in config[sections[num]].items():
             print(f"{parameter.replace('_', ' ').capitalize()}: {value}")
 
-def view_config_md(config):
-    """Returns content of config file in markdown format"""
-    sections = [x for x in config.keys() if x != "DEFAULT"]
-    # remove the "DEFAULT" KEY that holds no info
-    clms = st.columns(len(sections))
-    for num, section in enumerate(sections):
-        with clms[num]:
-            placeholder = st.container()
-            placeholder_exp = placeholder.expander(f'{section}'.upper(), expanded=True)
-            with placeholder_exp:
-                # st.subheader(section)
-                for parameter, value in config[sections[num]].items():
-                    st.markdown(f"{parameter.replace('_', ' ').upper()}: {value}")

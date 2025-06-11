@@ -2,8 +2,6 @@ import numpy as np
 import pandas as pd
 from numba import jit
 from sklearn.preprocessing import StandardScaler
-from stqdm import stqdm
-import streamlit as st
 
 
 ## FAST NUMBA PROCESSING FUNCTIONS
@@ -224,10 +222,9 @@ def asoid_extract_numba_3d(data, fps):
 
 def feature_extraction_3d(train_datalist, num_train, framerate):
     f_integrated = []
-    for i in stqdm(range(num_train)):
-        with st.spinner(f'Extracting features from 3D pose'):
-            binned_features = asoid_extract_numba_3d([train_datalist[i]], framerate)
-            f_integrated.append(binned_features[0])  # getting only the non-shifted
+    for i in range(num_train):
+        binned_features = asoid_extract_numba_3d([train_datalist[i]], framerate)
+        f_integrated.append(binned_features[0])  # getting only the non-shifted
     features = np.vstack([f_integrated[m] for m in range(len(f_integrated))])
     scaler = StandardScaler()
     scaler.fit(features)

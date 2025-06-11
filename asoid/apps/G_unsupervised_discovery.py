@@ -1,16 +1,16 @@
 import streamlit as st
 import os
-from config.help_messages import IMPRESS_TEXT, NO_CONFIG_HELP
+
 from stqdm import stqdm
-from utils.extract_features_2D import feature_extraction
-from utils.extract_features_3D import feature_extraction_3d
-from utils.predict import bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
-from utils.load_workspace import load_new_pose, load_iterX, save_data, load_features
-from utils.import_data import load_pose
+from asoid.utils.extract_features_2D import feature_extraction
+from asoid.utils.extract_features_3D import feature_extraction_3d
+from asoid.utils.predict import bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
+from asoid.utils.load_workspace import load_new_pose, load_iterX, save_data, load_features
+from asoid.utils.import_data import load_pose
 from datetime import date
-from utils.project_utils import create_new_project, update_config, copy_config
-from utils.preprocessing import adp_filt, sort_nicely
-from config.help_messages import *
+from asoid.utils.project_utils import create_new_project, update_config, copy_config
+from asoid.utils.preprocessing import adp_filt, sort_nicely
+from asoid.config.help_messages import *
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots

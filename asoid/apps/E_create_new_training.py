@@ -1,9 +1,9 @@
 import streamlit as st
 import numpy as np
 import os
-from config.help_messages import *
-from utils.load_workspace import load_refinement, load_features, load_iterX, save_data
-from utils.project_utils import update_config
+from asoid.config.help_messages import *
+from asoid.utils.load_workspace import load_refinement, load_features, load_iterX, save_data
+from asoid.utils.project_utils import update_config
 
 TITLE = "Create new dataset"
 DATASET_HELP = ("After refining behaviors, you can create a new dataset to retrain the model."

@@ -1,1 +1,1 @@
-from config.global_config import *
+from asoid.config.global_config import *

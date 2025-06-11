@@ -7,8 +7,8 @@ import base64
 from io import StringIO
 
 from apps import *
-from config.help_messages import UPLOAD_CONFIG_HELP, IMPRESS_TEXT
-from utils.load_workspace import load_data
+from asoid.config.help_messages import UPLOAD_CONFIG_HELP, IMPRESS_TEXT
+from asoid.utils.load_workspace import load_data
 
 
 def img_to_bytes(img_path):

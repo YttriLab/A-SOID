@@ -1,10 +1,16 @@
 import streamlit as st
 import numpy as np
+import pandas as pd
 import os
-from utils.project_utils import update_config
-from utils.load_workspace import load_data, load_features
-from utils.extract_features import Extract, interactive_durations_dist
-from config.help_messages import *
+import plotly.express as px
+import plotly.graph_objects as go
+
+import matplotlib.colors as mcolors
+
+from asoid.utils.project_utils import update_config
+from asoid.utils.load_workspace import load_data, load_features
+from asoid.utils.extract_features import Extract
+from asoid.config.help_messages import *
 
 TITLE = "Extract features"
 
@@ -18,6 +24,105 @@ EXTRACT_FEATURES_HELP = ("In this step, you will extract features from the label
                             "\n\n---\n\n"
                          ":blue[Feature extraction can be repeated but requires new training afterwards.]"
                          )
+
+
+def interactive_durations_dist(targets, behavior_classes, framerate, plot_container,
+                               num_bins, split_by_class=True):
+    # Add histogram data
+    plot_col, option_col = plot_container.columns([3, 1])
+    option_col.write('')
+    option_col.write('')
+    option_col.write('')
+    all_c_options = list(mcolors.CSS4_COLORS.keys())
+    with option_col:
+        option_expander = st.expander("Configure plot")
+        if split_by_class:
+            behavior_colors = {k: [] for k in behavior_classes}
+            if len(behavior_classes) == 4:
+                default_colors = ["red", "darkorange", "dodgerblue", "gray"]
+            else:
+                np.random.seed(42)
+                selected_idx = np.random.choice(np.arange(len(all_c_options)), len(behavior_classes), replace=False)
+                default_colors = [all_c_options[s] for s in selected_idx]
+
+            for i, class_id in enumerate(behavior_classes):
+                behavior_colors[class_id] = option_expander.selectbox(f'Color for {behavior_classes[i]}',
+                                                                      all_c_options,
+                                                                      index=all_c_options.index(default_colors[i]),
+                                                                      key=f'color_option{i}',
+                                                                      help=BEHAVIOR_COLOR_SELECT_HELP)
+            colors = [behavior_colors[class_id] for class_id in behavior_classes]
+        else:
+            behavior_colors = {k: [] for k in ['All']}
+            default_colors = ['dodgerblue']
+            for i, class_id in enumerate(['All']):
+                behavior_colors[class_id] = option_expander.selectbox(f'Color for all',
+                                                                      all_c_options,
+                                                                      index=all_c_options.index(default_colors[i]),
+                                                                      key=f'color_option{i}',
+                                                                      help=BEHAVIOR_COLOR_SELECT_HELP)
+            colors = [behavior_colors[class_id] for class_id in ['All']]
+
+    duration_dict = {k: [] for k in behavior_classes}
+    durations = []
+    corr_targets = []
+    for seq in range(len(targets)):
+        durations.append(np.diff(np.hstack((0, np.where(np.diff(targets[seq]) != 0)[0] + 1))))
+        corr_targets.append(targets[seq][
+                                np.hstack((0, np.where(np.diff(targets[seq]) != 0)[0] + 1))][:durations[seq].shape[0]])
+    for seq in range(len(durations)):
+        current_seq_durs = durations[seq]
+        for unique_beh in np.unique(np.hstack(corr_targets)):
+            # make sure it's an int
+            unique_beh = int(unique_beh)
+            idx_behavior = np.where(corr_targets[seq] == unique_beh)[0]
+            curr_annot = behavior_classes[unique_beh]
+            if len(idx_behavior) > 0:
+                duration_dict[curr_annot].append(current_seq_durs[np.where(corr_targets[seq] == unique_beh)[0]])
+    keys = ['Sequence', 'Annotation', 'Duration (seconds)']
+    data_dict = {k: [] for k in keys}
+    for curr_annot in behavior_classes:
+        for seq in range(len(duration_dict[curr_annot])):
+            for bout, duration in enumerate(duration_dict[curr_annot][seq]):
+                data_dict['Sequence'].append(seq)
+                data_dict['Annotation'].append(curr_annot)
+                data_dict['Duration (seconds)'].append(duration / framerate)
+
+    df = pd.DataFrame(data_dict)
+    if split_by_class:
+        fig = px.histogram(df, x="Duration (seconds)", color='Annotation',
+                           opacity=0.7,
+                           nbins=num_bins,
+                           marginal="box",
+                           barmode='relative',
+                           color_discrete_sequence=colors,
+                           range_x=[0, np.percentile(np.hstack(data_dict['Duration (seconds)']), 99)],
+                           hover_data=df.columns)
+    else:
+        fig = px.histogram(df, x="Duration (seconds)",
+                           opacity=0.8,
+                           nbins=num_bins,
+                           marginal="box",
+                           barmode='relative',
+                           histnorm='probability',
+                           color_discrete_sequence=colors,
+                           range_x=[0, np.percentile(np.hstack(durations) / framerate, 99)],
+                           hover_data=df.columns)
+    fig.update_yaxes(linecolor='dimgray', gridcolor='dimgray')
+
+    fig.update_layout(
+        title="",
+        xaxis_title=keys[2],
+        legend_title=keys[1],
+        font=dict(
+            family="Arial",
+            size=14,
+            color="white"
+        )
+    )
+    plot_col.plotly_chart(fig, use_container_width=True)
+    return fig
+
 
 
 def prompt_setup(prompt_container, software, framerate, annotation_classes,
@@ -103,7 +208,11 @@ def main(config=None):
                                  working_dir, prefix)
                 if st.button('Extract Features', help = EXTRACT_FEATURES_HELP):
                     extractor = Extract(working_dir, prefix, frames2integ, is_3d)
-                    extractor.main()
+                    with st.spinner('Extracting features...'):
+                        extractor.main()
+                    col_left, _, col_right = st.columns([1, 1, 1])
+                    col_right.success("Continue on with next module".upper())
+
         except FileNotFoundError:
             try:
                 prompt_container = st.container()
@@ -112,7 +221,11 @@ def main(config=None):
                                  annotation_classes, working_dir, prefix)
                 if st.button('Extract Features'):
                     extractor = Extract(working_dir, prefix, frames2integ, is_3d)
-                    extractor.main()
+                    with st.spinner('Extracting features...'):
+                        extractor.main()
+                    col_left, _, col_right = st.columns([1, 1, 1])
+                    col_right.success("Continue on with next module".upper())
+
             except FileNotFoundError:
                 st.info(SPLIT_PROJECT_HELP)
         st.session_state['page'] = 'Step 3'

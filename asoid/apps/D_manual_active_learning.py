@@ -1,6 +1,6 @@
 import streamlit as st
-from config.help_messages import *
-from utils.manual_refinement import Refinement
+from asoid.config.help_messages import *
+from asoid.utils.manual_refinement import Refinement
 
 
 

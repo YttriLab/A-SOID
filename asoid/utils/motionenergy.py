@@ -15,8 +15,8 @@ from PIL.ImageColor import getcolor
 
 from stqdm import stqdm
 
-from config.help_messages import *
-from utils.load_workspace import load_data, load_motion_energy, save_data
+from asoid.config.help_messages import *
+from asoid.utils.load_workspace import load_data, load_motion_energy, save_data
 
 #TODO: adapt to work with new iterations
 

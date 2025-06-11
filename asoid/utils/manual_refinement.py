@@ -14,14 +14,14 @@ import re
 import tkinter as tk
 import base64
 from moviepy.editor import VideoFileClip
-from utils.import_data import load_pose
-from utils.preprocessing import adp_filt, sort_nicely
-from utils.load_workspace import load_iterX, load_features, save_data, load_refinement, load_refine_params
+from asoid.utils.import_data import load_pose
+from asoid.utils.preprocessing import adp_filt, sort_nicely
+from asoid.utils.load_workspace import load_iterX, load_features, save_data, load_refinement, load_refine_params
 
-from utils.extract_features_2D import feature_extraction
-from utils.extract_features_3D import feature_extraction_3d
-from utils.predict import bsoid_predict_numba, bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
-from config.help_messages import *
+from asoid.utils.extract_features_2D import feature_extraction
+from asoid.utils.extract_features_3D import feature_extraction_3d
+from asoid.utils.predict import bsoid_predict_numba, bsoid_predict_numba_noscale, bsoid_predict_proba_numba_noscale
+from asoid.config.help_messages import *
 
 def frame_extraction(video_file, frame_dir):
     probe = ffmpeg.probe(video_file)

@@ -2,11 +2,11 @@ import os
 
 import numpy as np
 import streamlit as st
-from config.help_messages import *
-from utils.auto_active_learning import show_classifier_results, RF_Classify
-from utils.load_workspace import load_features, load_heldout, \
+from asoid.config.help_messages import *
+from asoid.utils.auto_active_learning import show_classifier_results, RF_Classify, get_available_conf_options
+from asoid.utils.load_workspace import load_features, load_heldout, \
     load_iter0, load_iterX, load_all_train
-from utils.project_utils import update_config
+from asoid.utils.project_utils import update_config
 
 TITLE = "Active learning"
 ACTIVE_LEARNING_HELP = ("In this step, you will train a classifier using a small set of labeled data and then small portions of the remaining training data are fed to the classifier for several iterations."
@@ -21,7 +21,7 @@ ACTIVE_LEARNING_HELP = ("In this step, you will train a classifier using a small
                         "\n\n---\n\n"
                         ":blue[This classifier can be directly used in the prediction and discovery steps. Alternatively, you can refine the classifier by adding more unlabeled data in the next step:] :orange[Refine Behaviors]")
 
-def prompt_setup(software, train_fx, conf,
+def prompt_setup(software, train_fx, conf, conf_type,
                  working_dir, prefix, iteration_dir, exclude_other, annotation_classes):
     project_dir = os.path.join(working_dir, prefix)
     [_, targets, _] = load_features(project_dir, iteration_dir)
@@ -36,7 +36,7 @@ def prompt_setup(software, train_fx, conf,
     min_samples = 10
     smallest_class_num = np.min(data_samples_per)
     min_ratio_ = np.round(min_samples / smallest_class_num, 2)
-    max_samps_iter = np.ceil(len(data_samples_per) * 10).astype(int)
+    max_samps_iter = np.ceil(len(data_samples_per) * 100).astype(int)
 
     if not np.all(data_samples_per) or smallest_class_num < min_samples:
         # if any selected class has no labels in the dataset, throw an error (very rare cases).
@@ -69,12 +69,39 @@ def prompt_setup(software, train_fx, conf,
     col1_exp.info('Initial samples to train per class: \n\n' + ";  ".join(info_text))
     max_iter = col2_exp.number_input('Max number of self-learning iterations',
                                      min_value=1, max_value=None,
-                                     value=100, key='maxi3', help=MAX_ITER_HELP)
+                                     value=50, key='maxi3', help=MAX_ITER_HELP)
     max_samples_iter = col2_bot_exp.number_input(f'Max samples amongst the '
                                                  f'{len(data_samples_per)} classes',
                                                  min_value=max_samps_iter, max_value=None,
                                                  value=max_samps_iter,
                                                  key='maxs3', help=MAX_SAMPLES_HELP)
+
+    
+    available_conf_types = get_available_conf_options()
+    #turn dict into nice string in markdown
+    conf_types_str = "\n".join([f"{k}: {available_conf_types[k]['description']} \n" for k in available_conf_types.keys()])
+    CONFIDENCE_TYPE_HELP = ("Confidence type to use for the active learning regime (low-confidence/uncertainty sampling). \n\n" \
+                            "The confidence type is used to determine the confidence of the classifier in its predictions. \n" \
+                            "The probability ouput of clf.predict_proba(X) is used to calculate the confidence. See \n\n" \
+                            "Available types: \n\n" \
+                            + conf_types_str)
+
+    if conf_type not in get_available_conf_options():
+            col2_bot_exp.error(f"Invalid confidence calculation option found in config: {conf_type}. Defaulting to 'max'.")
+            conf_type = 'max'
+
+    
+    sel_conf_type = col2_bot_exp.selectbox('Confidence type'
+                            , available_conf_types.keys()
+                            , index = int(list(available_conf_types.keys()).index(conf_type))
+                            , help = CONFIDENCE_TYPE_HELP
+                            )
+    
+    if st.session_state['conf_type'] != sel_conf_type:
+        # get the default confidence threshold for the selected confidence type
+        conf = available_conf_types[sel_conf_type]["default_thresh"]
+    
+
     st.session_state['conf_threshold'] = col2_bot_exp.number_input('Confidence threshold',
                                                min_value=0.05, max_value=0.95,
                                                value=conf
@@ -84,10 +111,12 @@ def prompt_setup(software, train_fx, conf,
             TRAIN_FRACTION=init_ratio,
             MAX_ITER=max_iter,
             MAX_SAMPLES_ITER=max_samples_iter,
+            CONF_TYPE=sel_conf_type,
             CONF_THRESHOLD=st.session_state['conf_threshold']
         )
     }
     st.session_state['config'] = update_config(os.path.join(working_dir, prefix), updated_params=parameters_dict)
+    st.session_state['conf_type'] = sel_conf_type
 
     return init_ratio, max_iter, max_samples_iter
 
@@ -106,6 +135,11 @@ def main(ri=None, config=None):
         software = config["Project"].get("PROJECT_TYPE")
         exclude_other = config["Project"].getboolean("EXCLUDE_OTHER")
         train_fx = config["Processing"].getfloat("TRAIN_FRACTION")
+        #TODO: needs failsave for older projects
+        try:
+            conf_type = config["Processing"].get("CONF_TYPE")
+        except KeyError:
+            conf_type = get_available_conf_options().keys()[0]
         conf = config["Processing"].getfloat("CONF_THRESHOLD")
         iteration = config["Processing"].getint("ITERATION")
         selected_iter = ri.selectbox('Select Iteration #', np.arange(iteration + 1), iteration)
@@ -118,6 +152,8 @@ def main(ri=None, config=None):
             conf = 0.5
         if 'conf_threshold' not in st.session_state:
             st.session_state['conf_threshold'] = None
+        if 'conf_type' not in st.session_state:
+            st.session_state['conf_type'] = conf_type
 
         try:
             [all_f1_scores] = \
@@ -136,28 +172,40 @@ def main(ri=None, config=None):
                 message_container.success(f'This prefix had been classified.')
             else:
                 init_ratio, max_iter, max_samples_iter = \
-                    prompt_setup(software, train_fx, conf, working_dir, prefix, iter_folder, exclude_other,
+                    prompt_setup(software, train_fx, conf, conf_type, working_dir, prefix, iter_folder, exclude_other,
                                  annotation_classes)
                 # st.write(conf_threshold)
                 if st.button('Train Classifier'):
                     rf_classifier = RF_Classify(working_dir, prefix, iter_folder, software,
-                                                init_ratio, max_iter, max_samples_iter,
-                                                annotation_classes, exclude_other,
-                                                st.session_state['conf_threshold'])
+                                                init_ratio
+                                                , max_iter
+                                                , max_samples_iter
+                                                , annotation_classes
+                                                , exclude_other
+                                                , st.session_state['conf_type']
+                                                , st.session_state['conf_threshold'])
                     rf_classifier.main()
+                    col_left, _, col_right = st.columns([1, 1, 1])
+                    col_right.success("Continue on with next module".upper())
         except FileNotFoundError:
             # make sure the features were extracted:
 
             try:
                 init_ratio, max_iter, max_samples_iter = \
-                    prompt_setup(software, train_fx, conf, working_dir, prefix, iter_folder, exclude_other,
+                    prompt_setup(software, train_fx, conf, conf_type, working_dir, prefix, iter_folder, exclude_other,
                                  annotation_classes)
                 if st.button('Train Classifier'):
-                    rf_classifier = RF_Classify(working_dir, prefix, iter_folder, software,
-                                                init_ratio, max_iter, max_samples_iter,
-                                                annotation_classes, exclude_other,
-                                                st.session_state['conf_threshold'])
+                    rf_classifier = RF_Classify(working_dir, prefix, iter_folder, software
+                                                , init_ratio
+                                                , max_iter
+                                                , max_samples_iter
+                                                , annotation_classes
+                                                , exclude_other
+                                                , st.session_state['conf_type']
+                                                , st.session_state['conf_threshold'])
                     rf_classifier.main()
+                    col_left, _, col_right = st.columns([1, 1, 1])
+                    col_right.success("Continue on with next module".upper())
             except FileNotFoundError:
                 st.error(NO_FEATURES_HELP)
         st.session_state['page'] = 'Step 4'

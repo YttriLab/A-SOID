@@ -1,7 +1,6 @@
 import streamlit as st
-from utils.project_utils import view_config_md
-from utils.load_preprocess import Preprocess
-from config.help_messages import *
+from asoid.utils.load_preprocess import Preprocess
+from asoid.config.help_messages import *
 
 
 TITLE = "Preprocess data"
@@ -20,6 +19,20 @@ PREPROCESS_HELP = ("In this step, you will preprocess the data before extracting
                    "\n\n---\n\n"
                    ":red[Using the same prefix and working directory will result in an overwrite and might cause unintended problems.]"
                    )
+
+def view_config_md(config):
+    """Returns content of config file in markdown format"""
+    sections = [x for x in config.keys() if x != "DEFAULT"]
+    # remove the "DEFAULT" KEY that holds no info
+    clms = st.columns(len(sections))
+    for num, section in enumerate(sections):
+        with clms[num]:
+            placeholder = st.container()
+            placeholder_exp = placeholder.expander(f'{section}'.upper(), expanded=True)
+            with placeholder_exp:
+                # st.subheader(section)
+                for parameter, value in config[sections[num]].items():
+                    st.markdown(f"{parameter.replace('_', ' ').upper()}: {value}")
 
 def main(config=None):
     st.markdown("""---""")

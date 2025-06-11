@@ -7,11 +7,14 @@ import numpy as np
 import pandas as pd
 import re
 import streamlit as st
-from utils.preprocessing import adp_filt
-from utils.import_data import load_pose, get_bodyparts, get_animals, load_labels
-from utils.project_utils import create_new_project, update_config
-from config.help_messages import *
+from asoid.utils.preprocessing import adp_filt
+from asoid.utils.import_data import load_pose, get_bodyparts, get_animals, load_labels
+from asoid.utils.project_utils import create_new_project, update_config
+from asoid.config.help_messages import *
 
+LLH_HELP = "Likelihood value to filter pose estimation data. " \
+          "Coordinates with a likelihood below this threshold will be filtered out and interpolated. " \
+          "If set to 0, no filtering will be applied."
 
 def convert_int(s):
     if s.isdigit():
@@ -328,8 +331,10 @@ class Preprocess:
                     self.pose_csvs = [self.pose_files[x] for x in self.pose_csvs]
                     # st.write(self.pose_csvs)
                     self.llh_value = upload_container.number_input('Likelihood value to filter',
-                                                                   min_value=0.05, max_value=0.95,
-                                                                   value=0.1)
+                                                                   min_value=0.0, max_value=0.95,
+                                                                   value=0.1
+                                                                   , help =LLH_HELP)
+                    
                     upload_container.write('---')
 
                 # do the same for labels
@@ -481,8 +486,11 @@ class Preprocess:
                         print("3D project detected. Skipping likelihood adaptive filtering.")
                         # if yes, just drop likelihood columns and pick the selected bodyparts
                         filt_pose = current_pose.iloc[:, idx_selected].values
-                    else:
+                    elif self.llh_value > 0:
                         filt_pose, _ = adp_filt(current_pose, idx_selected, idx_llh, self.llh_value)
+                    else:
+                        # if no likelihood filtering is applied, just take the selected bodyparts
+                        filt_pose = current_pose.iloc[:, idx_selected].values
 
                     # self.processed_input_data.append(np.array(current_pose.iloc[:, idx_selected]))
                     self.processed_input_data.append(filt_pose)

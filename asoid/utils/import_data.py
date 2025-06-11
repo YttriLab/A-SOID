@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import h5py
-import streamlit as st
 from scipy.io import loadmat
 import warnings
 
@@ -205,7 +204,7 @@ def resample_labels(labels: pd.DataFrame, fps: int, sample_rate:int):
     resample_rate = label_sample_rate / pose_sample_rate
     #check if resample rate is divisible by fps
     if sample_rate % fps != 0 and fps % sample_rate != 0:
-        raise st.error(f"Annotations cannot be resampled to fit pose estimation sampling. The annotation sample rate {sample_rate} is not divisible by FPS {fps} or vice versa.")
+        raise ValueError(f"Annotations cannot be resampled to fit pose estimation sampling. The annotation sample rate {sample_rate} is not divisible by FPS {fps} or vice versa.")
 
     if resample_rate > 1:
         # take the upsample rate and apply it to the samples
@@ -222,7 +221,7 @@ def resample_labels(labels: pd.DataFrame, fps: int, sample_rate:int):
         return labels
     # correct the time column
     re_labels["time"] = np.arange(0, re_labels.shape[0]) / fps
-    # st.write(re_labels)
+
     return re_labels
 
 
@@ -237,13 +236,7 @@ def load_labels(file, origin: str, fps: int, sample_rate: int):
         labels = _load_boris_raw(file)
     else:
         raise ValueError(f"Label origin {origin} is not supported.")
-    #testing
-    # upsample labels to test downsampling
-    # st.write(labels.shape)
-    # labels = pd.DataFrame(
-    #         np.repeat(labels.values, 6, axis=0), columns=labels.columns
-    #     )
-    # st.write(labels)
+
     if sample_rate != fps:
         re_labels = resample_labels(labels, fps, sample_rate)
         return re_labels
